@@ -1,9 +1,10 @@
 ########################################################################################################################
-# ~/.claude/hooks/_lib.py
+# hooks/_lib.py
 #
 # IO helpers and the low-level memory-path checker shared by every PreToolUse entry script
 ########################################################################################################################
 import json
+import os
 import re
 import sys
 
@@ -89,3 +90,72 @@ class MemoryPathChecker:
                     f" version-controlled CLAUDE.md files."
                 )
         return None
+
+
+class GlobToRegexConverter:
+
+    """Converts a manifest-style glob pattern (as used in the `match` field of a required-reads rule) into a compiled
+    regex suitable for `fullmatch` against a normalized forward-slash absolute path. Supported tokens: `**` matches any
+    characters including path separators, `*` matches any characters except `/`, `?` matches one character except `/`,
+    `{a,b,c}` expands to an alternation group (brace nesting is unsupported), `[abc]` is passed through to regex as a
+    character class, and every other regex metacharacter is escaped so it matches literally. Matching is case
+    insensitive on Windows (os.name == 'nt') and case sensitive elsewhere."""
+
+    @staticmethod
+    def convert_glob_to_compiled_regex(glob_pattern_string):
+
+        """Returns a compiled `re.Pattern` equivalent to the given glob. Callers use `pattern.fullmatch(normalized_path)`
+        to test a candidate path. Normalization (tilde expansion, absolutising, forward-slash separators) is the
+        caller's responsibility and is shared with the manifest loader."""
+        regex_part_strings = []
+        character_index = 0
+        glob_length = len(glob_pattern_string)
+        while character_index < glob_length:
+            current_character = glob_pattern_string[character_index]
+            # ** must be checked before single *
+            if (
+                current_character == "*"
+                and character_index + 1 < glob_length
+                and glob_pattern_string[character_index + 1] == "*"
+            ):
+                regex_part_strings.append(".*")
+                character_index += 2
+                continue
+            if current_character == "*":
+                regex_part_strings.append("[^/]*")
+                character_index += 1
+                continue
+            if current_character == "?":
+                regex_part_strings.append("[^/]")
+                character_index += 1
+                continue
+            if current_character == "{":
+                # flat brace alternation only; nesting is unsupported and the '{' is treated literally if unterminated
+                close_brace_index = glob_pattern_string.find("}", character_index + 1)
+                if close_brace_index == -1:
+                    regex_part_strings.append(re.escape(current_character))
+                    character_index += 1
+                    continue
+                brace_body_string = glob_pattern_string[character_index + 1:close_brace_index]
+                brace_alternative_strings = brace_body_string.split(",")
+                escaped_brace_alternative_strings = [
+                    re.escape(brace_alternative_string) for brace_alternative_string in brace_alternative_strings
+                ]
+                regex_part_strings.append("(?:" + "|".join(escaped_brace_alternative_strings) + ")")
+                character_index = close_brace_index + 1
+                continue
+            if current_character == "[":
+                # character class passthrough; if unterminated, treat '[' literally
+                close_bracket_index = glob_pattern_string.find("]", character_index + 1)
+                if close_bracket_index == -1:
+                    regex_part_strings.append(re.escape(current_character))
+                    character_index += 1
+                    continue
+                regex_part_strings.append(glob_pattern_string[character_index:close_bracket_index + 1])
+                character_index = close_bracket_index + 1
+                continue
+            regex_part_strings.append(re.escape(current_character))
+            character_index += 1
+        combined_regex_string = "".join(regex_part_strings)
+        compile_flags = re.IGNORECASE if os.name == "nt" else 0
+        return re.compile(combined_regex_string, compile_flags)

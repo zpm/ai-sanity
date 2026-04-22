@@ -6,6 +6,10 @@
 
 CLAUDE.md is guidance only: Claude reads it but the harness does not enforce it. Rules drift across long sessions, into subagents, and especially when another system prompt directly contradicts CLAUDE.md (the auto-memory system instructs Claude to write to a directory CLAUDE.md forbids). The PreToolUse hook contract lets a script inspect each tool call before it runs and deny outright with a message Claude reads back. Every CLAUDE.md rule that maps cleanly onto a deterministic, programmatic check lives here.
 
+## Wiring
+
+These scripts live outside `~/.claude/` so they can iterate under version control. They run because `~/.claude/settings.json` references them by absolute path (`$HOME/Dev/ai-common/hooks/pretooluse_*.py`). Moving or renaming any entry script requires updating `settings.json` to match. See the repo `README.md` for the installation pattern.
+
 ## Defense-in-depth: where to put each rule
 
 `settings.json` deny rules are the primary enforcement layer and hold every rule that can be cleanly expressed as a glob match on the command string. That covers the obvious cases: every `*` install (pip install, npm install, uv pip install, python -m pip install, etc.), every git write subcommand (push, pull, fetch, merge, clone, gc, init, filter-branch, am, update-ref, etc.), every shell-out tool that should be replaced by a built-in (cat, grep, find, sed, awk).
@@ -52,7 +56,7 @@ If the rule applies to more than one matcher, factor the comparison logic into a
 
 ## Tests
 
-Two layers using stdlib `unittest`. Unit tests import the rule classes directly. Subprocess integration tests pipe a synthetic payload to the entry script and assert on stdout JSON and exit code. Run via `./test_hooks.sh` or `./test_hooks.ps1` from anywhere; both walk up to find the `.git` directory before running.
+Two layers using stdlib `unittest`. Unit tests import the rule classes directly. Subprocess integration tests pipe a synthetic payload to the entry script and assert on stdout JSON and exit code. Run via the repo-root wrappers: see the [repo README](../README.md) for commands. The wrappers `cd` into `hooks/` and hand off to `unittest discover tests/`.
 
 ## Windows notes
 

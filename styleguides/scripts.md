@@ -45,3 +45,5 @@ while (-not (Test-Path "$RootDir\.git")) {
 ```
 
 Then use `$ROOT_DIR` (`.sh`) or `$RootDir` (`.ps1`) to build all absolute paths: `$ROOT_DIR/server`, `$ROOT_DIR/venv/bin/activate`, etc. Never use relative `../../` navigation from the script location.
+
+Exception: a script that only operates inside its own directory (e.g. a test runner that `cd`s to `$PSScriptRoot` / `$(dirname "$0")` and hands off to `pytest` or `unittest discover` in the same directory) does not need the walk-up. The walk-up exists to resolve paths elsewhere in the repo; a self-contained script has no such paths to resolve.

@@ -1,5 +1,5 @@
 ########################################################################################################################
-# ~/.claude/hooks/tests/test_entry_subprocesses.py
+# hooks/tests/test_entry_subprocesses.py
 #
 # Subprocess integration tests for pretooluse_*.py entry scripts
 ########################################################################################################################

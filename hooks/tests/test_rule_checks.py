@@ -1,5 +1,5 @@
 ########################################################################################################################
-# ~/.claude/hooks/tests/test_rule_checks.py
+# hooks/tests/test_rule_checks.py
 #
 # Unit tests for every rule check method across _lib and the per-matcher entry scripts
 ########################################################################################################################
@@ -11,6 +11,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import _lib
 import pretooluse_bash
 import pretooluse_read
 import pretooluse_write

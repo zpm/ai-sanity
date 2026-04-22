@@ -1,5 +1,5 @@
 ########################################################################################################################
-# ~/.claude/hooks/pretooluse_write.py
+# hooks/pretooluse_write.py
 #
 # PreToolUse entry script for the Write|Edit|NotebookEdit matcher and its rule check methods
 ########################################################################################################################
