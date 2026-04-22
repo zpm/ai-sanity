@@ -104,7 +104,7 @@ Style guides and other mandatory context are enforced by a PreToolUse hook. The 
 
 ### `~/.claude/required-reads.json`
 
-The global manifest maps file-path globs to documents Claude must have in context before editing. It lives in `~/.claude/` (not in this repo) because the targets it references are user-configurable and machine-specific. Project-scoped manifests live at `<project>/.claude/required-reads.json` and layer on top via walk-up discovery. Relative `read` paths in a project manifest resolve against the project root (the parent of `.claude/`), not against the manifest directory. See [./hooks/hooks.md](./hooks/hooks.md) for the manifest schema and state-directory location.
+The global manifest maps file-path matchers to documents Claude must have in context before editing. Each rule carries at most one match criterion: `extension` (path suffix test) or `filepath` (path substring test). A rule with neither is a wildcard. Both on one rule is a validation error and the rule is skipped. The manifest lives in `~/.claude/` (not in this repo) because the targets it references are user-configurable and machine-specific. Project-scoped manifests live at `<project>/.claude/required-reads.json` and layer on top via walk-up discovery. Relative `read` paths in a project manifest resolve against the project root (the parent of `.claude/`), not against the manifest directory. See [./hooks/hooks.md](./hooks/hooks.md) for the manifest schema and state-directory location.
 
 ## Tests
 

@@ -4,9 +4,7 @@
 # PreToolUse entry script for the Write|Edit|NotebookEdit matcher that forces required reading of style guides, global
 # and project CLAUDE.md, settings.json, and project-specific docs before a file-modifying tool call is allowed to run
 ########################################################################################################################
-import glob
 import os
-import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -46,9 +44,9 @@ class PreToolUseRequiredReadsRuleChecks:
     def collect_applicable_rule_records(edited_file_abs_path):
 
         """Discovers every manifest applicable to the edited file, loads and flattens their rules, applies project
-        overrides against global rules, and filters to only those whose `match` glob matches the edited file path.
-        Returns a list of RequiredReadsRuleRecord in manifest-discovery order (nearest project rules first, global
-        rules last)."""
+        overrides against global rules, and filters to only those whose match criterion (extension suffix, filepath
+        substring, or wildcard) matches the edited file path. Returns a list of RequiredReadsRuleRecord in
+        manifest-discovery order (nearest project rules first, global rules last)."""
         rule_checks_class = PreToolUseRequiredReadsRuleChecks
         discovered_manifest_abs_paths = _lib.RequiredReadsManifestLoader.discover_manifest_abs_paths(
             edited_file_abs_path = edited_file_abs_path
@@ -66,7 +64,7 @@ class PreToolUseRequiredReadsRuleChecks:
         override_applied_rule_records = rule_checks_class.apply_project_overrides_against_global_rules(
             rule_records = flattened_rule_records
         )
-        return rule_checks_class.filter_rules_by_glob_match(
+        return rule_checks_class.filter_rules_by_match_criterion(
             rule_records = override_applied_rule_records,
             candidate_file_abs_path = edited_file_abs_path
         )
@@ -95,24 +93,22 @@ class PreToolUseRequiredReadsRuleChecks:
         return surviving_rule_records
 
     @staticmethod
-    def filter_rules_by_glob_match(rule_records, candidate_file_abs_path):
+    def filter_rules_by_match_criterion(rule_records, candidate_file_abs_path):
 
-        """Returns only the rules whose `match_glob` fullmatches the candidate file absolute path. Compilation uses
-        stdlib `glob.translate(..., recursive=True, include_hidden=True)` and is case-insensitive on Windows only.
-        Rules whose glob fails to translate (e.g. stdlib rejects the pattern) are silently skipped."""
+        """Returns only the rules that match the candidate file absolute path. A rule matches when: (a) it has neither
+        `match_extension_suffix` nor `match_filepath_substring` (wildcard), or (b) its `match_extension_suffix` is a
+        suffix of the path, or (c) its `match_filepath_substring` appears anywhere in the path. Both match fields on a
+        single rule is rejected at manifest load time, so this function never sees a rule with both set."""
         match_passed_rule_records = []
         for candidate_rule_record in rule_records:
-            try:
-                translated_regex_string = glob.translate(
-                    candidate_rule_record.match_glob,
-                    recursive = True,
-                    include_hidden = True
-                )
-                compile_flags = re.IGNORECASE if os.name == "nt" else 0
-                compiled_match_pattern = re.compile(translated_regex_string, compile_flags)
-            except (ValueError, re.error):
+            if candidate_rule_record.match_extension_suffix is None and candidate_rule_record.match_filepath_substring is None:
+                match_passed_rule_records.append(candidate_rule_record)
                 continue
-            if compiled_match_pattern.fullmatch(candidate_file_abs_path):
+            if candidate_rule_record.match_extension_suffix is not None:
+                if candidate_file_abs_path.endswith(candidate_rule_record.match_extension_suffix):
+                    match_passed_rule_records.append(candidate_rule_record)
+                continue
+            if candidate_rule_record.match_filepath_substring in candidate_file_abs_path:
                 match_passed_rule_records.append(candidate_rule_record)
         return match_passed_rule_records
 

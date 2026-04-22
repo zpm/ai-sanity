@@ -291,8 +291,8 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
         manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
-                {"match": "**/*.py", "read": "~/docs/python.md"},
-                {"match": "**/*.md", "read": "~/docs/markdown.md"}
+                {"extension": ".py", "read": "~/docs/python.md"},
+                {"extension": ".md", "read": "~/docs/markdown.md"}
             ]
         )
         loaded_rule_records = _lib.RequiredReadsManifestLoader.load_manifest_rule_records(
@@ -300,7 +300,8 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
             is_global_manifest = True
         )
         self.assertEqual(len(loaded_rule_records), 2)
-        self.assertEqual(loaded_rule_records[0].match_glob, "**/*.py")
+        self.assertEqual(loaded_rule_records[0].match_extension_suffix, ".py")
+        self.assertIsNone(loaded_rule_records[0].match_filepath_substring)
         self.assertTrue(loaded_rule_records[0].is_global_manifest)
 
     def test_malformed_json_returns_empty_list(self):
@@ -359,13 +360,12 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
         )
         self.assertEqual(loaded_rule_records, [])
 
-    def test_rule_missing_match_field_is_skipped_but_siblings_kept(self):
+    def test_rule_with_only_read_is_a_valid_wildcard(self):
 
         manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
-                {"read": "~/docs/x.md"},
-                {"match": "**/*.py", "read": "~/docs/python.md"}
+                {"read": "~/docs/always.md"}
             ]
         )
         loaded_rule_records = _lib.RequiredReadsManifestLoader.load_manifest_rule_records(
@@ -373,15 +373,16 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
             is_global_manifest = True
         )
         self.assertEqual(len(loaded_rule_records), 1)
-        self.assertEqual(loaded_rule_records[0].match_glob, "**/*.py")
+        self.assertIsNone(loaded_rule_records[0].match_extension_suffix)
+        self.assertIsNone(loaded_rule_records[0].match_filepath_substring)
 
     def test_rule_missing_read_field_is_skipped_but_siblings_kept(self):
 
         manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
-                {"match": "**/*.py"},
-                {"match": "**/*.md", "read": "~/docs/markdown.md"}
+                {"extension": ".py"},
+                {"extension": ".md", "read": "~/docs/markdown.md"}
             ]
         )
         loaded_rule_records = _lib.RequiredReadsManifestLoader.load_manifest_rule_records(
@@ -389,18 +390,67 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
             is_global_manifest = True
         )
         self.assertEqual(len(loaded_rule_records), 1)
-        self.assertEqual(loaded_rule_records[0].match_glob, "**/*.md")
+        self.assertEqual(loaded_rule_records[0].match_extension_suffix, ".md")
 
-    def test_unknown_fields_including_comment_and_legacy_mode_are_ignored(self):
+    def test_rule_with_both_extension_and_filepath_is_skipped(self):
+
+        manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+            manifest_directory_abs_path = self.sandboxed_home_abs_path,
+            rule_dicts = [
+                {"extension": ".py", "filepath": "/server/", "read": "~/docs/both.md"},
+                {"extension": ".md", "read": "~/docs/markdown.md"}
+            ]
+        )
+        loaded_rule_records = _lib.RequiredReadsManifestLoader.load_manifest_rule_records(
+            manifest_abs_path = manifest_abs_path,
+            is_global_manifest = True
+        )
+        self.assertEqual(len(loaded_rule_records), 1)
+        self.assertEqual(loaded_rule_records[0].match_extension_suffix, ".md")
+
+    def test_filepath_rule_populates_only_filepath_field(self):
+
+        manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+            manifest_directory_abs_path = self.sandboxed_home_abs_path,
+            rule_dicts = [
+                {"filepath": "/server/", "read": "~/docs/backend.md"}
+            ]
+        )
+        loaded_rule_records = _lib.RequiredReadsManifestLoader.load_manifest_rule_records(
+            manifest_abs_path = manifest_abs_path,
+            is_global_manifest = True
+        )
+        self.assertEqual(len(loaded_rule_records), 1)
+        self.assertIsNone(loaded_rule_records[0].match_extension_suffix)
+        self.assertEqual(loaded_rule_records[0].match_filepath_substring, "/server/")
+
+    def test_match_field_values_are_lowercased_at_load_time(self):
+
+        manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+            manifest_directory_abs_path = self.sandboxed_home_abs_path,
+            rule_dicts = [
+                {"extension": ".PY", "read": "~/docs/python.md"},
+                {"filepath": "/Server/", "read": "~/docs/backend.md"}
+            ]
+        )
+        loaded_rule_records = _lib.RequiredReadsManifestLoader.load_manifest_rule_records(
+            manifest_abs_path = manifest_abs_path,
+            is_global_manifest = True
+        )
+        self.assertEqual(loaded_rule_records[0].match_extension_suffix, ".py")
+        self.assertEqual(loaded_rule_records[1].match_filepath_substring, "/server/")
+
+    def test_unknown_fields_including_comment_and_legacy_match_and_mode_are_ignored(self):
 
         manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
                 {
-                    "match": "**/*.py",
+                    "extension": ".py",
                     "read": "~/docs/python.md",
                     "comment": "this is a documentation string, loader ignores it",
                     "mode": "anything-at-all",
+                    "match": "**/*.py",
                     "future_extension_field": {"unexpected": "shape"}
                 }
             ]
@@ -410,7 +460,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
             is_global_manifest = True
         )
         self.assertEqual(len(loaded_rule_records), 1)
-        self.assertEqual(loaded_rule_records[0].match_glob, "**/*.py")
+        self.assertEqual(loaded_rule_records[0].match_extension_suffix, ".py")
 
     def test_relative_read_path_resolved_against_project_root_not_manifest_directory(self):
 
@@ -419,7 +469,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
         manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = project_root_abs_path,
             rule_dicts = [
-                {"match": "**/*.py", "read": "./docs/python.md"}
+                {"extension": ".py", "read": "./docs/python.md"}
             ]
         )
         loaded_rule_records = _lib.RequiredReadsManifestLoader.load_manifest_rule_records(
@@ -436,7 +486,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
         manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
-                {"match": "**/*.py", "read": "~/docs/python.md"}
+                {"extension": ".py", "read": "~/docs/python.md"}
             ]
         )
         loaded_rule_records = _lib.RequiredReadsManifestLoader.load_manifest_rule_records(
@@ -450,7 +500,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
         manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
-                {"match": "**/*.py", "read": "~/docs/python.md", "dedupe_key": "python-style-guide"}
+                {"extension": ".py", "read": "~/docs/python.md", "dedupe_key": "python-style-guide"}
             ]
         )
         loaded_rule_records = _lib.RequiredReadsManifestLoader.load_manifest_rule_records(
@@ -654,7 +704,8 @@ class PreToolUseRequiredReadsRuleRecordBuilder:
     def build_rule_record(rule_id = "manifest.json#0",
         manifest_abs_path = "/fake/manifest.json",
         is_global_manifest = True,
-        match_glob = "**/*.py",
+        match_extension_suffix = ".py",
+        match_filepath_substring = None,
         read_abs_path = "/fake/docs/python.md",
         override_abs_path = None,
         dedupe_key = None
@@ -666,7 +717,8 @@ class PreToolUseRequiredReadsRuleRecordBuilder:
             rule_id = rule_id,
             manifest_abs_path = manifest_abs_path,
             is_global_manifest = is_global_manifest,
-            match_glob = match_glob,
+            match_extension_suffix = match_extension_suffix,
+            match_filepath_substring = match_filepath_substring,
             read_abs_path = read_abs_path,
             override_abs_path = override_abs_path,
             dedupe_key = dedupe_key if dedupe_key is not None else read_abs_path
@@ -789,51 +841,72 @@ class TestApplyProjectOverridesAgainstGlobalRules(unittest.TestCase):
         self.assertEqual(len(surviving_rule_records), 2)
 
 
-class TestFilterRulesByGlobMatch(unittest.TestCase):
+class TestFilterRulesByMatchCriterion(unittest.TestCase):
 
-    """Unit tests for `PreToolUseRequiredReadsRuleChecks.filter_rules_by_glob_match`. The inline glob compilation
-    uses `glob.translate(..., recursive=True, include_hidden=True)` from stdlib and applies `re.IGNORECASE` on
-    Windows only; these tests verify that those flags really are applied (matching the behavior that was previously
-    covered by a dedicated wrapper class and its tests)."""
+    """Unit tests for `PreToolUseRequiredReadsRuleChecks.filter_rules_by_match_criterion`. A rule matches when it has
+    no match fields (wildcard), or its extension suffix ends the path, or its filepath substring appears in the path.
+    Case normalization happens upstream (all paths are lowercased during path normalization and all match values are
+    lowercased at manifest load time), so the filter itself does plain string operations."""
 
-    def test_double_star_glob_matches_nested_path(self):
+    def test_wildcard_rule_matches_every_path(self):
 
-        python_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(match_glob = "**/*.py")
-        match_passed_rule_records = pretooluse_required_reads.PreToolUseRequiredReadsRuleChecks.filter_rules_by_glob_match(
-            rule_records = [python_rule_record],
-            candidate_file_abs_path = "/c/Users/zachm/Dev/ai-common/hooks/bar.py"
+        wildcard_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
+            match_extension_suffix = None,
+            match_filepath_substring = None
+        )
+        match_passed_rule_records = pretooluse_required_reads.PreToolUseRequiredReadsRuleChecks.filter_rules_by_match_criterion(
+            rule_records = [wildcard_rule_record],
+            candidate_file_abs_path = "/anywhere/foo.xyz"
         )
         self.assertEqual(len(match_passed_rule_records), 1)
 
-    def test_nonmatching_extension_is_filtered_out(self):
+    def test_extension_matches_when_path_ends_with_suffix(self):
 
-        python_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(match_glob = "**/*.py")
-        match_passed_rule_records = pretooluse_required_reads.PreToolUseRequiredReadsRuleChecks.filter_rules_by_glob_match(
+        python_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
+            match_extension_suffix = ".py",
+            match_filepath_substring = None
+        )
+        match_passed_rule_records = pretooluse_required_reads.PreToolUseRequiredReadsRuleChecks.filter_rules_by_match_criterion(
             rule_records = [python_rule_record],
-            candidate_file_abs_path = "/c/Users/zachm/Dev/foo.md"
+            candidate_file_abs_path = "/c/users/zachm/dev/ai-common/hooks/bar.py"
+        )
+        self.assertEqual(len(match_passed_rule_records), 1)
+
+    def test_extension_rejects_when_path_does_not_end_with_suffix(self):
+
+        python_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
+            match_extension_suffix = ".py",
+            match_filepath_substring = None
+        )
+        match_passed_rule_records = pretooluse_required_reads.PreToolUseRequiredReadsRuleChecks.filter_rules_by_match_criterion(
+            rule_records = [python_rule_record],
+            candidate_file_abs_path = "/c/users/zachm/dev/foo.md"
         )
         self.assertEqual(match_passed_rule_records, [])
 
-    def test_hidden_directory_crossing_is_enabled(self):
+    def test_filepath_matches_when_substring_appears_in_path(self):
 
-        any_file_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(match_glob = "**/*.json")
-        match_passed_rule_records = pretooluse_required_reads.PreToolUseRequiredReadsRuleChecks.filter_rules_by_glob_match(
-            rule_records = [any_file_rule_record],
-            candidate_file_abs_path = "/home/zachm/.claude/settings.json"
+        server_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
+            match_extension_suffix = None,
+            match_filepath_substring = "/server/"
+        )
+        match_passed_rule_records = pretooluse_required_reads.PreToolUseRequiredReadsRuleChecks.filter_rules_by_match_criterion(
+            rule_records = [server_rule_record],
+            candidate_file_abs_path = "/c/users/zachm/dev/project/server/api/foo.py"
         )
         self.assertEqual(len(match_passed_rule_records), 1)
 
-    def test_case_insensitive_on_windows_only(self):
+    def test_filepath_rejects_when_substring_absent_from_path(self):
 
-        python_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(match_glob = "**/*.py")
-        match_passed_rule_records = pretooluse_required_reads.PreToolUseRequiredReadsRuleChecks.filter_rules_by_glob_match(
-            rule_records = [python_rule_record],
-            candidate_file_abs_path = "/tmp/foo.PY"
+        server_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
+            match_extension_suffix = None,
+            match_filepath_substring = "/server/"
         )
-        if os.name == "nt":
-            self.assertEqual(len(match_passed_rule_records), 1)
-        else:
-            self.assertEqual(match_passed_rule_records, [])
+        match_passed_rule_records = pretooluse_required_reads.PreToolUseRequiredReadsRuleChecks.filter_rules_by_match_criterion(
+            rule_records = [server_rule_record],
+            candidate_file_abs_path = "/c/users/zachm/dev/project/client/index.js"
+        )
+        self.assertEqual(match_passed_rule_records, [])
 
 
 class TestPartitionRulesIntoUnsatisfiedFireAndAlreadySatisfied(tests.fixtures_required_reads.HomeOverrideEnvVarTestCaseMixin, unittest.TestCase):
@@ -879,12 +952,12 @@ class TestPartitionRulesIntoUnsatisfiedFireAndAlreadySatisfied(tests.fixtures_re
 
         first_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
             rule_id = "m#0",
-            match_glob = "**/*.py",
+            match_extension_suffix = ".py",
             dedupe_key = "shared-key"
         )
         second_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
             rule_id = "m#1",
-            match_glob = "**/*.pyi",
+            match_extension_suffix = ".pyi",
             dedupe_key = "shared-key"
         )
         _lib.RequiredReadsState.mark_dedupe_key_satisfied(

@@ -1,6 +1,29 @@
 # JavaScript Style Guide
 
-> Covers JavaScript and CSS code style across ALL PROJECTS.
+> Covers JavaScript, CSS, and JSON style across ALL PROJECTS.
+
+## JSON Formatting
+
+JSON files are always expanded (pretty-printed) with every field on its own line. No collapsed single-line or collapsed-single-object forms. Nested objects and arrays indent one level. This applies to configuration, fixtures, manifests, and hand-authored payloads alike. Editor-generated minification is fine at the build boundary but never committed.
+
+Good:
+
+```json
+{
+  "rules": [
+    {
+      "extension": ".py",
+      "read": "~/docs/python.md"
+    }
+  ]
+}
+```
+
+Bad:
+
+```json
+{ "rules": [ { "extension": ".py", "read": "~/docs/python.md" } ] }
+```
 
 ## CRITICAL: Double Quotes Everywhere
 

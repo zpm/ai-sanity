@@ -143,7 +143,8 @@ RequiredReadsRuleRecord = collections.namedtuple(
         "rule_id",
         "manifest_abs_path",
         "is_global_manifest",
-        "match_glob",
+        "match_extension_suffix",
+        "match_filepath_substring",
         "read_abs_path",
         "override_abs_path",
         "dedupe_key",
@@ -430,12 +431,21 @@ class RequiredReadsManifestLoader:
         """Validates a single raw rule dict and returns a `RequiredReadsRuleRecord`, or None if the rule is invalid.
         Relative `read` paths resolve against the project root (the directory containing `.claude/`), not against the
         manifest's own directory; this keeps rules natural to write (`./CLAUDE.md`, `./docs/stack/backend.md`). The
-        loader ignores unknown keys including any legacy `mode` field and the `comment` documentation field."""
-        match_glob_string = raw_rule_object.get("match")
+        two match fields `extension` and `filepath` are mutually exclusive; both present is a validation error and the
+        rule is skipped. A rule with neither is a wildcard that matches every file. All unknown keys (including legacy
+        `mode`, `match`, and the `comment` documentation field) are ignored."""
         read_path_string = raw_rule_object.get("read")
-        if not isinstance(match_glob_string, str) or not match_glob_string:
-            return None
         if not isinstance(read_path_string, str) or not read_path_string:
+            return None
+        extension_raw_value = raw_rule_object.get("extension")
+        filepath_raw_value = raw_rule_object.get("filepath")
+        match_extension_suffix = None
+        match_filepath_substring = None
+        if isinstance(extension_raw_value, str) and extension_raw_value:
+            match_extension_suffix = extension_raw_value.lower()
+        if isinstance(filepath_raw_value, str) and filepath_raw_value:
+            match_filepath_substring = filepath_raw_value.lower()
+        if match_extension_suffix is not None and match_filepath_substring is not None:
             return None
         read_abs_path = RequiredReadsPathNormalizer.normalize_path(
             read_path_string,
@@ -455,7 +465,8 @@ class RequiredReadsManifestLoader:
             rule_id = rule_id_string,
             manifest_abs_path = manifest_abs_path,
             is_global_manifest = is_global_manifest,
-            match_glob = match_glob_string,
+            match_extension_suffix = match_extension_suffix,
+            match_filepath_substring = match_filepath_substring,
             read_abs_path = read_abs_path,
             override_abs_path = override_abs_path,
             dedupe_key = dedupe_key_string

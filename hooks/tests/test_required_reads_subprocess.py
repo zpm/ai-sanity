@@ -31,7 +31,7 @@ class PreToolUseRequiredReadsSubprocessTestCase(
         tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
-                {"match": "**/*.py", "read": python_style_doc_abs_path}
+                {"extension": ".py", "read": python_style_doc_abs_path}
             ]
         )
         edited_file_abs_path = os.path.join(self.sandboxed_home_abs_path, "project", "src", "main.py")
@@ -58,7 +58,7 @@ class PreToolUseRequiredReadsSubprocessTestCase(
         tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
-                {"match": "**/*.py", "read": python_style_doc_abs_path}
+                {"extension": ".py", "read": python_style_doc_abs_path}
             ]
         )
         edited_file_abs_path = os.path.join(self.sandboxed_home_abs_path, "notes.txt")
@@ -82,8 +82,8 @@ class PreToolUseRequiredReadsSubprocessTestCase(
         tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
-                {"match": "**/*", "read": claude_md_abs_path},
-                {"match": "**/*.py", "read": python_style_doc_abs_path}
+                {"read": claude_md_abs_path},
+                {"extension": ".py", "read": python_style_doc_abs_path}
             ]
         )
         edited_file_abs_path = os.path.join(self.sandboxed_home_abs_path, "main.py")
@@ -111,7 +111,7 @@ class PreToolUseRequiredReadsSubprocessTestCase(
         tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
-                {"match": "**/*.py", "read": python_style_doc_abs_path}
+                {"extension": ".py", "read": python_style_doc_abs_path}
             ]
         )
         project_directory_abs_path = os.path.join(self.sandboxed_home_abs_path, "project")
@@ -144,7 +144,7 @@ class PreToolUseRequiredReadsSubprocessTestCase(
         tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
-                {"match": "**/*.ipynb", "read": notebook_style_doc_abs_path}
+                {"extension": ".ipynb", "read": notebook_style_doc_abs_path}
             ]
         )
         edited_notebook_abs_path = os.path.join(self.sandboxed_home_abs_path, "analysis.ipynb")
@@ -192,14 +192,14 @@ class PreToolUseRequiredReadsSubprocessTestCase(
         tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
-                {"match": "**/*.py", "read": global_python_doc_abs_path}
+                {"extension": ".py", "read": global_python_doc_abs_path}
             ]
         )
         tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = project_directory_abs_path,
             rule_dicts = [
                 {
-                    "match": "**/*.py",
+                    "extension": ".py",
                     "read": project_python_doc_abs_path,
                     "override": global_python_doc_abs_path
                 }
@@ -229,7 +229,7 @@ class PreToolUseRequiredReadsSubprocessTestCase(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
                 {
-                    "match": "**/*.py",
+                    "extension": ".py",
                     "read": os.path.join(self.sandboxed_home_abs_path, "does-not-exist.md")
                 }
             ]
@@ -270,7 +270,7 @@ class PostToolUseReadObserverSubprocessTestCase(
         tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
-                {"match": "**/*.py", "read": python_style_doc_abs_path}
+                {"extension": ".py", "read": python_style_doc_abs_path}
             ]
         )
         read_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_posttooluse_read_payload(
@@ -302,7 +302,7 @@ class PostToolUseReadObserverSubprocessTestCase(
         tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
-                {"match": "**/*.py", "read": python_style_doc_abs_path}
+                {"extension": ".py", "read": python_style_doc_abs_path}
             ]
         )
         read_of_unrelated_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_posttooluse_read_payload(
@@ -368,7 +368,7 @@ class PreCompactRequiredReadsSubprocessTestCase(
         tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
-                {"match": "**/*.py", "read": python_style_doc_abs_path}
+                {"extension": ".py", "read": python_style_doc_abs_path}
             ]
         )
         read_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_posttooluse_read_payload(
