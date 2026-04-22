@@ -102,3 +102,34 @@ class PreToolUsePayloadFixtureBuilder:
             tool_name = "Grep",
             tool_input = grep_tool_input
         )
+
+    @staticmethod
+    def build_posttooluse_read_payload(file_path, working_directory = "/tmp", session_id = "test-session"):
+
+        """Returns a synthetic PostToolUse payload for a completed Read tool call. Matches the PreToolUse shape with
+        `hook_event_name` switched to `PostToolUse` and a minimal `tool_response` object; the required-reads
+        observer only consumes `tool_name`, `tool_input.file_path`, `cwd`, and `session_id`."""
+        return {
+            "session_id": session_id,
+            "transcript_path": "/dev/null",
+            "cwd": working_directory,
+            "permission_mode": "default",
+            "hook_event_name": "PostToolUse",
+            "tool_name": "Read",
+            "tool_input": {"file_path": file_path},
+            "tool_response": {"success": True},
+            "tool_use_id": "test-tool-use-id"
+        }
+
+    @staticmethod
+    def build_precompact_payload(session_id = "test-session"):
+
+        """Returns a synthetic PreCompact payload. Only `session_id` is load-bearing for the required-reads
+        precompact hook; other fields mirror the standard shape."""
+        return {
+            "session_id": session_id,
+            "transcript_path": "/dev/null",
+            "cwd": "/tmp",
+            "permission_mode": "default",
+            "hook_event_name": "PreCompact"
+        }

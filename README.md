@@ -6,8 +6,8 @@
 
 | Path | Purpose |
 |---|---|
-| [./hooks/](./hooks/) | PreToolUse Python hooks that enforce `~/.claude/CLAUDE.md` rules at tool-call time |
-| [./styleguides/](./styleguides/) | Language style guides referenced from `~/.claude/CLAUDE.md` |
+| [./hooks/](./hooks/) | PreToolUse/PostToolUse/PreCompact Python hooks that enforce `~/.claude/CLAUDE.md` rules and required-reads at tool-call time |
+| [./styleguides/](./styleguides/) | Language style guides referenced from the required-reads manifest |
 
 The hooks and style guides live here rather than in `~/.claude/` because the claude harness does not track `~/.claude/` under git. Keeping them in a normal repo gives change history, tests, and cross-machine sync.
 
@@ -52,28 +52,59 @@ Each PreToolUse matcher points at the corresponding entry script in `./hooks/`. 
             "command": "python $HOME/Dev/ai-common/hooks/pretooluse_read.py"
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $HOME/Dev/ai-common/hooks/pretooluse_required_reads.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $HOME/Dev/ai-common/hooks/posttooluse_read_observer.py"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $HOME/Dev/ai-common/hooks/precompact_required_reads.py"
+          }
+        ]
       }
     ]
   }
 }
 ```
 
-Absolute paths are mandatory because the scripts live outside `~/.claude/`. Renaming or moving any entry script requires a matching edit here.
+Absolute paths are mandatory because the scripts live outside `~/.claude/`. Renaming or moving any entry script requires a matching edit here. The required-reads trio is a sibling of the existing `Write|Edit|NotebookEdit` entry, not a replacement; the harness runs both in parallel and the first to deny wins.
 
 On Windows, `CLAUDE_CODE_GIT_BASH_PATH` is set so the harness resolves `bash` to Git Bash rather than WSL. See [./hooks/hooks.md](./hooks/hooks.md) for the stdin encoding constraint that depends on this.
 
 ### `~/.claude/CLAUDE.md`
 
-The Style Guides table links each guide by home-relative path so the reader has one click to the full rules.
+The `Required Reads` section points readers at the manifest rather than enumerating rules. The manifest is the source of truth; the prose here just tells the model what to do when a required-read deny fires.
 
 ```markdown
-| Doc | When to read |
-|---|---|
-| [~/Dev/ai-common/styleguides/javascript.md](~/Dev/ai-common/styleguides/javascript.md) | Editing any `.js` or `.css` file |
-| [~/Dev/ai-common/styleguides/markdown.md](~/Dev/ai-common/styleguides/markdown.md) | Editing any `.md` file |
-| [~/Dev/ai-common/styleguides/python.md](~/Dev/ai-common/styleguides/python.md) | Editing any `.py` file |
-| [~/Dev/ai-common/styleguides/scripts.md](~/Dev/ai-common/styleguides/scripts.md) | Editing any `.sh` or `.ps1` file |
+# Required Reads
+
+Style guides and other mandatory context are enforced by a PreToolUse hook. The source of truth is the global `~/.claude/required-reads.json` plus any per-project `.claude/required-reads.json` discovered by walking up from the edited file. Every rule denies the edit until Claude has Read the target doc in the current session. When a deny fires, Read the cited docs and retry. Do not ask the user to disable the hook. A missing `read` target is a hard configuration error, not an escape hatch.
 ```
+
+### `~/.claude/required-reads.json`
+
+The global manifest maps file-path globs to documents Claude must have in context before editing. It lives in `~/.claude/` (not in this repo) because the targets it references are user-configurable and machine-specific. Project-scoped manifests live at `<project>/.claude/required-reads.json` and layer on top via walk-up discovery. Relative `read` paths in a project manifest resolve against the project root (the parent of `.claude/`), not against the manifest directory. See [./hooks/hooks.md](./hooks/hooks.md) for the manifest schema and state-directory location.
 
 ## Tests
 
