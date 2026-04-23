@@ -2,6 +2,36 @@
 
 > Covers shell script conventions across ALL PROJECTS.
 
+## CRITICAL: Fully Descriptive Names
+
+Brevity is the enemy of clarity. Every name (variable, function, constant) must fully describe what it is, what it does, or what it's for. Never shorten, abbreviate, or drop words for brevity. If a name has multiple concepts, every concept must be present. A reader should understand the name's full meaning without looking at the implementation.
+
+- Encode all concepts. If something is "safe user data," the name must say ALL of that. Not just "safe data" (safe what?) or "user info" (what makes it special?):
+  - Good: `get_safe_user_data_file_path()` (safe, user, data, all present)
+  - Bad: `get_data_file_path()` (drops "safe" and "user")
+  - Bad: `get_safe_info_path()` (drops what entity it's for)
+  - Bad: `get_path()` (says nothing useful)
+- Variables must read like helpful commentary. The reader should understand what a variable holds and where it came from without checking the right side of the assignment:
+  - Good: `current_branch_name="$(git rev-parse --abbrev-ref HEAD)"`
+  - Bad: `b="$(git rev-parse --abbrev-ref HEAD)"`
+  - Good: `requirements_lock_file="$ROOT_DIR/requirements.lock"`
+  - Bad: `f="$ROOT_DIR/requirements.lock"`
+- Constants (SCREAMING_SNAKE_CASE) must describe their purpose and scope:
+  - Good: `MAX_RETRY_ATTEMPTS_HTTP` (what it's for, what it limits)
+  - Bad: `MAX_RETRIES` (which retries? for what?)
+- Functions must describe the full action and context:
+  - Good: `ensure_venv_activated()` (ensures venv is active, idempotent)
+  - Good: `require_git_clean_working_tree()` (requires clean tree, errors if dirty)
+  - Bad: `activate()` (activate what?)
+  - Bad: `check()` (check what, and then what?)
+- Never sacrifice clarity for aesthetics. A long, clear name is always better than a short, ambiguous one. If a name feels "too long," that's a sign it's doing its job.
+- Concept-first naming. Lead with the concept so that related names sort together alphabetically in env vars, config files, and autocomplete. Put qualifiers like `total`, `count`, `max`, `min` at the end:
+  - Good: `PYTHON_VERSION_MIN`, `PYTHON_VERSION_MAX`, `PYTHON_VERSION_REQUIRED`
+  - Bad: `MIN_PYTHON_VERSION`, `MAX_PYTHON_VERSION`, `REQUIRED_PYTHON_VERSION`
+  - This applies equally to environment variable groups: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`. All `DB_*` vars group together when sorted.
+
+Note: the double-quote rule that applies in Python and JavaScript does not apply to shell, which has semantic differences between `'` and `"` (variable expansion, command substitution).
+
 ## Structure
 
 Non-trivial logic lives in a shared `.py` file, or in the wrapped tool call itself (`pytest`, `npm test`, etc.).

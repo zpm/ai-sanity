@@ -27,7 +27,7 @@ Bad:
 
 ## CRITICAL: Double Quotes Everywhere
 
-ALWAYS use double quotes for strings in ALL languages. This is a strict, non-negotiable rule.
+ALWAYS use double quotes for strings. This is a strict, non-negotiable rule.
 
 - JavaScript: `const x = "hello"` not `const x = 'hello'`
 - CSS: `font-family: "Roboto Slab"` not `font-family: 'Roboto Slab'`
@@ -35,9 +35,37 @@ ALWAYS use double quotes for strings in ALL languages. This is a strict, non-neg
 
 No exceptions. Single quotes are never acceptable for strings.
 
+## CRITICAL: Fully Descriptive Names
+
+Brevity is the enemy of clarity. Every name (variable, function, method, constant, class, CSS class, HTML id) must fully describe what it is, what it does, or what it's for. Never shorten, abbreviate, or drop words for brevity. If a name has multiple concepts, every concept must be present. A reader should understand the name's full meaning without looking at the implementation.
+
+- Encode all concepts. If something is "safe user data," the name must say ALL of that. Not just "safe data" (safe what?) or "user info" (what makes it special?):
+  - Good: `apiGetSafeUserData()` (safe, user, data, all present)
+  - Bad: `apiGetData()` (drops "safe" and "user")
+  - Bad: `apiGetSafeInfo()` (drops what entity it's for)
+  - Bad: `getInfo()` (says nothing useful)
+- Variables must read like helpful commentary. The reader should understand what a variable holds and where it came from without checking the right side of the assignment:
+  - Good: `const currentAuthedUser = requireAuthedUserOrRedirect(request);`
+  - Bad: `const user = requireAuthedUserOrRedirect(request);`
+  - Good: `const sessionAuthedUserId = request.session.get("user_id");`
+  - Bad: `const uid = request.session.get("user_id");`
+- Constants must describe their purpose and scope:
+  - Good: `UUID_PARAMS_STORY` (what format, what entity, what it validates)
+  - Bad: `UID_PARAMS` (which UID? params for what?)
+- Methods must describe the full action and context:
+  - Good: `apiGetStorySections(uid)` (API method, gets story sections, client-safe output)
+  - Good: `requireAuthedUserOrRedirect(request)` (requires auth, returns user, or redirects)
+  - Bad: `getSections(uid)` (which sections? for whom? filtered how?)
+  - Bad: `checkAuth(request)` (checks auth and then what?)
+- Never sacrifice clarity for aesthetics. A long, clear name is always better than a short, ambiguous one. If a name feels "too long," that's a sign it's doing its job.
+- Concept-first naming. Lead with the concept so that related names sort together alphabetically in objects, JSON, and autocomplete. Put qualifiers like `total`, `count`, `max`, `min` at the end:
+  - Good: `wordCount`, `wordCountTotal`, `llmCostUsd`, `llmCostUsdTicks`
+  - Bad: `totalWordCount`, `totalLlmCost`
+  - This applies equally to object/registry keys: `costPerMilTokensInput`, `costPerMilTokensOutput`, `costProvided`. All `cost*` keys group together when sorted.
+
 ## Comments
 
-Comment non-trivial blocks. Before any block of code where the intent isn't immediately obvious from the code itself, write a brief 1-2 line comment explaining what the block does and why. The reader should understand the purpose of the next 10-20 lines without reading every line. Don't comment self-explanatory code - only where the context helps.
+Comment non-trivial blocks. Before any block of code where the intent isn't immediately obvious from the code itself, write a brief 1-2 line comment explaining what the block does and why. The reader should understand the purpose of the next 10-20 lines without reading every line. Don't comment self-explanatory code; only where the context helps.
 
 All single-line comments should be lowercase (including section titles):
 - Good: `// dom elements`
@@ -71,11 +99,11 @@ Every CSS file uses `/*` to open, `*` for content lines, `*/` to close:
 ****************************************************************************************************************/
 ```
 
-File paths in headers must use the external serving path (e.g., `/static/js/dashboard.js`), not the internal filesystem path (e.g., `server/static/js/dashboard.js`). These files are served to the client - internal directory structure should never leak into client-facing code.
+File paths in headers must use the external serving path (e.g., `/static/js/dashboard.js`), not the internal filesystem path (e.g., `server/static/js/dashboard.js`). These files are served to the client; internal directory structure should never leak into client-facing code.
 
 ## Namespacing
 
-All JavaScript files must organize their code into object namespaces on `window`. No top-level functions or scattered `window.*` globals - everything belongs to a namespace.
+All JavaScript files must organize their code into object namespaces on `window`. No top-level functions or scattered `window.*` globals; everything belongs to a namespace.
 
 Shared scripts use the domain as the namespace name (e.g., `window.api`, `window.utils`, `window.STRINGS`).
 
@@ -104,7 +132,7 @@ dashboard.init();
 ```
 
 Rules:
-- Internal references always use the namespace name (e.g., `dashboard.container`, `dashboard.load()`), never `this` - avoids binding issues in callbacks
+- Internal references always use the namespace name (e.g., `dashboard.container`, `dashboard.load()`), never `this` (avoids binding issues in callbacks)
 - DOM lookups go in `init()`, called immediately at the bottom of the file
 - Framework event listeners and component registrations go inside `init()`
 
@@ -138,4 +166,4 @@ someMethod() {
 },
 ```
 
-This applies to function declarations, method definitions, and arrow callbacks at the function level. It does not apply to inner control-flow blocks (`if`, `for`, `try`/`catch`, `else`) - those keep their braces tight.
+This applies to function declarations, method definitions, and arrow callbacks at the function level. It does not apply to inner control-flow blocks (`if`, `for`, `try`/`catch`, `else`); those keep their braces tight.

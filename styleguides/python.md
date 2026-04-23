@@ -1,6 +1,6 @@
 # Python Style Guide
 
-> Covers Python code style: imports, spacing, naming, quotes, file headers, and comments. Project-agnostic - applies across projects.
+> Covers Python code style: imports, spacing, naming, quotes, file headers, and comments. Project-agnostic; applies across projects.
 
 ## CRITICAL: Double Quotes Everywhere
 
@@ -11,36 +11,35 @@ ALWAYS use double quotes for strings. This is a strict, non-negotiable rule.
 
 No exceptions. Single quotes are never acceptable for strings.
 
-## CRITICAL: Fully Descriptive Names - Brevity Is the Enemy
+## CRITICAL: Fully Descriptive Names
 
-Every name - variable, function, method, constant, class - must fully describe what it is, what it does, or what it's for. Never shorten, abbreviate, or drop words for brevity. If a name has multiple concepts, every concept must be present. A reader should understand the name's full meaning without looking at the implementation.
+Brevity is the enemy of clarity. Every name (variable, function, method, constant, class) must fully describe what it is, what it does, or what it's for. Never shorten, abbreviate, or drop words for brevity. If a name has multiple concepts, every concept must be present. A reader should understand the name's full meaning without looking at the implementation.
 
-- Encode all concepts.
-  If something is "safe user data," the name must say ALL of that - not just "safe data" (safe what?) or "user info" (what makes it special?):
-  - Good: `api_get_safe_user_data()` - safe, user, data, all present
-  - Bad: `api_get_data()` - drops "safe" and "user"
-  - Bad: `api_get_safe_info()` - drops what entity it's for
-  - Bad: `get_info()` - says nothing useful
+- Encode all concepts. If something is "safe user data," the name must say ALL of that. Not just "safe data" (safe what?) or "user info" (what makes it special?):
+  - Good: `api_get_safe_user_data()` (safe, user, data, all present)
+  - Bad: `api_get_data()` (drops "safe" and "user")
+  - Bad: `api_get_safe_info()` (drops what entity it's for)
+  - Bad: `get_info()` (says nothing useful)
 - Variables must read like helpful commentary. The reader should understand what a variable holds and where it came from without checking the right side of the assignment:
   - Good: `current_authed_user = require_authed_user_or_redirect(request)`
   - Bad: `user = require_authed_user_or_redirect(request)`
   - Good: `session_authed_user_id = request.session.get("user_id")`
   - Bad: `uid = request.session.get("user_id")`
 - Constants must describe their purpose and scope:
-  - Good: `UUID_PARAMS_STORY` - what format, what entity, what it validates
-  - Bad: `UID_PARAMS` - which UID? params for what?
+  - Good: `UUID_PARAMS_STORY` (what format, what entity, what it validates)
+  - Bad: `UID_PARAMS` (which UID? params for what?)
 - Methods must describe the full action and context:
-  - Good: `api_get_story_sections(uid)` - API method, gets story sections, client-safe output
-  - Good: `require_authed_user_or_redirect(request)` - requires auth, returns user, or redirects
-  - Bad: `get_sections(uid)` - which sections? for whom? filtered how?
-  - Bad: `check_auth(request)` - checks auth and then what?
+  - Good: `api_get_story_sections(uid)` (API method, gets story sections, client-safe output)
+  - Good: `require_authed_user_or_redirect(request)` (requires auth, returns user, or redirects)
+  - Bad: `get_sections(uid)` (which sections? for whom? filtered how?)
+  - Bad: `check_auth(request)` (checks auth and then what?)
 - Never sacrifice clarity for aesthetics. A long, clear name is always better than a short, ambiguous one. If a name feels "too long," that's a sign it's doing its job.
 - Concept-first naming. Lead with the concept so that related names sort together alphabetically in dicts, JSON, and autocomplete. Put qualifiers like `total`, `count`, `max`, `min` at the end:
   - Good: `word_count`, `word_count_total`, `llm_cost_usd`, `llm_cost_usd_ticks`
   - Bad: `total_word_count`, `total_llm_cost`
-  - This applies equally to dict/registry keys: `cost_per_mil_tokens_input`, `cost_per_mil_tokens_output`, `cost_provided` - all `cost_*` keys group together when sorted.
+  - This applies equally to dict/registry keys: `cost_per_mil_tokens_input`, `cost_per_mil_tokens_output`, `cost_provided`. All `cost_*` keys group together when sorted.
 
-This rule applies across all languages (Python, JavaScript, CSS class names, HTML IDs, etc.).
+Explicit exception: caught exceptions are always bound as `e` (see Exception Handling). This is the single deliberate deviation from the naming rule, chosen for ubiquity and muscle memory, not because it's a good name.
 
 ## Imports
 
@@ -49,7 +48,7 @@ Use `import x` instead of `from x import y`. Reference with full module path for
 - Bad: `from fastapi import FastAPI` then `app = FastAPI()`
 - Exception: Standard library modules with very long paths can use `from` imports if it improves readability
 
-All imports must be at the top of the file. Never use `__import__()` or place `import` statements inside functions, methods, or conditional blocks. If a top-level import would create a circular dependency, that is a structural problem - fix the dependency graph instead of hiding the cycle with a late import.
+All imports must be at the top of the file. Never use `__import__()` or place `import` statements inside functions, methods, or conditional blocks. If a top-level import would create a circular dependency, that is a structural problem. Fix the dependency graph instead of hiding the cycle with a late import.
 
 Never use quoted/string type annotations (e.g. `"MyClass"`, `"module.MyClass | None"`). Always import the module and use the real type. Never use `TYPE_CHECKING` or `from __future__ import annotations`.
 
@@ -89,47 +88,56 @@ myapp.services.logging.critical(
 
 ## Spacing
 
-- Between major code blocks: Use three newlines (two empty lines) between module-level classes and functions. For large files with distinct logical sections (e.g., base classes vs. standalone functions vs. router), use a `########` separator line (120 `#` chars) with an ALL CAPS label (see comment capitalization tiers in Comments section):
+- Between major code blocks: Use three newlines (two empty lines) between module-level classes. For large files with distinct logical sections (e.g., base/model classes vs. service classes vs. router setup), use a `########` separator line (120 `#` chars). Do not add a label comment after the separator; the class name below is label enough:
   ```python
   # Good - separator between major sections
-  class Service:
+  class UserService:
       def __init__(self):
+
           pass
 
 
   ########################################################################################################################
 
 
-  def standalone_helper():
-      pass
+  class AuditLogger:
+      def __init__(self):
+
+          pass
 
   # Good - blank lines between closely related classes
   class Config:
       def __init__(self):
+
           pass
 
 
   class SubConfig(Config):
       def __init__(self):
+
           pass
 
-  # Bad - comment label after separator (the class/function name is label enough)
+  # Bad - comment label after separator (the class name is label enough)
   ########################################################################################################################
   # helpers
 
-  def standalone_helper():
-      pass
+  class AuditLogger:
+      def __init__(self):
+
+          pass
 
   # Bad - only one empty line between module-level blocks
   class Config:
       def __init__(self):
+
           pass
 
-  class Service:
+  class UserService:
       def __init__(self):
+
           pass
   ```
-- Always include an empty newline after every function/method definition (between the `def` line and the function body).
+- Always include an empty newline after every function/method definition (between the `def` line and the function body). This applies to every `def`, including single-line bodies, `pass` stubs, and docstring-only bodies. The cost of one blank line is trivial, and consistency with real function bodies matters more than visual density on stubs. Do not collapse for elegance.
 
 ## Method Signatures
 
@@ -181,7 +189,7 @@ async def xsvc_add_ink_trial_daily(self,
   # Bad
   myapp.services.logging.write(logging_group_key, "api-response", response.model_dump())
   ```
-- Always include exactly one space around `=` and other operators, even inside function calls. Never columnar-align `=` across consecutive kwargs - it creates noisy diffs when any field is renamed or added, and the whole block has to be reformatted. One space, always. The same rule applies to dict literals: exactly one space after the colon, never pad values to line up vertically.
+- Always include exactly one space around `=` and other operators, even inside function calls. Never columnar-align `=` across consecutive kwargs; it creates noisy diffs when any field is renamed or added, and the whole block has to be reformatted. One space, always. The same rule applies to dict literals: exactly one space after the colon, never pad values to line up vertically.
   - Good: `Field(default_factory = datetime.utcnow)`
   - Bad: `Field(default_factory=datetime.utcnow)`
   - Good:
@@ -212,7 +220,8 @@ async def xsvc_add_ink_trial_daily(self,
         "event_payload": row["event_payload"],
     }
     ```
-- For function calls with multiple arguments, use JSON-style indenting with each argument on its own line. Exception: Decorators (`@app.get`, `@app.post`, etc.) stay on one line:
+  - Note: the space-around-`=` rule explicitly overrides PEP 8 (which says no spaces around `=` in keyword arguments) and will fight auto-formatters like black and ruff's default profile. Configure the formatter to respect this rule, or disable formatting on conflicting regions. PEP 8 does not win here.
+- For function calls with multiple arguments, use JSON-style indenting with each argument on its own line. This applies even when arguments are trivial (a single-key dict, a one-element list, a short literal). Blow them up anyway. Consistency with larger calls and scannability matter more than compactness; do not collapse for elegance. Exception: Decorators (`@app.get`, `@app.post`, etc.) stay on one line:
   ```python
   # Good
   return templates.TemplateResponse(
@@ -244,7 +253,7 @@ return {"name": user.name, "role": user.role, "user_id": user.user_id}
 
 ## Required Subclass Configuration
 
-Per-subclass configuration (provider tag, env var name, timeout, etc.) goes through `__init__` parameters on the base class. Each subclass passes concrete values up via `super().__init__()`. A missing kwarg raises `TypeError` at construction - the loud, immediate failure you want.
+Per-subclass configuration (provider tag, env var name, timeout, etc.) goes through `__init__` parameters on the base class. Each subclass passes concrete values up via `super().__init__()`. A missing kwarg raises `TypeError` at construction: the loud, immediate failure you want.
 
 ```python
 class WebhookIngest:
@@ -274,21 +283,25 @@ class StripeWebhookIngest(WebhookIngest):
 
 All functions must live inside a class. No bare `def` at module level. If a function doesn't need instance state, make it a `@staticmethod` on the most relevant class. This keeps every function discoverable via its class and avoids orphaned helpers drifting around at module scope.
 
+Note: this explicitly overrides typical Python convention. Top-level functions are idiomatic in most Python code and no linter or formatter enforces this rule out of the box. Rationale: in complex projects, scattered module-level helpers are error-prone, hard to discover, and drift without a clear home. This convention mirrors Java/C#-style organization where every callable has a class home. Third-party libraries will not follow this rule; it applies only to code you own.
+
 ```python
 # Good - static method on a class
 class CostCalculator:
     @staticmethod
     def calculate_total(items):
+
         return sum(i.price for i in items)
 
 # Bad - top-level function
 def calculate_total(items):
+
     return sum(i.price for i in items)
 ```
 
 ## Third-Party API Responses
 
-Never trust values from third-party APIs. Always coerce to the expected type explicitly. If it's not our code, assume anything could happen - wrong types, missing fields, unexpected nulls. Defensive coercion costs nothing and prevents silent corruption.
+Never trust values from third-party APIs. Always coerce to the expected type explicitly. If it's not our code, assume anything could happen: wrong types, missing fields, unexpected nulls. Defensive coercion costs nothing and prevents silent corruption.
 
 ```python
 # Good - coerce to int
@@ -333,6 +346,7 @@ Inside Python this does not apply. Enum comparisons (`if status == MyEnum.ACTIVE
       story_id: str | None,
       cost_stream: dict | None,
   ) -> None:
+
       ...
 
   await service.log_request(
@@ -347,6 +361,7 @@ Inside Python this does not apply. Enum comparisons (`if status == MyEnum.ACTIVE
       story_id: str | None = None,
       cost_stream: dict = None,
   ) -> None:
+
       ...
 
   await service.log_request(user_id = user.user_id)
@@ -356,6 +371,7 @@ Inside Python this does not apply. Enum comparisons (`if status == MyEnum.ACTIVE
   # Good
   class Config:
       def __init__(self):
+
           # load config here
           pass
 
@@ -363,18 +379,25 @@ Inside Python this does not apply. Enum comparisons (`if status == MyEnum.ACTIVE
   class Config:
       _instance = None
       def __new__(cls):
+
           if cls._instance is None:
               cls._instance = super().__new__(cls)
           return cls._instance
   ```
 - No nested functions. Never define a function inside another function. Extract it as a private method on the class instead. If you need a callable for `asyncio.to_thread`, pass a method reference and its arguments.
-- No trivial wrapper helpers. Don't create helper functions that just wrap a single expression like dict construction or simple transforms. Inline the expression directly at the call site - it's easier to read and grep for:
+- No trivial wrapper helpers. Don't create helper functions that just wrap a single expression like dict construction or simple transforms. Inline the expression directly at the call site; it's easier to read and grep for:
   ```python
   # Good
-  return templates.TemplateResponse("index.html", {"request": request})
+  return templates.TemplateResponse(
+      "index.html",
+      {
+          "request": request
+      }
+  )
 
   # Bad
   def make_context(request, **extra):
+
       ctx = {"request": request}
       ctx.update(extra)
       return ctx
@@ -411,7 +434,7 @@ Every Python file must have a standard header at the top (120 `#` chars for sepa
 
 ## Comments
 
-- Comment non-trivial blocks. Before any block of code where the intent isn't immediately obvious from the code itself, write a brief 1-2 line comment explaining what the block does and why. The reader should understand the purpose of the next 10-20 lines without reading every line. Don't comment self-explanatory code - only where the context helps.
+- Comment non-trivial blocks. Before any block of code where the intent isn't immediately obvious from the code itself, write a brief 1-2 line comment explaining what the block does and why. The reader should understand the purpose of the next 10-20 lines without reading every line. Don't comment self-explanatory code; only where the context helps.
 - Three capitalization tiers for comments:
   1. Class-level section breakpoints (full-width `########` separators): ALL CAPS.
      - Good: `# STORY SUMMARY SERVICE`
