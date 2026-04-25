@@ -1,8 +1,8 @@
 # Python Style Guide
 
-> Covers Python code style: imports, spacing, naming, quotes, file headers, and comments. Project-agnostic; applies across projects.
+> Covers Python code style: imports, spacing, naming, quotes, file headers, and comments.
 
-## CRITICAL: Double Quotes Everywhere
+## Double Quotes Everywhere
 
 ALWAYS use double quotes for strings. This is a strict, non-negotiable rule.
 
@@ -11,7 +11,7 @@ ALWAYS use double quotes for strings. This is a strict, non-negotiable rule.
 
 No exceptions. Single quotes are never acceptable for strings.
 
-## CRITICAL: Fully Descriptive Names
+## Fully Descriptive Names
 
 Brevity is the enemy of clarity. Every name (variable, function, method, constant, class) must fully describe what it is, what it does, or what it's for. Never shorten, abbreviate, or drop words for brevity. If a name has multiple concepts, every concept must be present. A reader should understand the name's full meaning without looking at the implementation.
 

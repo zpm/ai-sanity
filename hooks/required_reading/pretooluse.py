@@ -1,17 +1,11 @@
-########################################################################################################################
-# hooks/pretooluse_required_reads.py
-#
-# PreToolUse entry script for the Write|Edit|NotebookEdit|Read matcher that forces required reading of style guides,
-# global and project CLAUDE.md, settings.json, and project-specific docs before a file-touching tool call is allowed to
-# run. Read is included so that wildcard rules (CLAUDE.md, settings.json) fire on the first tool call of a session and
-# so that extension/filepath rules shape Claude's reading of source code, not just edits to it.
-########################################################################################################################
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import _lib
+import _hook_io
+from required_reading._manifest import RequiredReadsPathNormalizer, RequiredReadsManifestLoader
+from required_reading._state import RequiredReadsState
 
 
 class PreToolUseRequiredReadsRuleChecks:
@@ -41,7 +35,7 @@ class PreToolUseRequiredReadsRuleChecks:
         raw_file_path_string = tool_input_dict.get(file_path_field_name)
         if not isinstance(raw_file_path_string, str) or not raw_file_path_string:
             return None
-        return _lib.RequiredReadsPathNormalizer.normalize_path(raw_file_path_string)
+        return RequiredReadsPathNormalizer.normalize_path(raw_file_path_string)
 
     @staticmethod
     def collect_applicable_rule_records(edited_file_abs_path):
@@ -51,16 +45,16 @@ class PreToolUseRequiredReadsRuleChecks:
         substring, or wildcard) matches the edited file path. Returns a list of RequiredReadsRuleRecord in
         manifest-discovery order (nearest project rules first, global rules last)."""
         rule_checks_class = PreToolUseRequiredReadsRuleChecks
-        discovered_manifest_abs_paths = _lib.RequiredReadsManifestLoader.discover_manifest_abs_paths(
+        discovered_manifest_abs_paths = RequiredReadsManifestLoader.discover_manifest_abs_paths(
             edited_file_abs_path = edited_file_abs_path
         )
-        global_manifest_abs_path = _lib.RequiredReadsPathNormalizer.normalize_path(
-            os.path.join(_lib.RequiredReadsPathNormalizer.get_effective_home_abs_path(), ".claude/required-reads.json")
+        global_manifest_abs_path = RequiredReadsPathNormalizer.normalize_path(
+            os.path.join(RequiredReadsPathNormalizer.get_effective_home_abs_path(), ".claude/required-reads.json")
         )
         flattened_rule_records = []
         for manifest_abs_path in discovered_manifest_abs_paths:
             is_global_manifest_bool = manifest_abs_path == global_manifest_abs_path
-            flattened_rule_records.extend(_lib.RequiredReadsManifestLoader.load_manifest_rule_records(
+            flattened_rule_records.extend(RequiredReadsManifestLoader.load_manifest_rule_records(
                 manifest_abs_path = manifest_abs_path,
                 is_global_manifest = is_global_manifest_bool
             ))
@@ -127,11 +121,11 @@ class PreToolUseRequiredReadsRuleChecks:
         Write/Edit/NotebookEdit on a target doc still demand a prior Read."""
         if tool_name_string != "Read":
             return False
-        discovered_manifest_abs_paths = _lib.RequiredReadsManifestLoader.discover_manifest_abs_paths(
+        discovered_manifest_abs_paths = RequiredReadsManifestLoader.discover_manifest_abs_paths(
             edited_file_abs_path = edited_file_abs_path
         )
         for manifest_abs_path in discovered_manifest_abs_paths:
-            loaded_rule_records = _lib.RequiredReadsManifestLoader.load_manifest_rule_records(
+            loaded_rule_records = RequiredReadsManifestLoader.load_manifest_rule_records(
                 manifest_abs_path = manifest_abs_path,
                 is_global_manifest = False
             )
@@ -149,7 +143,7 @@ class PreToolUseRequiredReadsRuleChecks:
         rules_to_fire_list = []
         rules_already_satisfied_list = []
         for candidate_rule_record in rule_records:
-            is_satisfied_bool = _lib.RequiredReadsState.is_dedupe_key_satisfied(
+            is_satisfied_bool = RequiredReadsState.is_dedupe_key_satisfied(
                 claude_session_id_string = claude_session_id_string,
                 dedupe_key_string = candidate_rule_record.dedupe_key
             )
@@ -221,9 +215,9 @@ class PreToolUseRequiredReadsHookEntry:
         fires. Sweeps stale session directories lazily on entry so cleanup happens without a daemon."""
         rule_checks_class = PreToolUseRequiredReadsRuleChecks
         try:
-            pretooluse_payload = _lib.PreToolUseHookIo.read_pretooluse_payload_from_stdin()
+            pretooluse_payload = _hook_io.PreToolUseHookIo.read_pretooluse_payload_from_stdin()
             try:
-                _lib.RequiredReadsState.sweep_stale_session_directories()
+                RequiredReadsState.sweep_stale_session_directories()
             except OSError:
                 pass
             claude_session_id_string = pretooluse_payload.get("session_id") or "unknown-session"
@@ -231,14 +225,14 @@ class PreToolUseRequiredReadsHookEntry:
                 pretooluse_payload = pretooluse_payload
             )
             if edited_file_abs_path is None:
-                _lib.PreToolUseHookIo.emit_passthrough_and_exit()
+                _hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
                 return
             if rule_checks_class.is_read_of_a_manifest_listed_doc(
                 tool_name_string = pretooluse_payload.get("tool_name", ""),
                 candidate_file_abs_path = edited_file_abs_path,
                 edited_file_abs_path = edited_file_abs_path
             ):
-                _lib.PreToolUseHookIo.emit_passthrough_and_exit()
+                _hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
                 return
             applicable_rule_records = rule_checks_class.collect_applicable_rule_records(
                 edited_file_abs_path = edited_file_abs_path
@@ -248,7 +242,7 @@ class PreToolUseRequiredReadsHookEntry:
                 claude_session_id_string = claude_session_id_string
             )
             if not rules_to_fire_list:
-                _lib.PreToolUseHookIo.emit_passthrough_and_exit()
+                _hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
                 return
             rules_with_missing_targets = rule_checks_class.find_rules_with_missing_read_targets(
                 rule_records = rules_to_fire_list
@@ -258,15 +252,15 @@ class PreToolUseRequiredReadsHookEntry:
                     rules_with_missing_targets = rules_with_missing_targets,
                     edited_file_abs_path = edited_file_abs_path
                 )
-                _lib.PreToolUseHookIo.emit_deny_decision_and_exit(missing_target_deny_reason_string)
+                _hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(missing_target_deny_reason_string)
                 return
             deny_reason_string = rule_checks_class.build_deny_reason_string(
                 unsatisfied_rule_records = rules_to_fire_list,
                 edited_file_abs_path = edited_file_abs_path
             )
-            _lib.PreToolUseHookIo.emit_deny_decision_and_exit(deny_reason_string)
+            _hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(deny_reason_string)
         except Exception:
-            _lib.PreToolUseHookIo.emit_passthrough_and_exit()
+            _hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
 
 
 if __name__ == "__main__":

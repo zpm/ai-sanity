@@ -1,31 +1,8 @@
 # JavaScript Style Guide
 
-> Covers JavaScript, CSS, and JSON style across ALL PROJECTS.
+> Covers JavaScript, CSS, and JSON style.
 
-## JSON Formatting
-
-JSON files are always expanded (pretty-printed) with every field on its own line. No collapsed single-line or collapsed-single-object forms. Nested objects and arrays indent one level. This applies to configuration, fixtures, manifests, and hand-authored payloads alike. Editor-generated minification is fine at the build boundary but never committed.
-
-Good:
-
-```json
-{
-  "rules": [
-    {
-      "extension": ".py",
-      "read": "~/docs/python.md"
-    }
-  ]
-}
-```
-
-Bad:
-
-```json
-{ "rules": [ { "extension": ".py", "read": "~/docs/python.md" } ] }
-```
-
-## CRITICAL: Double Quotes Everywhere
+## Double Quotes Everywhere
 
 ALWAYS use double quotes for strings. This is a strict, non-negotiable rule.
 
@@ -35,7 +12,7 @@ ALWAYS use double quotes for strings. This is a strict, non-negotiable rule.
 
 No exceptions. Single quotes are never acceptable for strings.
 
-## CRITICAL: Fully Descriptive Names
+## Fully Descriptive Names
 
 Brevity is the enemy of clarity. Every name (variable, function, method, constant, class, CSS class, HTML id) must fully describe what it is, what it does, or what it's for. Never shorten, abbreviate, or drop words for brevity. If a name has multiple concepts, every concept must be present. A reader should understand the name's full meaning without looking at the implementation.
 
@@ -62,6 +39,29 @@ Brevity is the enemy of clarity. Every name (variable, function, method, constan
   - Good: `wordCount`, `wordCountTotal`, `llmCostUsd`, `llmCostUsdTicks`
   - Bad: `totalWordCount`, `totalLlmCost`
   - This applies equally to object/registry keys: `costPerMilTokensInput`, `costPerMilTokensOutput`, `costProvided`. All `cost*` keys group together when sorted.
+
+## JSON Formatting
+
+JSON files are always expanded (pretty-printed) with every field on its own line. No collapsed single-line or collapsed-single-object forms. Nested objects and arrays indent one level. This applies to configuration, fixtures, manifests, and hand-authored payloads alike. Editor-generated minification is fine at the build boundary but never committed.
+
+Good:
+
+```json
+{
+  "rules": [
+    {
+      "extension": ".py",
+      "read": "~/docs/python.md"
+    }
+  ]
+}
+```
+
+Bad:
+
+```json
+{ "rules": [ { "extension": ".py", "read": "~/docs/python.md" } ] }
+```
 
 ## Comments
 

@@ -2,7 +2,7 @@
 
 > Covers shell script conventions across ALL PROJECTS.
 
-## CRITICAL: Fully Descriptive Names
+## Fully Descriptive Names
 
 Brevity is the enemy of clarity. Every name (variable, function, constant) must fully describe what it is, what it does, or what it's for. Never shorten, abbreviate, or drop words for brevity. If a name has multiple concepts, every concept must be present. A reader should understand the name's full meaning without looking at the implementation.
 

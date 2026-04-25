@@ -4,5 +4,13 @@
 			"path": "."
 		}
 	],
-	"settings": {}
+	"settings": {
+		"cSpell.words": [
+			"blockquotes",
+			"posttooluse",
+			"precompact",
+			"pretooluse",
+			"styleguides"
+		]
+	}
 }

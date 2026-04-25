@@ -1,6 +1,6 @@
 # Markdown
 
-> Covers markdown style and formatting across ALL PROJECTS.
+> Covers markdown style and formatting.
 
 ## Line Breaks
 
@@ -8,7 +8,7 @@ Do not introduce line breaks within a paragraph. Each paragraph is a single unbr
 
 ## Headings
 
-`#` for the document title, `##` for sections, `###` only when truly needed. No `####` or deeper. Most sub-topics work fine as a new paragraph - don't reach for a heading when a paragraph break will do.
+`#` for the document title, `##` for sections, `###` when needed. No `####` or deeper. Most sub-topics work fine as a new paragraph; don't use a heading when a paragraph break will do.
 
 ## Formatting
 
