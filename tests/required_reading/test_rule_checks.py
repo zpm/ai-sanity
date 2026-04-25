@@ -887,5 +887,38 @@ class TestBuildDenyReasonString(unittest.TestCase):
         self.assertNotIn("skip", missing_target_deny_reason_string)
 
 
+class TestIsFileInsideDotClaudeDirectory(unittest.TestCase):
+
+    def test_file_under_home_dot_claude_returns_true(self):
+
+        self.assertTrue(PreToolUseRequiredReadsRuleChecks.is_file_inside_dot_claude_directory(
+            edited_file_abs_path = "c:/users/zachm/.claude/plans/foo.md"
+        ))
+
+    def test_settings_json_under_home_dot_claude_returns_true(self):
+
+        self.assertTrue(PreToolUseRequiredReadsRuleChecks.is_file_inside_dot_claude_directory(
+            edited_file_abs_path = "c:/users/zachm/.claude/settings.json"
+        ))
+
+    def test_file_under_project_dot_claude_returns_true(self):
+
+        self.assertTrue(PreToolUseRequiredReadsRuleChecks.is_file_inside_dot_claude_directory(
+            edited_file_abs_path = "c:/users/zachm/dev/project/.claude/required-reads.json"
+        ))
+
+    def test_regular_project_file_returns_false(self):
+
+        self.assertFalse(PreToolUseRequiredReadsRuleChecks.is_file_inside_dot_claude_directory(
+            edited_file_abs_path = "c:/users/zachm/dev/project/src/foo.py"
+        ))
+
+    def test_partial_name_match_without_segment_boundary_returns_false(self):
+
+        self.assertFalse(PreToolUseRequiredReadsRuleChecks.is_file_inside_dot_claude_directory(
+            edited_file_abs_path = "c:/users/zachm/dev/project/src/.claude-config/foo.py"
+        ))
+
+
 if __name__ == "__main__":
     unittest.main()

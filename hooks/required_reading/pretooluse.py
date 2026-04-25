@@ -38,6 +38,14 @@ class PreToolUseRequiredReadsRuleChecks:
         return RequiredReadsPathNormalizer.normalize_path(raw_file_path_string)
 
     @staticmethod
+    def is_file_inside_dot_claude_directory(edited_file_abs_path):
+
+        """Returns True when the file lives under any `.claude/` directory. Files in `.claude/` are Claude's
+        operational space (plans, settings, memory, hooks state) where style guide enforcement does not apply.
+        The input path is already normalized to forward slashes and lowercased by `normalize_path`."""
+        return "/.claude/" in edited_file_abs_path
+
+    @staticmethod
     def collect_applicable_rule_records(edited_file_abs_path):
 
         """Discovers every manifest applicable to the edited file, loads and flattens their rules, applies project
@@ -225,6 +233,11 @@ class PreToolUseRequiredReadsHookEntry:
                 pretooluse_payload = pretooluse_payload
             )
             if edited_file_abs_path is None:
+                _hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
+                return
+            if rule_checks_class.is_file_inside_dot_claude_directory(
+                edited_file_abs_path = edited_file_abs_path
+            ):
                 _hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
                 return
             if rule_checks_class.is_read_of_a_manifest_listed_doc(
