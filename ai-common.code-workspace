@@ -10,7 +10,8 @@
 			"posttooluse",
 			"precompact",
 			"pretooluse",
-			"styleguides"
+			"styleguides",
+			"taskkill"
 		]
 	}
 }
