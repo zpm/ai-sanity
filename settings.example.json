@@ -1,0 +1,81 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $HOME/Dev/ai-common/hooks/no_memory/pretooluse_write.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $HOME/Dev/ai-common/hooks/no_memory/pretooluse_bash.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $HOME/Dev/ai-common/hooks/git_safety/pretooluse_bash.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $HOME/Dev/ai-common/hooks/bash_commands/pretooluse_bash.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Read|Glob|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $HOME/Dev/ai-common/hooks/no_memory/pretooluse_read.py"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|NotebookEdit|Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $HOME/Dev/ai-common/hooks/required_reading/pretooluse.py"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $HOME/Dev/ai-common/hooks/required_reading/posttooluse_observer.py"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $HOME/Dev/ai-common/hooks/required_reading/precompact.py"
+          }
+        ]
+      }
+    ]
+  }
+}

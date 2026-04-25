@@ -33,6 +33,28 @@ class TestPreToolUseBashGitSafetyEntryScript(unittest.TestCase):
             check = True
         )
 
+    def test_git_commit_is_denied(self):
+
+        exit_code, parsed_stdout = tests._subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
+            entry_script_relative_path = "git_safety/pretooluse_bash.py",
+            pretooluse_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
+                bash_command_string = "git commit -m 'test'"
+            )
+        )
+        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_deny_decision(
+            self, exit_code, parsed_stdout, "strictly prohibited"
+        )
+
+    def test_git_diff_passes_through(self):
+
+        exit_code, parsed_stdout = tests._subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
+            entry_script_relative_path = "git_safety/pretooluse_bash.py",
+            pretooluse_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
+                bash_command_string = "git diff HEAD"
+            )
+        )
+        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(self, exit_code, parsed_stdout)
+
     def test_mv_of_tracked_file_is_denied(self):
 
         exit_code, parsed_stdout = tests._subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(

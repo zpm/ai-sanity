@@ -46,6 +46,15 @@ class HookEntryScriptInvocationHelper:
             testcase.assertIn(expected_message_substring, permission_decision_reason_value)
 
     @staticmethod
+    def assert_allow_decision(testcase, exit_code, parsed_stdout):
+
+        """Asserts that the script emitted an allow decision (exit 0 with hookSpecificOutput on stdout)."""
+        testcase.assertEqual(exit_code, 0)
+        testcase.assertIsNotNone(parsed_stdout)
+        permission_decision_value = parsed_stdout["hookSpecificOutput"]["permissionDecision"]
+        testcase.assertEqual(permission_decision_value, "allow")
+
+    @staticmethod
     def assert_passthrough(testcase, exit_code, parsed_stdout):
 
         """Asserts that the script emitted a passthrough (exit 0 with no stdout)."""

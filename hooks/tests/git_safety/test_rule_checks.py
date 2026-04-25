@@ -10,6 +10,184 @@ import tests.fixtures
 from git_safety.pretooluse_bash import PreToolUseBashGitSafetyRuleChecks
 
 
+class TestCheckDenyGitWriteCommands(unittest.TestCase):
+
+    def _build(self, command):
+
+        return tests.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(command)
+
+    def test_blocks_git_commit(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git commit -m 'msg'"))
+        self.assertIsNotNone(result)
+        self.assertIn("strictly prohibited", result)
+
+    def test_blocks_git_push(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git push origin main"))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_pull(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git pull"))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_fetch(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git fetch origin"))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_merge(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git merge feature"))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_rebase(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git rebase main"))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_reset(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git reset --hard HEAD"))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_checkout(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git checkout feature"))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_branch(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git branch new-feature"))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_branch_no_args(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git branch"))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_stash(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git stash"))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_stash_pop(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git stash pop"))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_add(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git add ."))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_tag(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git tag v1.0"))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_rm(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git rm file.txt"))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_clean(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git clean -fd"))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_config(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git config user.name test"))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_remote(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git remote add origin url"))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_clone(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git clone https://github.com/foo/bar"))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_init(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git init"))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_cherry_pick(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git cherry-pick abc123"))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_revert(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git revert HEAD"))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_filter_branch(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git filter-branch --all"))
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_update_ref(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git update-ref refs/heads/main abc"))
+        self.assertIsNotNone(result)
+
+    def test_passes_git_diff(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git diff HEAD"))
+        self.assertIsNone(result)
+
+    def test_passes_git_status(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git status"))
+        self.assertIsNone(result)
+
+    def test_passes_git_log(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git log --oneline"))
+        self.assertIsNone(result)
+
+    def test_passes_git_ls_files(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git ls-files"))
+        self.assertIsNone(result)
+
+    def test_passes_git_show(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git show HEAD"))
+        self.assertIsNone(result)
+
+    def test_passes_git_mv(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git mv old.txt new.txt"))
+        self.assertIsNone(result)
+
+    def test_passes_non_git_command(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("echo hello"))
+        self.assertIsNone(result)
+
+    def test_passes_git_alone(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git"))
+        self.assertIsNone(result)
+
+    def test_passes_on_malformed_quoting(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build("git commit -m \"broken"))
+        self.assertIsNone(result)
+
+    def test_passes_on_empty_command(self):
+
+        result = PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands(self._build(""))
+        self.assertIsNone(result)
+
+
 class TestCheckRequireGitMv(unittest.TestCase):
 
     def setUp(self):

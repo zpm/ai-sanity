@@ -35,6 +35,22 @@ class PreToolUseHookIo:
         sys.exit(0)
 
     @staticmethod
+    def emit_allow_decision_and_exit():
+
+        """Writes an allow-decision hookSpecificOutput JSON object to stdout and exits, which permits the in-flight
+        tool call to proceed without further permission checks from settings.json."""
+        json.dump(
+            {
+                "hookSpecificOutput": {
+                    "hookEventName": "PreToolUse",
+                    "permissionDecision": "allow"
+                }
+            },
+            sys.stdout
+        )
+        sys.exit(0)
+
+    @staticmethod
     def emit_passthrough_and_exit():
 
         """Writes nothing to stdout and exits cleanly, which lets the tool call proceed to the normal settings.json

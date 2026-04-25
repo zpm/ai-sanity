@@ -13,6 +13,37 @@ class PreToolUseBashGitSafetyRuleChecks:
     """Git-safety rule checks for the Bash matcher. Each method takes the full PreToolUse payload dict and returns
     either a string deny-reason on violation or None to pass."""
 
+    _DENIED_GIT_SUBCOMMANDS = frozenset({
+        "add", "am", "apply", "bisect", "branch", "cherry-pick", "checkout", "clean", "clone",
+        "commit", "config", "fetch", "filter-branch", "filter-repo", "gc", "init", "merge",
+        "notes", "pack-refs", "prune", "pull", "push", "rebase", "remote", "repack", "reset",
+        "restore", "revert", "rm", "stash", "submodule", "switch", "tag", "update-index",
+        "update-ref", "worktree",
+    })
+
+    @staticmethod
+    def check_deny_git_write_commands(pretooluse_payload):
+
+        """Rejects all git write subcommands. Only read-only commands (diff, status, log, ls-files, show) and git mv
+        are allowed. Checks the token immediately after 'git' (position 1) against the denied subcommand set, which
+        matches the same surface area as the settings.json glob patterns (e.g. Bash(git commit *))."""
+        bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
+        try:
+            command_tokens = shlex.split(bash_command_string)
+        except ValueError:
+            return None
+        if not command_tokens or command_tokens[0] != "git":
+            return None
+        if len(command_tokens) < 2:
+            return None
+        subcommand = command_tokens[1]
+        if subcommand in PreToolUseBashGitSafetyRuleChecks._DENIED_GIT_SUBCOMMANDS:
+            return (
+                "Git write commands are strictly prohibited. Only read commands"
+                " (diff, status, log, ls-files, show) and `git mv` are allowed."
+            )
+        return None
+
     @staticmethod
     def check_require_git_mv_for_tracked_file_moves(pretooluse_payload):
 
@@ -71,6 +102,7 @@ class PreToolUseBashGitSafetyHookEntry:
     """Composes git-safety rule checks for Bash tool calls."""
 
     _rule_check_methods_to_run_in_order = (
+        PreToolUseBashGitSafetyRuleChecks.check_deny_git_write_commands,
         PreToolUseBashGitSafetyRuleChecks.check_require_git_mv_for_tracked_file_moves,
     )
 
