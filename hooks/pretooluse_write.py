@@ -16,36 +16,6 @@ class PreToolUseWriteRuleChecks:
     """Rule checks that apply only to the Write, Edit, and NotebookEdit matcher. Each method takes the full PreToolUse
     payload dict and returns either a string deny-reason on violation or None to pass."""
 
-    _content_field_name_by_write_like_tool_name = {
-        "Write": "content",
-        "Edit": "new_string",
-        "NotebookEdit": "new_source"
-    }
-
-    @staticmethod
-    def check_no_em_or_en_dash_in_write_or_edit_content(pretooluse_payload):
-
-        """Rejects Write/Edit/NotebookEdit payloads whose new content contains a U+2014 em dash or U+2013 en dash. The
-        rule comes from CLAUDE.md ('Never use em dashes in code, comments, docs, or strings'); this check expands that
-        to en dashes per the user's clarification on the spirit of the rule."""
-        write_like_tool_name = pretooluse_payload.get("tool_name", "")
-        rule_check_class = PreToolUseWriteRuleChecks
-        content_field_name = rule_check_class._content_field_name_by_write_like_tool_name.get(write_like_tool_name)
-        if content_field_name is None:
-            return None
-        new_content_string = (pretooluse_payload.get("tool_input") or {}).get(content_field_name) or ""
-        if "\u2014" in new_content_string:
-            return (
-                "Em dash found in content. CLAUDE.md forbids em and en dashes in code, comments, docs, and strings."
-                " Use a regular hyphen (-) instead."
-            )
-        if "\u2013" in new_content_string:
-            return (
-                "En dash found in content. CLAUDE.md forbids em and en dashes in code, comments, docs, and strings."
-                " Use a regular hyphen (-) instead."
-            )
-        return None
-
     @staticmethod
     def check_no_memory_access_for_write_or_edit_or_notebook_edit(pretooluse_payload):
 
@@ -65,8 +35,7 @@ class PreToolUseWriteHookEntry:
     first check that returns a deny reason wins."""
 
     _rule_check_methods_to_run_in_order = (
-        PreToolUseWriteRuleChecks.check_no_em_or_en_dash_in_write_or_edit_content,
-        PreToolUseWriteRuleChecks.check_no_memory_access_for_write_or_edit_or_notebook_edit
+        PreToolUseWriteRuleChecks.check_no_memory_access_for_write_or_edit_or_notebook_edit,
     )
 
     @staticmethod

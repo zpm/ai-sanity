@@ -1,8 +1,10 @@
 ########################################################################################################################
 # hooks/pretooluse_required_reads.py
 #
-# PreToolUse entry script for the Write|Edit|NotebookEdit matcher that forces required reading of style guides, global
-# and project CLAUDE.md, settings.json, and project-specific docs before a file-modifying tool call is allowed to run
+# PreToolUse entry script for the Write|Edit|NotebookEdit|Read matcher that forces required reading of style guides,
+# global and project CLAUDE.md, settings.json, and project-specific docs before a file-touching tool call is allowed to
+# run. Read is included so that wildcard rules (CLAUDE.md, settings.json) fire on the first tool call of a session and
+# so that extension/filepath rules shape Claude's reading of source code, not just edits to it.
 ########################################################################################################################
 import os
 import sys
@@ -15,20 +17,21 @@ import _lib
 class PreToolUseRequiredReadsRuleChecks:
 
     """Pure helpers composing the required-reads PreToolUse flow. Every rule is block-mode: an unsatisfied rule denies
-    the edit until Claude has Read the target doc in the current session. Each helper is independently unit-testable
-    by passing synthetic RequiredReadsRuleRecord instances."""
+    the tool call until Claude has Read the target doc in the current session. Each helper is independently
+    unit-testable by passing synthetic RequiredReadsRuleRecord instances."""
 
     _file_path_tool_input_field_name_by_tool_name = {
         "Write": "file_path",
         "Edit": "file_path",
-        "NotebookEdit": "notebook_path"
+        "NotebookEdit": "notebook_path",
+        "Read": "file_path"
     }
 
     @staticmethod
     def extract_edited_file_abs_path_or_none(pretooluse_payload):
 
-        """Returns the normalized absolute forward-slash path of the file being edited, or None if the payload does
-        not carry one. Edit and Write read `tool_input.file_path`; NotebookEdit reads `tool_input.notebook_path`."""
+        """Returns the normalized absolute forward-slash path of the file being touched, or None if the payload does
+        not carry one. Write/Edit/Read read `tool_input.file_path`; NotebookEdit reads `tool_input.notebook_path`."""
         rule_checks_class = PreToolUseRequiredReadsRuleChecks
         tool_name_string = pretooluse_payload.get("tool_name", "")
         file_path_field_name = rule_checks_class._file_path_tool_input_field_name_by_tool_name.get(tool_name_string)
@@ -113,6 +116,31 @@ class PreToolUseRequiredReadsRuleChecks:
         return match_passed_rule_records
 
     @staticmethod
+    def is_read_of_a_manifest_listed_doc(tool_name_string, candidate_file_abs_path, edited_file_abs_path):
+
+        """Returns True if the in-flight tool is Read and the file being read is listed as a `read` target in any
+        discoverable manifest (project walk-up plus global). When True, the caller must passthrough: Reads of required
+        docs must never be blocked, both to break self-target deadlocks (the `.md` rule pointing at `markdown.md`,
+        which is itself an `.md` file would block the very Read that satisfies it) and so loading required context is
+        never gated on other required context (Reading `python.md` should not demand `CLAUDE.md` first). The
+        PostToolUse observer still runs and marks the corresponding dedupe key satisfied. Only applies to Read;
+        Write/Edit/NotebookEdit on a target doc still demand a prior Read."""
+        if tool_name_string != "Read":
+            return False
+        discovered_manifest_abs_paths = _lib.RequiredReadsManifestLoader.discover_manifest_abs_paths(
+            edited_file_abs_path = edited_file_abs_path
+        )
+        for manifest_abs_path in discovered_manifest_abs_paths:
+            loaded_rule_records = _lib.RequiredReadsManifestLoader.load_manifest_rule_records(
+                manifest_abs_path = manifest_abs_path,
+                is_global_manifest = False
+            )
+            for candidate_rule_record in loaded_rule_records:
+                if candidate_rule_record.read_abs_path == candidate_file_abs_path:
+                    return True
+        return False
+
+    @staticmethod
     def partition_rules_into_unsatisfied_fire_and_already_satisfied(rule_records, claude_session_id_string):
 
         """Splits rules into two lists: those whose dedupe key is not yet satisfied within the session (fire list)
@@ -156,10 +184,10 @@ class PreToolUseRequiredReadsRuleChecks:
         ]
         joined_missing_target_description_string = "\n".join(missing_target_description_lines)
         return (
-            f"Required-reads configuration error: editing `{edited_file_abs_path}` requires documents that are"
-            f" missing on disk:\n{joined_missing_target_description_string}\n"
+            f"Required-reads configuration error: `{edited_file_abs_path}` requires documents that are missing on"
+            f" disk:\n{joined_missing_target_description_string}\n"
             f"Fix the setup (clone the missing repo, correct the manifest path, or remove the offending rule) before"
-            f" retrying this edit. Do not proceed without the required context."
+            f" retrying. Do not proceed without the required context."
         )
 
     @staticmethod
@@ -174,9 +202,9 @@ class PreToolUseRequiredReadsRuleChecks:
         ]
         joined_required_read_description_string = "\n".join(required_read_description_lines)
         return (
-            f"Required-reads block: editing `{edited_file_abs_path}` requires the following documents to be in"
-            f" context first:\n{joined_required_read_description_string}\n"
-            f"Use the Read tool to load each one, then retry this edit."
+            f"Required-reads block: `{edited_file_abs_path}` requires the following documents to be in context"
+            f" first:\n{joined_required_read_description_string}\n"
+            f"Use the Read tool to load each one, then retry."
         )
 
 
@@ -203,6 +231,13 @@ class PreToolUseRequiredReadsHookEntry:
                 pretooluse_payload = pretooluse_payload
             )
             if edited_file_abs_path is None:
+                _lib.PreToolUseHookIo.emit_passthrough_and_exit()
+                return
+            if rule_checks_class.is_read_of_a_manifest_listed_doc(
+                tool_name_string = pretooluse_payload.get("tool_name", ""),
+                candidate_file_abs_path = edited_file_abs_path,
+                edited_file_abs_path = edited_file_abs_path
+            ):
                 _lib.PreToolUseHookIo.emit_passthrough_and_exit()
                 return
             applicable_rule_records = rule_checks_class.collect_applicable_rule_records(

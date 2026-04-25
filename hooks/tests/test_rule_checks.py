@@ -21,47 +21,6 @@ import tests.fixtures
 import tests.fixtures_required_reads
 
 
-class TestCheckNoEmOrEnDash(unittest.TestCase):
-
-    def test_blocks_em_dash_in_write_content(self):
-
-        payload_with_em_dash = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_write_payload(
-            file_content = "hello \u2014 world"
-        )
-        rule_check_class = pretooluse_write.PreToolUseWriteRuleChecks
-        deny_reason = rule_check_class.check_no_em_or_en_dash_in_write_or_edit_content(payload_with_em_dash)
-        self.assertIsNotNone(deny_reason)
-        self.assertIn("Em dash", deny_reason)
-
-    def test_blocks_en_dash_in_write_content(self):
-
-        payload_with_en_dash = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_write_payload(
-            file_content = "hello \u2013 world"
-        )
-        rule_check_class = pretooluse_write.PreToolUseWriteRuleChecks
-        deny_reason = rule_check_class.check_no_em_or_en_dash_in_write_or_edit_content(payload_with_en_dash)
-        self.assertIsNotNone(deny_reason)
-        self.assertIn("En dash", deny_reason)
-
-    def test_blocks_em_dash_in_edit_new_string(self):
-
-        payload_with_em_dash_edit = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_edit_payload(
-            new_string_content = "foo \u2014 bar"
-        )
-        rule_check_class = pretooluse_write.PreToolUseWriteRuleChecks
-        deny_reason = rule_check_class.check_no_em_or_en_dash_in_write_or_edit_content(payload_with_em_dash_edit)
-        self.assertIsNotNone(deny_reason)
-
-    def test_passes_plain_hyphen(self):
-
-        payload_with_plain_hyphen = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_write_payload(
-            file_content = "hello - world"
-        )
-        rule_check_class = pretooluse_write.PreToolUseWriteRuleChecks
-        deny_reason = rule_check_class.check_no_em_or_en_dash_in_write_or_edit_content(payload_with_plain_hyphen)
-        self.assertIsNone(deny_reason)
-
-
 class TestCheckRequireGitMv(unittest.TestCase):
 
     def setUp(self):
@@ -765,10 +724,21 @@ class TestExtractEditedFilePath(unittest.TestCase):
         self.assertIsNotNone(extracted_abs_path)
         self.assertTrue(extracted_abs_path.endswith("/tmp/book.ipynb"))
 
+    def test_read_payload_returns_normalized_file_path(self):
+
+        read_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_read_payload(
+            file_path = "/tmp/foo.py"
+        )
+        extracted_abs_path = pretooluse_required_reads.PreToolUseRequiredReadsRuleChecks.extract_edited_file_abs_path_or_none(
+            pretooluse_payload = read_payload
+        )
+        self.assertIsNotNone(extracted_abs_path)
+        self.assertTrue(extracted_abs_path.endswith("/tmp/foo.py"))
+
     def test_unknown_tool_returns_none(self):
 
-        unrelated_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_read_payload(
-            file_path = "/tmp/foo.py"
+        unrelated_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
+            bash_command_string = "echo hello"
         )
         extracted_abs_path = pretooluse_required_reads.PreToolUseRequiredReadsRuleChecks.extract_edited_file_abs_path_or_none(
             pretooluse_payload = unrelated_payload
@@ -907,6 +877,96 @@ class TestFilterRulesByMatchCriterion(unittest.TestCase):
             candidate_file_abs_path = "/c/users/zachm/dev/project/client/index.js"
         )
         self.assertEqual(match_passed_rule_records, [])
+
+
+class TestIsReadOfAManifestListedDoc(tests.fixtures_required_reads.HomeOverrideEnvVarTestCaseMixin, unittest.TestCase):
+
+    """Unit tests for `PreToolUseRequiredReadsRuleChecks.is_read_of_a_manifest_listed_doc`. Reads of any
+    manifest-listed `read` target must always passthrough so loading required context is never blocked. Self-target
+    rules (the `.md` rule pointing at `markdown.md`) and cross-target chains (Reading `python.md` while wildcard
+    rules want `CLAUDE.md`) both deadlock without this exemption."""
+
+    def test_read_of_self_target_doc_returns_true(self):
+
+        markdown_doc_abs_path = os.path.join(self.sandboxed_home_abs_path, "markdown.md")
+        with open(markdown_doc_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
+            open_doc_file_handle.write("# md")
+        tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+            manifest_directory_abs_path = self.sandboxed_home_abs_path,
+            rule_dicts = [
+                {"extension": ".md", "read": markdown_doc_abs_path}
+            ]
+        )
+        normalized_candidate_abs_path = _lib.RequiredReadsPathNormalizer.normalize_path(markdown_doc_abs_path)
+        is_manifest_listed = pretooluse_required_reads.PreToolUseRequiredReadsRuleChecks.is_read_of_a_manifest_listed_doc(
+            tool_name_string = "Read",
+            candidate_file_abs_path = normalized_candidate_abs_path,
+            edited_file_abs_path = normalized_candidate_abs_path
+        )
+        self.assertTrue(is_manifest_listed)
+
+    def test_read_of_cross_target_doc_returns_true_even_when_other_rules_would_fire(self):
+
+        python_doc_abs_path = os.path.join(self.sandboxed_home_abs_path, "python.md")
+        claude_md_abs_path = os.path.join(self.sandboxed_home_abs_path, "CLAUDE.md")
+        with open(python_doc_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
+            open_doc_file_handle.write("# py")
+        with open(claude_md_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
+            open_doc_file_handle.write("# claude")
+        tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+            manifest_directory_abs_path = self.sandboxed_home_abs_path,
+            rule_dicts = [
+                {"read": claude_md_abs_path},
+                {"extension": ".py", "read": python_doc_abs_path}
+            ]
+        )
+        normalized_candidate_abs_path = _lib.RequiredReadsPathNormalizer.normalize_path(python_doc_abs_path)
+        is_manifest_listed = pretooluse_required_reads.PreToolUseRequiredReadsRuleChecks.is_read_of_a_manifest_listed_doc(
+            tool_name_string = "Read",
+            candidate_file_abs_path = normalized_candidate_abs_path,
+            edited_file_abs_path = normalized_candidate_abs_path
+        )
+        self.assertTrue(is_manifest_listed)
+
+    def test_read_of_unrelated_file_returns_false(self):
+
+        markdown_doc_abs_path = os.path.join(self.sandboxed_home_abs_path, "markdown.md")
+        with open(markdown_doc_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
+            open_doc_file_handle.write("# md")
+        tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+            manifest_directory_abs_path = self.sandboxed_home_abs_path,
+            rule_dicts = [
+                {"extension": ".md", "read": markdown_doc_abs_path}
+            ]
+        )
+        unrelated_abs_path = _lib.RequiredReadsPathNormalizer.normalize_path(
+            os.path.join(self.sandboxed_home_abs_path, "project", "notes.md")
+        )
+        is_manifest_listed = pretooluse_required_reads.PreToolUseRequiredReadsRuleChecks.is_read_of_a_manifest_listed_doc(
+            tool_name_string = "Read",
+            candidate_file_abs_path = unrelated_abs_path,
+            edited_file_abs_path = unrelated_abs_path
+        )
+        self.assertFalse(is_manifest_listed)
+
+    def test_edit_of_target_doc_returns_false(self):
+
+        markdown_doc_abs_path = os.path.join(self.sandboxed_home_abs_path, "markdown.md")
+        with open(markdown_doc_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
+            open_doc_file_handle.write("# md")
+        tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+            manifest_directory_abs_path = self.sandboxed_home_abs_path,
+            rule_dicts = [
+                {"extension": ".md", "read": markdown_doc_abs_path}
+            ]
+        )
+        normalized_candidate_abs_path = _lib.RequiredReadsPathNormalizer.normalize_path(markdown_doc_abs_path)
+        is_manifest_listed = pretooluse_required_reads.PreToolUseRequiredReadsRuleChecks.is_read_of_a_manifest_listed_doc(
+            tool_name_string = "Edit",
+            candidate_file_abs_path = normalized_candidate_abs_path,
+            edited_file_abs_path = normalized_candidate_abs_path
+        )
+        self.assertFalse(is_manifest_listed)
 
 
 class TestPartitionRulesIntoUnsatisfiedFireAndAlreadySatisfied(tests.fixtures_required_reads.HomeOverrideEnvVarTestCaseMixin, unittest.TestCase):

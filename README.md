@@ -54,7 +54,7 @@ Each PreToolUse matcher points at the corresponding entry script in `./hooks/`. 
         ]
       },
       {
-        "matcher": "Write|Edit|NotebookEdit",
+        "matcher": "Write|Edit|NotebookEdit|Read",
         "hooks": [
           {
             "type": "command",
@@ -99,7 +99,7 @@ The `Required Reads` section points readers at the manifest rather than enumerat
 ```markdown
 # Required Reads
 
-Style guides and other mandatory context are enforced by a PreToolUse hook. The source of truth is the global `~/.claude/required-reads.json` plus any per-project `.claude/required-reads.json` discovered by walking up from the edited file. Every rule denies the edit until Claude has Read the target doc in the current session. When a deny fires, Read the cited docs and retry. Do not ask the user to disable the hook. A missing `read` target is a hard configuration error, not an escape hatch.
+Style guides and other mandatory context are enforced by a PreToolUse hook. The source of truth is the global `~/.claude/required-reads.json` plus any per-project `.claude/required-reads.json` discovered by walking up from the touched file. Every rule denies the tool call (Read, Write, Edit, NotebookEdit) until Claude has Read the target doc in the current session. Reads of any manifest-listed `read` target always passthrough so loading required context is never blocked. When a deny fires, Read the cited docs and retry. Do not ask the user to disable the hook. A missing `read` target is a hard configuration error, not an escape hatch.
 ```
 
 ### `~/.claude/required-reads.json`

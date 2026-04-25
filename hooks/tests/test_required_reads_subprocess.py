@@ -179,6 +179,144 @@ class PreToolUseRequiredReadsSubprocessTestCase(
         )
         tests.test_entry_subprocesses.HookEntryScriptInvocationHelper.assert_passthrough(self, exit_code, parsed_stdout)
 
+    def test_read_of_python_file_with_matching_rule_emits_deny_envelope(self):
+
+        python_style_doc_abs_path = os.path.join(self.sandboxed_home_abs_path, "python.md")
+        with open(python_style_doc_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
+            open_doc_file_handle.write("# python style\n")
+        tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+            manifest_directory_abs_path = self.sandboxed_home_abs_path,
+            rule_dicts = [
+                {"extension": ".py", "read": python_style_doc_abs_path}
+            ]
+        )
+        read_target_abs_path = os.path.join(self.sandboxed_home_abs_path, "project", "src", "main.py")
+        os.makedirs(os.path.dirname(read_target_abs_path), exist_ok = True)
+        exit_code, parsed_stdout = tests.test_entry_subprocesses.HookEntryScriptInvocationHelper.invoke_entry_script(
+            entry_script_filename = "pretooluse_required_reads.py",
+            pretooluse_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_read_payload(
+                file_path = read_target_abs_path
+            )
+        )
+        tests.test_entry_subprocesses.HookEntryScriptInvocationHelper.assert_deny_decision(
+            self,
+            exit_code,
+            parsed_stdout,
+            expected_message_substring = "python.md"
+        )
+
+    def test_read_of_wildcard_only_file_demands_global_claude_md(self):
+
+        claude_md_abs_path = os.path.join(self.sandboxed_home_abs_path, "CLAUDE.md")
+        with open(claude_md_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
+            open_doc_file_handle.write("# claude md\n")
+        tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+            manifest_directory_abs_path = self.sandboxed_home_abs_path,
+            rule_dicts = [
+                {"read": claude_md_abs_path}
+            ]
+        )
+        unrelated_read_target_abs_path = os.path.join(self.sandboxed_home_abs_path, "notes.txt")
+        exit_code, parsed_stdout = tests.test_entry_subprocesses.HookEntryScriptInvocationHelper.invoke_entry_script(
+            entry_script_filename = "pretooluse_required_reads.py",
+            pretooluse_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_read_payload(
+                file_path = unrelated_read_target_abs_path
+            )
+        )
+        tests.test_entry_subprocesses.HookEntryScriptInvocationHelper.assert_deny_decision(
+            self,
+            exit_code,
+            parsed_stdout,
+            expected_message_substring = "claude.md"
+        )
+
+    def test_read_of_cross_target_doc_passes_through_even_when_wildcard_rule_unsatisfied(self):
+
+        python_style_doc_abs_path = os.path.join(self.sandboxed_home_abs_path, "python.md")
+        claude_md_abs_path = os.path.join(self.sandboxed_home_abs_path, "CLAUDE.md")
+        with open(python_style_doc_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
+            open_doc_file_handle.write("# python style\n")
+        with open(claude_md_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
+            open_doc_file_handle.write("# claude md\n")
+        tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+            manifest_directory_abs_path = self.sandboxed_home_abs_path,
+            rule_dicts = [
+                {"read": claude_md_abs_path},
+                {"extension": ".py", "read": python_style_doc_abs_path}
+            ]
+        )
+        exit_code, parsed_stdout = tests.test_entry_subprocesses.HookEntryScriptInvocationHelper.invoke_entry_script(
+            entry_script_filename = "pretooluse_required_reads.py",
+            pretooluse_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_read_payload(
+                file_path = python_style_doc_abs_path
+            )
+        )
+        tests.test_entry_subprocesses.HookEntryScriptInvocationHelper.assert_passthrough(self, exit_code, parsed_stdout)
+
+    def test_read_of_self_target_doc_passes_through_to_break_deadlock(self):
+
+        markdown_style_doc_abs_path = os.path.join(self.sandboxed_home_abs_path, "markdown.md")
+        with open(markdown_style_doc_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
+            open_doc_file_handle.write("# markdown style\n")
+        tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+            manifest_directory_abs_path = self.sandboxed_home_abs_path,
+            rule_dicts = [
+                {"extension": ".md", "read": markdown_style_doc_abs_path}
+            ]
+        )
+        exit_code, parsed_stdout = tests.test_entry_subprocesses.HookEntryScriptInvocationHelper.invoke_entry_script(
+            entry_script_filename = "pretooluse_required_reads.py",
+            pretooluse_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_read_payload(
+                file_path = markdown_style_doc_abs_path
+            )
+        )
+        tests.test_entry_subprocesses.HookEntryScriptInvocationHelper.assert_passthrough(self, exit_code, parsed_stdout)
+
+    def test_edit_of_self_target_doc_still_demands_prior_read(self):
+
+        markdown_style_doc_abs_path = os.path.join(self.sandboxed_home_abs_path, "markdown.md")
+        with open(markdown_style_doc_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
+            open_doc_file_handle.write("# markdown style\n")
+        tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+            manifest_directory_abs_path = self.sandboxed_home_abs_path,
+            rule_dicts = [
+                {"extension": ".md", "read": markdown_style_doc_abs_path}
+            ]
+        )
+        exit_code, parsed_stdout = tests.test_entry_subprocesses.HookEntryScriptInvocationHelper.invoke_entry_script(
+            entry_script_filename = "pretooluse_required_reads.py",
+            pretooluse_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_edit_payload(
+                new_string_content = "x",
+                file_path = markdown_style_doc_abs_path
+            )
+        )
+        tests.test_entry_subprocesses.HookEntryScriptInvocationHelper.assert_deny_decision(
+            self,
+            exit_code,
+            parsed_stdout,
+            expected_message_substring = "markdown.md"
+        )
+
+    def test_read_of_unmatched_file_with_no_wildcard_rule_passes_through(self):
+
+        python_style_doc_abs_path = os.path.join(self.sandboxed_home_abs_path, "python.md")
+        with open(python_style_doc_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
+            open_doc_file_handle.write("# python style\n")
+        tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+            manifest_directory_abs_path = self.sandboxed_home_abs_path,
+            rule_dicts = [
+                {"extension": ".py", "read": python_style_doc_abs_path}
+            ]
+        )
+        read_target_abs_path = os.path.join(self.sandboxed_home_abs_path, "notes.txt")
+        exit_code, parsed_stdout = tests.test_entry_subprocesses.HookEntryScriptInvocationHelper.invoke_entry_script(
+            entry_script_filename = "pretooluse_required_reads.py",
+            pretooluse_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_read_payload(
+                file_path = read_target_abs_path
+            )
+        )
+        tests.test_entry_subprocesses.HookEntryScriptInvocationHelper.assert_passthrough(self, exit_code, parsed_stdout)
+
     def test_project_override_silences_global_rule_end_to_end(self):
 
         global_python_doc_abs_path = os.path.join(self.sandboxed_home_abs_path, "global-python.md")

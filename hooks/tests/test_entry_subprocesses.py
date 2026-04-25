@@ -64,44 +64,6 @@ class HookEntryScriptInvocationHelper:
 
 class TestPreToolUseWriteEntryScript(unittest.TestCase):
 
-    def test_em_dash_in_write_content_is_denied(self):
-
-        exit_code, parsed_stdout = HookEntryScriptInvocationHelper.invoke_entry_script(
-            entry_script_filename = "pretooluse_write.py",
-            pretooluse_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_write_payload(
-                file_content = "hello \u2014 world"
-            )
-        )
-        HookEntryScriptInvocationHelper.assert_deny_decision(self, exit_code, parsed_stdout, "Em dash")
-
-    def test_em_dash_as_raw_utf8_bytes_is_denied_windows_cp1252_regression(self):
-
-        """Regression guard for the Windows cp1252 stdin bug: asserts the payload bytes really contain the three-byte
-        UTF-8 em dash sequence (not the ASCII-escaped form that silently sidesteps the mojibake) before verifying the
-        hook denies."""
-        em_dash_utf8_bytes = bytes([0xe2, 0x80, 0x94])
-        em_dash_character = em_dash_utf8_bytes.decode("utf-8")
-        pretooluse_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_write_payload(
-            file_content = f"hello {em_dash_character} world"
-        )
-        payload_utf8_bytes = json.dumps(pretooluse_payload, ensure_ascii = False).encode("utf-8")
-        self.assertIn(em_dash_utf8_bytes, payload_utf8_bytes)
-        exit_code, parsed_stdout = HookEntryScriptInvocationHelper.invoke_entry_script(
-            entry_script_filename = "pretooluse_write.py",
-            pretooluse_payload = pretooluse_payload
-        )
-        HookEntryScriptInvocationHelper.assert_deny_decision(self, exit_code, parsed_stdout, "Em dash")
-
-    def test_plain_hyphen_in_write_content_passes(self):
-
-        exit_code, parsed_stdout = HookEntryScriptInvocationHelper.invoke_entry_script(
-            entry_script_filename = "pretooluse_write.py",
-            pretooluse_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_write_payload(
-                file_content = "hello - world"
-            )
-        )
-        HookEntryScriptInvocationHelper.assert_passthrough(self, exit_code, parsed_stdout)
-
     def test_write_inside_auto_memory_directory_is_denied(self):
 
         exit_code, parsed_stdout = HookEntryScriptInvocationHelper.invoke_entry_script(
