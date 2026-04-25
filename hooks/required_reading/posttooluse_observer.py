@@ -3,7 +3,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import _hook_io
+from common import _hook_io
 from required_reading._manifest import RequiredReadsPathNormalizer, RequiredReadsManifestLoader
 from required_reading._state import RequiredReadsState
 

@@ -26,6 +26,6 @@ On Windows, `CLAUDE_CODE_GIT_BASH_PATH` must point to Git Bash (which it should 
 Run from the repo root:
 
 ```sh
-./hooks/test_hooks.sh         # unix/mac
-pwsh ./hooks/test_hooks.ps1   # windows
+./test_hooks.sh         # unix/mac
+pwsh ./test_hooks.ps1   # windows
 ```
