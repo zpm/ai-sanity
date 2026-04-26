@@ -54,19 +54,15 @@ class TestPreToolUseBashCommandEntryScript(unittest.TestCase):
             self, exit_code, parsed_stdout, "Edit tool"
         )
 
-    def test_cat_is_denied(self):
+    def test_cat_passes_through(self):
 
         exit_code, parsed_stdout = self._invoke("cat file.txt")
-        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_deny_decision(
-            self, exit_code, parsed_stdout, "Read, Grep, and Glob"
-        )
+        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(self, exit_code, parsed_stdout)
 
-    def test_ls_is_denied(self):
+    def test_ls_passes_through(self):
 
         exit_code, parsed_stdout = self._invoke("ls -la")
-        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_deny_decision(
-            self, exit_code, parsed_stdout, "Read, Grep, and Glob"
-        )
+        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(self, exit_code, parsed_stdout)
 
     def test_taskkill_is_denied(self):
 

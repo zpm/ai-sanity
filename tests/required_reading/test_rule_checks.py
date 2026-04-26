@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
 
 import tests.fixtures
 import tests.fixtures_required_reads
-from required_reading._manifest import RequiredReadsRuleRecord, RequiredReadsPathNormalizer, RequiredReadsManifestLoader
+from required_reading._manifest import RequiredReadsRuleRecord, RequiredReadsPathNormalizer, RequiredReadsManifestLoader, DiscoveredManifest
 from required_reading._state import RequiredReadsState
 from required_reading.pretooluse import PreToolUseRequiredReadsRuleChecks
 
@@ -292,22 +292,24 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
 
 class TestRequiredReadsManifestLoaderDiscovery(tests.fixtures_required_reads.HomeOverrideEnvVarTestCaseMixin, unittest.TestCase):
 
-    def test_only_global_manifest_present_returns_global_alone(self):
+    def test_hooks_repo_global_manifest_appears_as_non_project(self):
 
-        tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
-            manifest_directory_abs_path = self.sandboxed_home_abs_path,
-            rule_dicts = []
-        )
         project_directory_abs_path = os.path.join(self.sandboxed_home_abs_path, "some", "project")
         os.makedirs(project_directory_abs_path, exist_ok = True)
         edited_file_abs_path = os.path.join(project_directory_abs_path, "src", "foo.py")
-        discovered_manifest_abs_paths = RequiredReadsManifestLoader.discover_manifest_abs_paths(
+        discovered_manifests = RequiredReadsManifestLoader.discover_manifests(
             edited_file_abs_path = edited_file_abs_path
         )
-        self.assertEqual(len(discovered_manifest_abs_paths), 1)
-        self.assertTrue(discovered_manifest_abs_paths[0].endswith("/.claude/required-reads.json"))
+        non_project_manifests = [
+            dm for dm in discovered_manifests if not dm.is_project_walkup_manifest
+        ]
+        self.assertTrue(len(non_project_manifests) >= 1)
+        self.assertTrue(any(
+            dm.manifest_abs_path.endswith("/.claude/required-reading.global.json")
+            for dm in non_project_manifests
+        ))
 
-    def test_project_manifest_in_nearest_claude_directory_appears_first(self):
+    def test_discovery_order_is_global_then_home_then_project(self):
 
         project_directory_abs_path = os.path.join(self.sandboxed_home_abs_path, "some", "project")
         os.makedirs(project_directory_abs_path, exist_ok = True)
@@ -320,12 +322,19 @@ class TestRequiredReadsManifestLoaderDiscovery(tests.fixtures_required_reads.Hom
             rule_dicts = []
         )
         edited_file_abs_path = os.path.join(project_directory_abs_path, "src", "foo.py")
-        discovered_manifest_abs_paths = RequiredReadsManifestLoader.discover_manifest_abs_paths(
+        discovered_manifests = RequiredReadsManifestLoader.discover_manifests(
             edited_file_abs_path = edited_file_abs_path
         )
-        self.assertEqual(len(discovered_manifest_abs_paths), 2)
-        self.assertIn("/some/project/.claude/required-reads.json", discovered_manifest_abs_paths[0])
-        self.assertTrue(discovered_manifest_abs_paths[1].endswith("/.claude/required-reads.json"))
+        manifest_paths = [dm.manifest_abs_path for dm in discovered_manifests]
+        global_index = next(i for i, p in enumerate(manifest_paths) if "required-reading.global.json" in p)
+        home_index = next(
+            i for i, p in enumerate(manifest_paths)
+            if p.endswith("/.claude/required-reading.json") and "required-reading.global" not in p
+            and not discovered_manifests[i].is_project_walkup_manifest
+        )
+        project_index = next(i for i, dm in enumerate(discovered_manifests) if dm.is_project_walkup_manifest)
+        self.assertLess(global_index, home_index)
+        self.assertLess(home_index, project_index)
 
     def test_walk_passes_intermediate_directories_without_manifests(self):
 
@@ -336,11 +345,12 @@ class TestRequiredReadsManifestLoaderDiscovery(tests.fixtures_required_reads.Hom
             rule_dicts = []
         )
         edited_file_abs_path = os.path.join(deep_directory_abs_path, "foo.py")
-        discovered_manifest_abs_paths = RequiredReadsManifestLoader.discover_manifest_abs_paths(
+        discovered_manifests = RequiredReadsManifestLoader.discover_manifests(
             edited_file_abs_path = edited_file_abs_path
         )
-        self.assertEqual(len(discovered_manifest_abs_paths), 1)
-        self.assertIn("/a/b/.claude/required-reads.json", discovered_manifest_abs_paths[0])
+        project_manifests = [dm for dm in discovered_manifests if dm.is_project_walkup_manifest]
+        self.assertEqual(len(project_manifests), 1)
+        self.assertIn("/a/b/.claude/required-reading.json", project_manifests[0].manifest_abs_path)
 
     def test_walk_stops_at_home_and_does_not_escape_above(self):
 
@@ -350,18 +360,20 @@ class TestRequiredReadsManifestLoaderDiscovery(tests.fixtures_required_reads.Hom
             rule_dicts = []
         )
         edited_file_abs_path = os.path.join(self.sandboxed_home_abs_path, "project", "src", "foo.py")
-        discovered_manifest_abs_paths = RequiredReadsManifestLoader.discover_manifest_abs_paths(
+        discovered_manifests = RequiredReadsManifestLoader.discover_manifests(
             edited_file_abs_path = edited_file_abs_path
         )
-        self.assertEqual(discovered_manifest_abs_paths, [])
+        project_manifests = [dm for dm in discovered_manifests if dm.is_project_walkup_manifest]
+        self.assertEqual(project_manifests, [])
 
-    def test_no_manifests_anywhere_returns_empty_list(self):
+    def test_no_manifests_anywhere_returns_only_hooks_repo_global(self):
 
         edited_file_abs_path = os.path.join(self.sandboxed_home_abs_path, "a", "b", "foo.py")
-        discovered_manifest_abs_paths = RequiredReadsManifestLoader.discover_manifest_abs_paths(
+        discovered_manifests = RequiredReadsManifestLoader.discover_manifests(
             edited_file_abs_path = edited_file_abs_path
         )
-        self.assertEqual(discovered_manifest_abs_paths, [])
+        project_manifests = [dm for dm in discovered_manifests if dm.is_project_walkup_manifest]
+        self.assertEqual(project_manifests, [])
 
 
 class TestRequiredReadsState(tests.fixtures_required_reads.HomeOverrideEnvVarTestCaseMixin, unittest.TestCase):
@@ -847,7 +859,7 @@ class TestBuildDenyReasonString(unittest.TestCase):
         self.assertIn("required-reads.json#0", deny_reason_string)
         self.assertIn("required-reads.json#3", deny_reason_string)
 
-    def test_find_rules_with_missing_read_targets_returns_only_missing_ones(self):
+    def test_partition_rules_keeps_present_and_flags_required_missing(self):
 
         present_doc_directory_abs_path = tempfile.mkdtemp()
         present_doc_abs_path = os.path.join(present_doc_directory_abs_path, "present.md")
@@ -861,30 +873,31 @@ class TestBuildDenyReasonString(unittest.TestCase):
             rule_id = "m#missing",
             read_abs_path = "/nowhere/does-not-exist.md"
         )
-        rules_with_missing_targets = PreToolUseRequiredReadsRuleChecks.find_rules_with_missing_read_targets(
-            rule_records = [present_rule_record, missing_rule_record]
+        present_records, required_missing_records = (
+            PreToolUseRequiredReadsRuleChecks.partition_rules_by_missing_read_targets(
+                rule_records = [present_rule_record, missing_rule_record]
+            )
         )
-        self.assertEqual(len(rules_with_missing_targets), 1)
-        self.assertEqual(rules_with_missing_targets[0].rule_id, "m#missing")
+        self.assertEqual(len(present_records), 1)
+        self.assertEqual(present_records[0].rule_id, "m#present")
+        self.assertEqual(len(required_missing_records), 1)
+        self.assertEqual(required_missing_records[0].rule_id, "m#missing")
 
-    def test_build_missing_target_deny_reason_string_lists_every_missing_doc_with_no_escape_hatch(self):
+    def test_partition_rules_silently_drops_missing_home_claude_docs(self):
 
-        first_missing_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
-            rule_id = "m#first",
-            read_abs_path = "/nowhere/a.md"
+        effective_home_abs_path = RequiredReadsPathNormalizer.get_effective_home_abs_path()
+        missing_home_doc_abs_path = effective_home_abs_path + "/.claude/nonexistent-doc.md"
+        home_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
+            rule_id = "m#home",
+            read_abs_path = missing_home_doc_abs_path
         )
-        second_missing_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
-            rule_id = "m#second",
-            read_abs_path = "/nowhere/b.md"
+        present_records, required_missing_records = (
+            PreToolUseRequiredReadsRuleChecks.partition_rules_by_missing_read_targets(
+                rule_records = [home_rule_record]
+            )
         )
-        missing_target_deny_reason_string = PreToolUseRequiredReadsRuleChecks.build_missing_target_deny_reason_string(
-            rules_with_missing_targets = [first_missing_rule_record, second_missing_rule_record],
-            edited_file_abs_path = "/tmp/foo.py"
-        )
-        self.assertIn("/nowhere/a.md", missing_target_deny_reason_string)
-        self.assertIn("/nowhere/b.md", missing_target_deny_reason_string)
-        self.assertIn("configuration error", missing_target_deny_reason_string)
-        self.assertNotIn("skip", missing_target_deny_reason_string)
+        self.assertEqual(present_records, [])
+        self.assertEqual(required_missing_records, [])
 
 
 class TestIsFileInsideDotClaudeDirectory(unittest.TestCase):

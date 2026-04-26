@@ -1,0 +1,38 @@
+{
+  "rules": [
+    {
+      "read": "~/.claude/CLAUDE.md"
+    },
+    {
+      "read": "~/.claude/settings.json"
+    },
+    {
+      "extension": ".py",
+      "read": "./styleguides/python.md"
+    },
+    {
+      "extension": ".js",
+      "read": "./styleguides/javascript.md"
+    },
+    {
+      "extension": ".css",
+      "read": "./styleguides/javascript.md"
+    },
+    {
+      "extension": ".json",
+      "read": "./styleguides/javascript.md"
+    },
+    {
+      "extension": ".md",
+      "read": "./styleguides/markdown.md"
+    },
+    {
+      "extension": ".sh",
+      "read": "./styleguides/scripts.md"
+    },
+    {
+      "extension": ".ps1",
+      "read": "./styleguides/scripts.md"
+    }
+  ]
+}

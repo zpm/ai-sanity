@@ -17,35 +17,34 @@ RequiredReadsRuleRecord = collections.namedtuple(
     ]
 )
 
+DiscoveredManifest = collections.namedtuple(
+    "DiscoveredManifest",
+    [
+        "manifest_abs_path",
+        "is_project_walkup_manifest",
+    ]
+)
+
 
 class RequiredReadsPathNormalizer:
 
-    """Single canonicalization function for every path in the required-reads subsystem. All comparisons between paths
-    (rule `read` targets, candidate edited-file paths, override targets) must go through this so Windows vs Posix and
-    tilde-prefixed vs absolute forms collapse to the same string. Tilde expansion honors the test-only
-    HOOK_TEST_HOME_OVERRIDE env var so tests can point at a sandboxed home without touching the real ~."""
+    """Canonicalizes every path in the required-reads subsystem to forward-slash, lowercased absolute form."""
 
     @staticmethod
     def normalize_path(raw_path_string, base_directory_abs_path = None):
 
-        """Returns a forward-slash, lowercased absolute path. Tilde is expanded first (honoring
-        HOOK_TEST_HOME_OVERRIDE), then relative paths are resolved against `base_directory_abs_path` if given, then
-        `os.path.abspath`, then backslashes become forward slashes, then the whole string is lowercased. The lower
-        call handles Windows filesystem case-insensitivity (the common real bug: manifest `C:/...` vs Read
-        `c:/...`); it is technically lossy on Posix where `foo.md` and `FOO.md` can coexist, but case-colliding doc
-        paths do not occur in any meaningful deployment of this hook, so universal lowercasing simplifies the
-        canonicalization story."""
+        """Returns a forward-slash, lowercased absolute path."""
         home_expanded_path_string = RequiredReadsPathNormalizer._expand_home_honoring_test_override(raw_path_string)
         if base_directory_abs_path and not os.path.isabs(home_expanded_path_string):
             home_expanded_path_string = os.path.join(base_directory_abs_path, home_expanded_path_string)
         absolutised_path_string = os.path.abspath(home_expanded_path_string)
+        # lowercasing handles Windows case-insensitivity; harmless on Posix for doc paths
         return absolutised_path_string.replace("\\", "/").lower()
 
     @staticmethod
     def _expand_home_honoring_test_override(raw_path_string):
 
-        """Expands a leading `~` using HOOK_TEST_HOME_OVERRIDE if set, otherwise `os.path.expanduser`. Non-tilde paths
-        return unchanged."""
+        """Expands a leading `~` using HOOK_TEST_HOME_OVERRIDE if set, otherwise `os.path.expanduser`."""
         home_override_abs_path = os.environ.get("HOOK_TEST_HOME_OVERRIDE")
         if home_override_abs_path and raw_path_string.startswith("~"):
             if raw_path_string == "~":
@@ -57,10 +56,7 @@ class RequiredReadsPathNormalizer:
     @staticmethod
     def get_effective_home_abs_path():
 
-        """Returns the home directory that the required-reads subsystem treats as ~. HOOK_TEST_HOME_OVERRIDE wins
-        when set; otherwise `os.path.expanduser('~')`. Output is forward-slash-normalized and lowercased to match
-        `normalize_path`'s canonicalization, so directory walk-up comparisons in the manifest discovery path do not
-        miss on case differences."""
+        """Returns the normalized home directory. HOOK_TEST_HOME_OVERRIDE wins when set."""
         home_override_abs_path = os.environ.get("HOOK_TEST_HOME_OVERRIDE")
         if home_override_abs_path:
             return home_override_abs_path.replace("\\", "/").lower()
@@ -69,59 +65,86 @@ class RequiredReadsPathNormalizer:
 
 class RequiredReadsManifestLoader:
 
-    """Discovers and parses `.claude/required-reads.json` manifests. Project manifests live next to the edited file
-    (walk up until home is reached). The global manifest lives at `~/.claude/required-reads.json`. Every failure mode
-    (missing file, malformed JSON, wrong top-level shape, invalid rule) returns an empty list or skips the offending
-    rule so that hook execution never crashes an edit."""
+    """Discovers and loads required-reading manifests. Failure modes (missing file, bad JSON, invalid rules) return
+    empty lists or skip the offending rule so hook execution never crashes an edit."""
 
-    _project_manifest_relative_path = ".claude/required-reads.json"
-    _global_manifest_relative_path_from_home = ".claude/required-reads.json"
+    _project_manifest_relative_path = ".claude/required-reading.json"
+    _global_manifest_relative_path_from_repo_root = ".claude/required-reading.global.json"
 
     @staticmethod
-    def discover_manifest_abs_paths(edited_file_abs_path):
+    def get_hooks_repo_root_abs_path():
 
-        """Walks up from `dirname(edited_file_abs_path)` collecting `.claude/required-reads.json` files. Stops when
-        the walk reaches the effective home or the filesystem root. The global manifest is appended last if it
-        exists. Return value is ordered nearest-project-manifest first, global last. A `visited` set on normalized
-        paths guards against symlink loops."""
+        """Two directory levels up from `hooks/required_reading/`."""
+        return RequiredReadsPathNormalizer.normalize_path(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
+        )
+
+    @staticmethod
+    def discover_manifests(edited_file_abs_path):
+
+        """Returns discovered manifests in order: hooks-repo global, home, project walk-up."""
         loader_class = RequiredReadsManifestLoader
-        discovered_manifest_abs_paths = []
-        visited_directory_abs_paths = set()
+        discovered_manifests = []
+        seen_abs_paths = set()
+
+        # hooks-repo global (.claude/required-reading.global.json resolved via __file__)
+        global_manifest_abs_path = RequiredReadsPathNormalizer.normalize_path(
+            os.path.join(
+                loader_class.get_hooks_repo_root_abs_path(),
+                loader_class._global_manifest_relative_path_from_repo_root
+            )
+        )
+        if os.path.isfile(global_manifest_abs_path):
+            discovered_manifests.append(DiscoveredManifest(
+                manifest_abs_path = global_manifest_abs_path,
+                is_project_walkup_manifest = False
+            ))
+            seen_abs_paths.add(global_manifest_abs_path)
+
+        # home directory (~/.claude/required-reading.json, hardcoded, not via walk-up)
         effective_home_abs_path = RequiredReadsPathNormalizer.get_effective_home_abs_path()
+        home_manifest_abs_path = RequiredReadsPathNormalizer.normalize_path(
+            os.path.join(effective_home_abs_path, loader_class._project_manifest_relative_path)
+        )
+        if home_manifest_abs_path not in seen_abs_paths and os.path.isfile(home_manifest_abs_path):
+            discovered_manifests.append(DiscoveredManifest(
+                manifest_abs_path = home_manifest_abs_path,
+                is_project_walkup_manifest = False
+            ))
+            seen_abs_paths.add(home_manifest_abs_path)
+
+        # project walk-up (stops before $HOME, visited set guards against symlink loops)
+        visited_directory_abs_paths = set()
         current_directory_abs_path = RequiredReadsPathNormalizer.normalize_path(
             os.path.dirname(edited_file_abs_path)
         )
         while True:
             if current_directory_abs_path in visited_directory_abs_paths:
                 break
+            if current_directory_abs_path == effective_home_abs_path:
+                break
             visited_directory_abs_paths.add(current_directory_abs_path)
             candidate_project_manifest_abs_path = RequiredReadsPathNormalizer.normalize_path(
                 os.path.join(current_directory_abs_path, loader_class._project_manifest_relative_path)
             )
             if os.path.isfile(candidate_project_manifest_abs_path):
-                discovered_manifest_abs_paths.append(candidate_project_manifest_abs_path)
-            if current_directory_abs_path == effective_home_abs_path:
-                break
+                discovered_manifests.append(DiscoveredManifest(
+                    manifest_abs_path = candidate_project_manifest_abs_path,
+                    is_project_walkup_manifest = True
+                ))
+                seen_abs_paths.add(candidate_project_manifest_abs_path)
             parent_directory_abs_path = RequiredReadsPathNormalizer.normalize_path(
                 os.path.dirname(current_directory_abs_path)
             )
             if parent_directory_abs_path == current_directory_abs_path:
                 break
             current_directory_abs_path = parent_directory_abs_path
-        global_manifest_abs_path = RequiredReadsPathNormalizer.normalize_path(
-            os.path.join(effective_home_abs_path, loader_class._global_manifest_relative_path_from_home)
-        )
-        if global_manifest_abs_path not in discovered_manifest_abs_paths and os.path.isfile(global_manifest_abs_path):
-            discovered_manifest_abs_paths.append(global_manifest_abs_path)
-        return discovered_manifest_abs_paths
+        return discovered_manifests
 
     @staticmethod
     def load_manifest_rule_records(manifest_abs_path, is_global_manifest):
 
-        """Parses a single manifest file and returns a list of `RequiredReadsRuleRecord`. Returns [] on any file or
-        JSON parse error, and skips individual rules that are missing required fields or have invalid values. The
-        `is_global_manifest` flag controls whether the rules produced are eligible to be silenced by a project-level
-        `override`."""
+        """Parses a manifest file into rule records. Returns [] on any file or JSON error, skips invalid rules."""
         loader_class = RequiredReadsManifestLoader
         try:
             with open(manifest_abs_path, "r", encoding = "utf-8") as open_manifest_file_handle:
@@ -133,9 +156,17 @@ class RequiredReadsManifestLoader:
         raw_rule_objects = parsed_manifest_object.get("rules")
         if not isinstance(raw_rule_objects, list):
             return []
-        project_root_abs_path = RequiredReadsPathNormalizer.normalize_path(
-            os.path.dirname(os.path.dirname(manifest_abs_path))
-        )
+        # .claude/ manifests resolve relative paths against the project root (parent of .claude/),
+        # non-.claude/ manifests resolve against their own directory
+        manifest_parent_directory_basename = os.path.basename(os.path.dirname(manifest_abs_path))
+        if manifest_parent_directory_basename == ".claude":
+            base_directory_abs_path_for_relative_reads = RequiredReadsPathNormalizer.normalize_path(
+                os.path.dirname(os.path.dirname(manifest_abs_path))
+            )
+        else:
+            base_directory_abs_path_for_relative_reads = RequiredReadsPathNormalizer.normalize_path(
+                os.path.dirname(manifest_abs_path)
+            )
         produced_rule_records = []
         for raw_rule_object_index, raw_rule_object in enumerate(raw_rule_objects):
             if not isinstance(raw_rule_object, dict):
@@ -144,7 +175,7 @@ class RequiredReadsManifestLoader:
                 raw_rule_object = raw_rule_object,
                 raw_rule_object_index = raw_rule_object_index,
                 manifest_abs_path = manifest_abs_path,
-                project_root_abs_path = project_root_abs_path,
+                base_directory_abs_path_for_relative_reads = base_directory_abs_path_for_relative_reads,
                 is_global_manifest = is_global_manifest
             )
             if rule_record_or_none is not None:
@@ -155,16 +186,11 @@ class RequiredReadsManifestLoader:
     def _build_rule_record_or_none(raw_rule_object,
         raw_rule_object_index,
         manifest_abs_path,
-        project_root_abs_path,
+        base_directory_abs_path_for_relative_reads,
         is_global_manifest
     ):
 
-        """Validates a single raw rule dict and returns a `RequiredReadsRuleRecord`, or None if the rule is invalid.
-        Relative `read` paths resolve against the project root (the directory containing `.claude/`), not against the
-        manifest's own directory; this keeps rules natural to write (`./CLAUDE.md`, `./docs/stack/backend.md`). The
-        two match fields `extension` and `filepath` are mutually exclusive; both present is a validation error and the
-        rule is skipped. A rule with neither is a wildcard that matches every file. All unknown keys (including legacy
-        `mode`, `match`, and the `comment` documentation field) are ignored."""
+        """Returns a RequiredReadsRuleRecord or None if the rule is invalid."""
         read_path_string = raw_rule_object.get("read")
         if not isinstance(read_path_string, str) or not read_path_string:
             return None
@@ -180,7 +206,7 @@ class RequiredReadsManifestLoader:
             return None
         read_abs_path = RequiredReadsPathNormalizer.normalize_path(
             read_path_string,
-            base_directory_abs_path = project_root_abs_path
+            base_directory_abs_path = base_directory_abs_path_for_relative_reads
         )
         override_raw_value = raw_rule_object.get("override")
         override_abs_path = None

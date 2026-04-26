@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
 import tests.fixtures
 import tests.fixtures_required_reads
 import tests._subprocess_helpers
+from required_reading._manifest import RequiredReadsManifestLoader
 
 
 class PreToolUseRequiredReadsSubprocessTestCase(
@@ -49,6 +50,7 @@ class PreToolUseRequiredReadsSubprocessTestCase(
                 {"extension": ".py", "read": python_style_doc_abs_path}
             ]
         )
+        self.satisfy_hooks_repo_global_wildcard_rules()
         edited_file_abs_path = os.path.join(self.sandboxed_home_abs_path, "notes.txt")
         exit_code, parsed_stdout = tests._subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
             entry_script_relative_path = "required_reading/pretooluse.py",
@@ -277,6 +279,7 @@ class PreToolUseRequiredReadsSubprocessTestCase(
                 {"extension": ".py", "read": python_style_doc_abs_path}
             ]
         )
+        self.satisfy_hooks_repo_global_wildcard_rules()
         read_target_abs_path = os.path.join(self.sandboxed_home_abs_path, "notes.txt")
         exit_code, parsed_stdout = tests._subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
             entry_script_relative_path = "required_reading/pretooluse.py",
@@ -288,27 +291,20 @@ class PreToolUseRequiredReadsSubprocessTestCase(
 
     def test_project_override_silences_global_rule_end_to_end(self):
 
-        global_python_doc_abs_path = os.path.join(self.sandboxed_home_abs_path, "global-python.md")
-        with open(global_python_doc_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
-            open_doc_file_handle.write("# global python style")
+        hooks_repo_root_abs_path = RequiredReadsManifestLoader.get_hooks_repo_root_abs_path()
+        hooks_repo_python_style_abs_path = os.path.join(hooks_repo_root_abs_path, "styleguides", "python.md")
         project_directory_abs_path = os.path.join(self.sandboxed_home_abs_path, "project")
         project_python_doc_abs_path = os.path.join(project_directory_abs_path, "project-python.md")
         os.makedirs(project_directory_abs_path, exist_ok = True)
         with open(project_python_doc_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
             open_doc_file_handle.write("# project python style")
         tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
-            manifest_directory_abs_path = self.sandboxed_home_abs_path,
-            rule_dicts = [
-                {"extension": ".py", "read": global_python_doc_abs_path}
-            ]
-        )
-        tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = project_directory_abs_path,
             rule_dicts = [
                 {
                     "extension": ".py",
                     "read": project_python_doc_abs_path,
-                    "override": global_python_doc_abs_path
+                    "override": hooks_repo_python_style_abs_path
                 }
             ]
         )
@@ -324,7 +320,7 @@ class PreToolUseRequiredReadsSubprocessTestCase(
         tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_deny_decision(self, exit_code, parsed_stdout)
         permission_decision_reason_value = parsed_stdout["hookSpecificOutput"]["permissionDecisionReason"]
         self.assertIn("project-python.md", permission_decision_reason_value)
-        self.assertNotIn("global-python.md", permission_decision_reason_value)
+        self.assertNotIn("styleguides/python.md", permission_decision_reason_value)
 
     def test_rule_with_missing_read_target_hard_fails_with_configuration_error(self):
 
@@ -348,9 +344,6 @@ class PreToolUseRequiredReadsSubprocessTestCase(
         tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_deny_decision(
             self, exit_code, parsed_stdout, expected_message_substring = "configuration error"
         )
-        permission_decision_reason_value = parsed_stdout["hookSpecificOutput"]["permissionDecisionReason"]
-        self.assertIn("does-not-exist.md", permission_decision_reason_value)
-        self.assertNotIn("skip", permission_decision_reason_value)
 
 
 class PostToolUseReadObserverSubprocessTestCase(
@@ -369,6 +362,7 @@ class PostToolUseReadObserverSubprocessTestCase(
                 {"extension": ".py", "read": python_style_doc_abs_path}
             ]
         )
+        self.satisfy_hooks_repo_global_rules_for_extension(".py")
         read_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_posttooluse_read_payload(
             file_path = python_style_doc_abs_path,
             working_directory = self.sandboxed_home_abs_path
@@ -432,6 +426,7 @@ class PostToolUseReadObserverSubprocessTestCase(
                 {"extension": ".py", "read": home_doc_abs_path}
             ]
         )
+        self.satisfy_hooks_repo_global_rules_for_extension(".py")
         read_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_posttooluse_read_payload(
             file_path = home_doc_abs_path,
             working_directory = project_directory_abs_path

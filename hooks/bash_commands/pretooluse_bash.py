@@ -44,13 +44,6 @@ class PreToolUseBashCommandRuleChecks:
 
     _DENIED_TEXT_MANIPULATION = frozenset({"sed", "awk", "tee"})
 
-    _DENIED_TOOL_BYPASS_COMMANDS = frozenset({
-        "cat", "head", "tail", "less", "more", "bat",
-        "grep", "rg", "ag", "ack", "ripgrep",
-        "find", "fd",
-        "ls", "tree",
-    })
-
     @staticmethod
     def check_allowed_command(pretooluse_payload):
 
@@ -156,22 +149,6 @@ class PreToolUseBashCommandRuleChecks:
         return None
 
     @staticmethod
-    def check_no_builtin_tool_bypass(pretooluse_payload):
-
-        """Rejects shell commands that duplicate built-in tools: cat/head/tail/less/more/bat (use Read),
-        grep/rg/ag/ack/ripgrep (use Grep), find/fd (use Glob), ls/tree (use Glob)."""
-        bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
-        clauses = BashCommandParser.extract_command_clauses(bash_command_string)
-        checks = PreToolUseBashCommandRuleChecks
-        for clause in clauses:
-            if clause[0] in checks._DENIED_TOOL_BYPASS_COMMANDS:
-                return (
-                    "Do not use Bash for file reading (cat/head/tail), searching (grep/rg/find/fd),"
-                    " or listing (ls/tree). Use the Read, Grep, and Glob tools instead."
-                )
-        return None
-
-    @staticmethod
     def check_no_taskkill(pretooluse_payload):
 
         """Rejects taskkill commands."""
@@ -193,7 +170,6 @@ class PreToolUseBashCommandHookEntry:
         PreToolUseBashCommandRuleChecks.check_no_shell_spawning,
         PreToolUseBashCommandRuleChecks.check_no_github_api,
         PreToolUseBashCommandRuleChecks.check_no_text_manipulation,
-        PreToolUseBashCommandRuleChecks.check_no_builtin_tool_bypass,
         PreToolUseBashCommandRuleChecks.check_no_taskkill,
     )
 
