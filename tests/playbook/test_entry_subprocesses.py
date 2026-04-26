@@ -13,8 +13,8 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "hooks"))
 
-import tests.fixtures
-import tests._subprocess_helpers
+import tests._common.fixtures
+import tests._common.subprocess_helpers
 
 
 class TestPreToolUsePlaybookEntryScript(unittest.TestCase):
@@ -44,9 +44,9 @@ class TestPreToolUsePlaybookEntryScript(unittest.TestCase):
 
         if working_directory is None:
             working_directory = self.temp_project_directory
-        return tests._subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
+        return tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
             entry_script_relative_path = "playbook/pretooluse_bash.py",
-            pretooluse_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
+            pretooluse_payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
                 bash_command_string = command,
                 working_directory = working_directory
             )
@@ -55,14 +55,14 @@ class TestPreToolUsePlaybookEntryScript(unittest.TestCase):
     def test_exact_matching_command_is_allowed(self):
 
         exit_code, parsed_stdout = self._invoke("python -m unittest discover -s tests -t . -v")
-        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_allow_decision(
+        tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_allow_decision(
             self, exit_code, parsed_stdout
         )
 
     def test_prefix_matching_command_is_allowed(self):
 
         exit_code, parsed_stdout = self._invoke("python -m unittest tests.playbook.test_rule_checks -v")
-        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_allow_decision(
+        tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_allow_decision(
             self, exit_code, parsed_stdout
         )
 
@@ -71,14 +71,14 @@ class TestPreToolUsePlaybookEntryScript(unittest.TestCase):
         exit_code, parsed_stdout = self._invoke(
             "python -m unittest discover -s tests -t . -v 2>&1 | tail -5"
         )
-        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_allow_decision(
+        tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_allow_decision(
             self, exit_code, parsed_stdout
         )
 
     def test_non_matching_command_passes_through(self):
 
         exit_code, parsed_stdout = self._invoke("ls -la")
-        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
+        tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
             self, exit_code, parsed_stdout
         )
 
@@ -87,7 +87,7 @@ class TestPreToolUsePlaybookEntryScript(unittest.TestCase):
         exit_code, parsed_stdout = self._invoke(
             "python -m unittest discover -s tests -t . -v && rm -rf /"
         )
-        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
+        tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
             self, exit_code, parsed_stdout
         )
 
@@ -96,7 +96,7 @@ class TestPreToolUsePlaybookEntryScript(unittest.TestCase):
         exit_code, parsed_stdout = self._invoke(
             "python -m unittest discover -s tests -t . -v | rm -rf /"
         )
-        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
+        tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
             self, exit_code, parsed_stdout
         )
 
@@ -105,7 +105,7 @@ class TestPreToolUsePlaybookEntryScript(unittest.TestCase):
         exit_code, parsed_stdout = self._invoke(
             "python -m unittest discover -s tests -t . -v > output.txt"
         )
-        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
+        tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
             self, exit_code, parsed_stdout
         )
 
@@ -116,14 +116,14 @@ class TestPreToolUsePlaybookEntryScript(unittest.TestCase):
             command = "python -m unittest discover -s tests -t . -v",
             working_directory = empty_temp_directory
         )
-        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
+        tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
             self, exit_code, parsed_stdout
         )
 
     def test_empty_command_passes_through(self):
 
         exit_code, parsed_stdout = self._invoke("")
-        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
+        tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
             self, exit_code, parsed_stdout
         )
 

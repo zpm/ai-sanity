@@ -72,6 +72,7 @@ class GitCommandsCheck:
         "ls-files",
         "ls-remote",
         "ls-tree",
+        "mv",
         "name-rev",
         "rev-list",
         "rev-parse",

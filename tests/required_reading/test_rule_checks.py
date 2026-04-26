@@ -6,14 +6,14 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "hooks"))
 
-import tests.fixtures
-import tests.fixtures_required_reads
+import tests._common.fixtures
+import tests.required_reading.fixtures_required_reads
 import required_reading._manifest
 import required_reading._state
 import required_reading.pretooluse
 
 
-class TestRequiredReadsPathNormalizer(tests.fixtures_required_reads.HomeOverrideEnvVarTestCaseMixin, unittest.TestCase):
+class TestRequiredReadsPathNormalizer(tests.required_reading.fixtures_required_reads.HomeOverrideEnvVarTestCaseMixin, unittest.TestCase):
 
     """Unit tests for `required_reading._manifest.RequiredReadsPathNormalizer.normalize_path`. Every path comparison in the required-reads
     subsystem goes through this function, so the tests focus on the three documented behaviors: tilde expansion with
@@ -62,13 +62,13 @@ class TestRequiredReadsPathNormalizer(tests.fixtures_required_reads.HomeOverride
         self.assertEqual(normalized_path_string, normalized_path_string.lower())
 
 
-class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.HomeOverrideEnvVarTestCaseMixin, unittest.TestCase):
+class TestRequiredReadsManifestLoaderLoadRecords(tests.required_reading.fixtures_required_reads.HomeOverrideEnvVarTestCaseMixin, unittest.TestCase):
 
     """Unit tests for `required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records`."""
 
     def test_well_formed_manifest_returns_one_record_per_rule(self):
 
-        manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+        manifest_abs_path = tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
                 {"extension": ".py", "read": "~/docs/python.md"},
@@ -86,7 +86,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
 
     def test_malformed_json_returns_empty_list(self):
 
-        manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_raw_manifest_body(
+        manifest_abs_path = tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_raw_manifest_body(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             raw_manifest_body_string = "{not valid json"
         )
@@ -98,7 +98,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
 
     def test_top_level_not_object_returns_empty_list(self):
 
-        manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_raw_manifest_body(
+        manifest_abs_path = tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_raw_manifest_body(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             raw_manifest_body_string = "[1, 2, 3]"
         )
@@ -110,7 +110,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
 
     def test_missing_rules_key_returns_empty_list(self):
 
-        manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_raw_manifest_body(
+        manifest_abs_path = tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_raw_manifest_body(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             raw_manifest_body_string = "{\"other\": []}"
         )
@@ -122,7 +122,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
 
     def test_rules_value_not_list_returns_empty_list(self):
 
-        manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_raw_manifest_body(
+        manifest_abs_path = tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_raw_manifest_body(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             raw_manifest_body_string = "{\"rules\": {}}"
         )
@@ -142,7 +142,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
 
     def test_rule_with_only_read_is_a_valid_wildcard(self):
 
-        manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+        manifest_abs_path = tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
                 {"read": "~/docs/always.md"}
@@ -158,7 +158,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
 
     def test_rule_missing_read_field_is_skipped_but_siblings_kept(self):
 
-        manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+        manifest_abs_path = tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
                 {"extension": ".py"},
@@ -174,7 +174,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
 
     def test_rule_with_both_extension_and_filepath_is_skipped(self):
 
-        manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+        manifest_abs_path = tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
                 {"extension": ".py", "filepath": "/server/", "read": "~/docs/both.md"},
@@ -190,7 +190,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
 
     def test_filepath_rule_populates_only_filepath_field(self):
 
-        manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+        manifest_abs_path = tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
                 {"filepath": "/server/", "read": "~/docs/backend.md"}
@@ -206,7 +206,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
 
     def test_match_field_values_are_lowercased_at_load_time(self):
 
-        manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+        manifest_abs_path = tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
                 {"extension": ".PY", "read": "~/docs/python.md"},
@@ -222,7 +222,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
 
     def test_unknown_fields_including_comment_and_legacy_match_and_mode_are_ignored(self):
 
-        manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+        manifest_abs_path = tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
                 {
@@ -246,7 +246,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
 
         project_root_abs_path = os.path.join(self.sandboxed_home_abs_path, "some-project")
         os.makedirs(project_root_abs_path, exist_ok = True)
-        manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+        manifest_abs_path = tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = project_root_abs_path,
             rule_dicts = [
                 {"extension": ".py", "read": "./docs/python.md"}
@@ -263,7 +263,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
 
     def test_dedupe_key_defaults_to_normalized_read_path(self):
 
-        manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+        manifest_abs_path = tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
                 {"extension": ".py", "read": "~/docs/python.md"}
@@ -277,7 +277,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
 
     def test_explicit_dedupe_key_overrides_default(self):
 
-        manifest_abs_path = tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+        manifest_abs_path = tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
                 {"extension": ".py", "read": "~/docs/python.md", "dedupe_key": "python-style-guide"}
@@ -290,7 +290,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
         self.assertEqual(loaded_rule_records[0].dedupe_key, "python-style-guide")
 
 
-class TestRequiredReadsManifestLoaderDiscovery(tests.fixtures_required_reads.HomeOverrideEnvVarTestCaseMixin, unittest.TestCase):
+class TestRequiredReadsManifestLoaderDiscovery(tests.required_reading.fixtures_required_reads.HomeOverrideEnvVarTestCaseMixin, unittest.TestCase):
 
     def test_hooks_repo_global_manifest_appears_as_non_project(self):
 
@@ -313,7 +313,7 @@ class TestRequiredReadsManifestLoaderDiscovery(tests.fixtures_required_reads.Hom
 
         project_directory_abs_path = os.path.join(self.sandboxed_home_abs_path, "some", "project")
         os.makedirs(project_directory_abs_path, exist_ok = True)
-        tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+        tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = project_directory_abs_path,
             rule_dicts = []
         )
@@ -330,7 +330,7 @@ class TestRequiredReadsManifestLoaderDiscovery(tests.fixtures_required_reads.Hom
 
         deep_directory_abs_path = os.path.join(self.sandboxed_home_abs_path, "a", "b", "c", "d")
         os.makedirs(deep_directory_abs_path, exist_ok = True)
-        tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+        tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = os.path.join(self.sandboxed_home_abs_path, "a", "b"),
             rule_dicts = []
         )
@@ -345,7 +345,7 @@ class TestRequiredReadsManifestLoaderDiscovery(tests.fixtures_required_reads.Hom
     def test_walk_stops_at_home_and_does_not_escape_above(self):
 
         grandparent_directory_abs_path = os.path.dirname(self.sandboxed_home_abs_path)
-        tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+        tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = grandparent_directory_abs_path,
             rule_dicts = []
         )
@@ -366,7 +366,7 @@ class TestRequiredReadsManifestLoaderDiscovery(tests.fixtures_required_reads.Hom
         self.assertEqual(project_manifests, [])
 
 
-class TestRequiredReadsState(tests.fixtures_required_reads.HomeOverrideEnvVarTestCaseMixin, unittest.TestCase):
+class TestRequiredReadsState(tests.required_reading.fixtures_required_reads.HomeOverrideEnvVarTestCaseMixin, unittest.TestCase):
 
     def test_unmarked_dedupe_key_is_not_satisfied(self):
 
@@ -495,7 +495,7 @@ class TestExtractEditedFilePath(unittest.TestCase):
 
     def test_edit_payload_returns_normalized_file_path(self):
 
-        edit_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_edit_payload(
+        edit_payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_edit_payload(
             new_string_content = "x",
             file_path = "/tmp/foo.py"
         )
@@ -507,7 +507,7 @@ class TestExtractEditedFilePath(unittest.TestCase):
 
     def test_write_payload_returns_normalized_file_path(self):
 
-        write_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_write_payload(
+        write_payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_write_payload(
             file_content = "x",
             file_path = "/tmp/bar.py"
         )
@@ -519,7 +519,7 @@ class TestExtractEditedFilePath(unittest.TestCase):
 
     def test_notebook_edit_payload_returns_notebook_path(self):
 
-        notebook_edit_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_base_payload(
+        notebook_edit_payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_base_payload(
             tool_name = "NotebookEdit",
             tool_input = {"notebook_path": "/tmp/book.ipynb", "new_source": "x", "cell_id": "c"}
         )
@@ -531,7 +531,7 @@ class TestExtractEditedFilePath(unittest.TestCase):
 
     def test_read_payload_returns_normalized_file_path(self):
 
-        read_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_read_payload(
+        read_payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_read_payload(
             file_path = "/tmp/foo.py"
         )
         extracted_abs_path = required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.extract_edited_file_abs_path_or_none(
@@ -542,7 +542,7 @@ class TestExtractEditedFilePath(unittest.TestCase):
 
     def test_unknown_tool_returns_none(self):
 
-        unrelated_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
+        unrelated_payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
             bash_command_string = "echo hello"
         )
         extracted_abs_path = required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.extract_edited_file_abs_path_or_none(
@@ -552,7 +552,7 @@ class TestExtractEditedFilePath(unittest.TestCase):
 
     def test_missing_file_path_field_returns_none(self):
 
-        empty_edit_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_base_payload(
+        empty_edit_payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_base_payload(
             tool_name = "Edit",
             tool_input = {}
         )
@@ -677,14 +677,14 @@ class TestFilterRulesByMatchCriterion(unittest.TestCase):
         self.assertEqual(match_passed_rule_records, [])
 
 
-class TestIsReadOfAManifestListedDoc(tests.fixtures_required_reads.HomeOverrideEnvVarTestCaseMixin, unittest.TestCase):
+class TestIsReadOfAManifestListedDoc(tests.required_reading.fixtures_required_reads.HomeOverrideEnvVarTestCaseMixin, unittest.TestCase):
 
     def test_read_of_self_target_doc_returns_true(self):
 
         markdown_doc_abs_path = os.path.join(self.sandboxed_home_abs_path, "markdown.md")
         with open(markdown_doc_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
             open_doc_file_handle.write("# md")
-        tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+        tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
                 {"extension": ".md", "read": markdown_doc_abs_path}
@@ -706,7 +706,7 @@ class TestIsReadOfAManifestListedDoc(tests.fixtures_required_reads.HomeOverrideE
             open_doc_file_handle.write("# py")
         with open(claude_md_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
             open_doc_file_handle.write("# claude")
-        tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+        tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
                 {"read": claude_md_abs_path},
@@ -726,7 +726,7 @@ class TestIsReadOfAManifestListedDoc(tests.fixtures_required_reads.HomeOverrideE
         markdown_doc_abs_path = os.path.join(self.sandboxed_home_abs_path, "markdown.md")
         with open(markdown_doc_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
             open_doc_file_handle.write("# md")
-        tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+        tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
                 {"extension": ".md", "read": markdown_doc_abs_path}
@@ -747,7 +747,7 @@ class TestIsReadOfAManifestListedDoc(tests.fixtures_required_reads.HomeOverrideE
         markdown_doc_abs_path = os.path.join(self.sandboxed_home_abs_path, "markdown.md")
         with open(markdown_doc_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
             open_doc_file_handle.write("# md")
-        tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+        tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
                 {"extension": ".md", "read": markdown_doc_abs_path}
@@ -762,7 +762,7 @@ class TestIsReadOfAManifestListedDoc(tests.fixtures_required_reads.HomeOverrideE
         self.assertFalse(is_manifest_listed)
 
 
-class TestPartitionRulesIntoUnsatisfiedFireAndAlreadySatisfied(tests.fixtures_required_reads.HomeOverrideEnvVarTestCaseMixin, unittest.TestCase):
+class TestPartitionRulesIntoUnsatisfiedFireAndAlreadySatisfied(tests.required_reading.fixtures_required_reads.HomeOverrideEnvVarTestCaseMixin, unittest.TestCase):
 
     def test_no_flags_set_means_every_rule_fires(self):
 

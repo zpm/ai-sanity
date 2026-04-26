@@ -4,7 +4,7 @@ import subprocess
 import sys
 
 
-HOOKS_DIRECTORY_ABSOLUTE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "hooks")
+HOOKS_DIRECTORY_ABSOLUTE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "hooks")
 PYTHON_INTERPRETER_FOR_TESTS = os.environ.get("HOOK_TEST_PYTHON_INTERPRETER", sys.executable)
 
 

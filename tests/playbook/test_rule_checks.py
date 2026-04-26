@@ -13,7 +13,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "hooks"))
 
-import tests.fixtures
+import tests._common.fixtures
 import playbook.pretooluse_bash
 
 
@@ -45,7 +45,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
 
     def _build_bash_payload(self, command):
 
-        return tests.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
+        return tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
             bash_command_string = command,
             working_directory = self.temp_project_directory
         )
@@ -368,7 +368,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
     def test_missing_playbook_returns_none(self):
 
         empty_temp_directory = tempfile.mkdtemp()
-        payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
+        payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
             bash_command_string = "python -m unittest discover -s tests -t . -v",
             working_directory = empty_temp_directory
         )

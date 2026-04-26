@@ -1,5 +1,5 @@
 ########################################################################################################################
-# tests/fixtures_required_reads.py
+# tests/required_reading/fixtures_required_reads.py
 #
 # Manifest fixture builders used by the required-reads hook tests
 ########################################################################################################################
@@ -10,11 +10,11 @@ import os
 import sys
 import tempfile
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "hooks"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "hooks"))
 
 import required_reading._manifest
-import tests._subprocess_helpers
-import tests.fixtures
+import tests._common.subprocess_helpers
+import tests._common.fixtures
 
 
 class RequiredReadsManifestFixtureBuilder:
@@ -81,11 +81,11 @@ class HomeOverrideEnvVarTestCaseMixin:
 
     def _satisfy_read_via_observer(self, file_abs_path):
 
-        read_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_posttooluse_read_payload(
+        read_payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_posttooluse_read_payload(
             file_path = file_abs_path,
             working_directory = self.sandboxed_home_abs_path
         )
-        tests._subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
+        tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
             entry_script_relative_path = "required_reading/posttooluse_observer.py",
             pretooluse_payload = read_payload
         )

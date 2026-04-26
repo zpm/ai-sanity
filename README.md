@@ -87,3 +87,17 @@ Run from the repo root:
 ```sh
 python -m unittest discover -s tests -t . -v
 ```
+
+The primary test artifact is [./tests/command_tests.json](tests/command_tests.json). It is the e2e test suite for bash_safety: every entry runs the full hook entry script as a subprocess and asserts the outcome. When you encounter a new command in the wild that should be allowed, denied, or passed through, add it to the appropriate list.
+
+```json
+{
+    "allow": ["git status", "..."],
+    "deny":  ["pip install requests", "..."],
+    "ask":   ["ls -la", "..."]
+}
+```
+
+`allow` = hook auto-approves. `deny` = hook hard-blocks. `ask` = hook has no opinion, falls through to Claude Code's normal permission prompt.
+
+Remaining hand-written tests cover cases that need filesystem fixtures (temp git repos for tracked-file detection, temp playbook files, required-reading manifests) or test non-command logic (the shell command parser).
