@@ -35,10 +35,10 @@ class PreToolUseRequiredReadsRuleChecks:
         return RequiredReadsPathNormalizer.normalize_path(raw_file_path_string)
 
     @staticmethod
-    def is_file_inside_dot_claude_directory(edited_file_abs_path):
+    def is_file_inside_config_directory(edited_file_abs_path):
 
-        """Files in `.claude/` are operational space where style guide enforcement does not apply."""
-        return "/.claude/" in edited_file_abs_path
+        """Files in `.claude/` or `.ai-sanity/` are operational space where style guide enforcement does not apply."""
+        return "/.claude/" in edited_file_abs_path or "/.ai-sanity/" in edited_file_abs_path
 
     @staticmethod
     def collect_applicable_rule_records(edited_file_abs_path):
@@ -140,17 +140,12 @@ class PreToolUseRequiredReadsRuleChecks:
     @staticmethod
     def partition_rules_by_missing_read_targets(rule_records):
 
-        """Returns (present, required_missing). Missing targets under ~/.claude/ are silently dropped."""
-        home_claude_directory_abs_path = RequiredReadsPathNormalizer.normalize_path(
-            os.path.join(RequiredReadsPathNormalizer.get_effective_home_abs_path(), ".claude")
-        ) + "/"
+        """Returns (present, required_missing)."""
         present_rule_records = []
         required_missing_rule_records = []
         for candidate_rule_record in rule_records:
             if os.path.isfile(candidate_rule_record.read_abs_path):
                 present_rule_records.append(candidate_rule_record)
-            elif candidate_rule_record.read_abs_path.startswith(home_claude_directory_abs_path):
-                continue
             else:
                 required_missing_rule_records.append(candidate_rule_record)
         return present_rule_records, required_missing_rule_records
@@ -158,7 +153,7 @@ class PreToolUseRequiredReadsRuleChecks:
     @staticmethod
     def build_missing_target_deny_reason_string(rules_with_missing_targets, edited_file_abs_path):
 
-        """Returns a deny-reason string for required (non-home) docs missing on disk."""
+        """Returns a deny-reason string for required docs missing on disk."""
         missing_target_description_lines = [
             f"  - `{candidate_rule_record.read_abs_path}` (rule {candidate_rule_record.rule_id}"
             f" from {candidate_rule_record.manifest_abs_path})"
@@ -211,7 +206,7 @@ class PreToolUseRequiredReadsHookEntry:
             if edited_file_abs_path is None:
                 _hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
                 return
-            if rule_checks_class.is_file_inside_dot_claude_directory(
+            if rule_checks_class.is_file_inside_config_directory(
                 edited_file_abs_path = edited_file_abs_path
             ):
                 _hook_io.PreToolUseHookIo.emit_passthrough_and_exit()

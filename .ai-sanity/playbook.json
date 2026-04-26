@@ -1,0 +1,12 @@
+[
+  {
+    "bash": "./test_hooks.sh",
+    "what": "Runs repo tests on mac",
+    "when": "Run as a final step after all changes have landed"
+  },
+  {
+    "bash": "pwsh ./test_hooks.ps1",
+    "what": "Runs repo tests on Windows",
+    "when": "Run as a final step after all changes have landed"
+  }
+]

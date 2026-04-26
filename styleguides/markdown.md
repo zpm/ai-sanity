@@ -46,4 +46,4 @@ The link target is the hyperlink destination. It is relative to the current docu
 
 ## Paths
 
-All displayed file references must use dot-prefix paths. Within a project, display paths from the project root with `./` (e.g., `./docs/stack/backend.md`). For user-level files in `~/.claude/`, always use the home path `~/` (e.g., `~/.claude/styleguides/python.md`). Never display absolute paths (`/Users/...`) or naked paths without a dot prefix (`docs/stack/backend.md`).
+All displayed file references must use dot-prefix paths. Within a project, display paths from the project root with `./` (e.g., `./docs/stack/backend.md`). For user-level files under the home directory, always use the tilde path `~/` (e.g., `~/.claude/settings.json`). Never display absolute paths (`/Users/...`) or naked paths without a dot prefix (`docs/stack/backend.md`).

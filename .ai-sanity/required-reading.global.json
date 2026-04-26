@@ -1,12 +1,6 @@
 {
   "rules": [
     {
-      "read": "~/.claude/CLAUDE.md"
-    },
-    {
-      "read": "~/.claude/settings.json"
-    },
-    {
       "extension": ".py",
       "read": "./styleguides/python.md"
     },

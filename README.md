@@ -18,33 +18,43 @@ On Windows, `CLAUDE_CODE_GIT_BASH_PATH` must point to Git Bash (which it should 
 
 The `required_reading` hook forces Claude to Read specified documents before it can touch matching files.
 
-The manifest filename is `.claude/required-reading.json` in all repos, including `~/.claude/`. Discovery checks three sources in order: hooks-repo global, `~/.claude/`, then project walk-up.
-
-### `~/.claude/` (user home)
-
-| File | Required | Notes |
-|---|---|---|
-| `~/.claude/required-reading.json` | No | Hardcoded path, always checked. If absent, silently skipped. Not discovered via walk-up. |
-
-`~/.claude/` is a hardcoded location, not a project directory. The walk-up stops before reaching `$HOME`. Any rule that points at a missing file under `~/.claude/` is silently dropped because the user may not have created it. This applies regardless of which manifest declared the rule.
+The manifest filename is `.ai-sanity/required-reading.json` in all repos. Discovery checks two sources in order: hooks-repo global, then project walk-up.
 
 ### Project repo (any repo Claude is working in)
 
 | File | Required | Notes |
 |---|---|---|
-| `.claude/required-reading.json` | No | If present, its rules are loaded via directory walk-up from the edited file. If absent, silently skipped. |
+| `.ai-sanity/required-reading.json` | No | If present, its rules are loaded via directory walk-up from the edited file. If absent, silently skipped. |
 | Any doc listed in that manifest | Yes | If the manifest exists and lists a doc, that doc must exist on disk. A missing target is a configuration error and blocks the edit. |
 
-A project opts into required reading by creating `.claude/required-reading.json`. Once it does, every doc it references must be present. This is intentional: a project that declares a requirement and then deletes the target has a broken config, and silent degradation would bypass enforcement.
+A project opts into required reading by creating `.ai-sanity/required-reading.json`. Once it does, every doc it references must be present. This is intentional: a project that declares a requirement and then deletes the target has a broken config, and silent degradation would bypass enforcement.
 
 ### This repo (ai-sanity)
 
 | File | Required | Notes |
 |---|---|---|
-| `.claude/required-reading.global.json` | Yes | Always loaded. Contains global wildcard rules and extension-to-styleguide mappings. |
-| `.claude/required-reading.json` | No | Project-level manifest for this repo. Currently requires `./README.md`. |
+| `.ai-sanity/required-reading.global.json` | Yes | Always loaded. Contains extension-to-styleguide mappings. |
+| `.ai-sanity/required-reading.json` | No | Project-level manifest for this repo. Currently requires `./README.md`. |
 
 The global manifest is always present because it ships with this repo. Its styleguide targets are required.
+
+## Playbook
+
+The `playbook` hook auto-whitelists bash commands listed in a project's `.ai-sanity/playbook.json`. Commands that exactly match a playbook entry are allowed without a permission prompt. Multi-clause commands (using `&&`, `;`, `|`) never match, even if the first clause is in the playbook.
+
+Each project that wants playbook support creates `.ai-sanity/playbook.json`:
+
+```json
+[
+  {
+    "bash": "./test_hooks.sh",
+    "what": "Runs repo tests on mac",
+    "when": "Run as a final step after all changes have landed"
+  }
+]
+```
+
+To inject the playbook into Claude's context before file operations, add it to the project's `.ai-sanity/required-reading.json`.
 
 ## Other Hooks
 

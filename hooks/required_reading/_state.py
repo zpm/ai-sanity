@@ -10,19 +10,19 @@ class RequiredReadsState:
 
     """Per-session satisfaction flags used by the required-reads hook trio. A flag means that, within a single Claude
     Code session, a given rule's dedupe key has already been satisfied (either by a Read observed on its target doc or
-    by an inline inject-mode injection). Flags live under `~/.claude/hooks-state/required-reads/<session_id>/` with
+    by an inline inject-mode injection). Flags live under `~/.ai-sanity/hooks-state/required-reads/<session_id>/` with
     filenames of `<sha1(dedupe_key)>.flag` containing the normalized key string for human debugging. The state
     directory base is overridable via the HOOK_TEST_STATE_DIR env var (test-only). Every operation swallows
     filesystem errors so that an unwritable state dir cannot crash an edit."""
 
-    _state_directory_relative_path_from_home = ".claude/hooks-state/required-reads"
+    _state_directory_relative_path_from_home = ".ai-sanity/hooks-state/required-reads"
 
     @staticmethod
     def get_state_base_directory_abs_path():
 
         """Returns the absolute, forward-slash-normalized path of the root directory under which per-session
         subdirectories live. Honors HOOK_TEST_STATE_DIR when set, otherwise uses the effective home's
-        `.claude/hooks-state/required-reads/`."""
+        `.ai-sanity/hooks-state/required-reads/`."""
         state_class = RequiredReadsState
         state_directory_override_abs_path = os.environ.get("HOOK_TEST_STATE_DIR")
         if state_directory_override_abs_path:

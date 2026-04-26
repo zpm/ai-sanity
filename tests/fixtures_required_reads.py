@@ -18,7 +18,7 @@ import tests.fixtures
 
 class RequiredReadsManifestFixtureBuilder:
 
-    """Writes `.claude/required-reading.json` manifests into tempdirs for loader and discovery tests. Keeps test bodies
+    """Writes `.ai-sanity/required-reading.json` manifests into tempdirs for loader and discovery tests. Keeps test bodies
     focused on the assertion rather than on filesystem plumbing. Every write creates parent directories as needed and
     returns the absolute path of the written manifest so tests can read it back or register it as the home override."""
 
@@ -26,11 +26,11 @@ class RequiredReadsManifestFixtureBuilder:
     def write_manifest_file(manifest_directory_abs_path, rule_dicts):
 
         """Writes a manifest with the given list of rule dicts to
-        `<manifest_directory_abs_path>/.claude/required-reading.json`. Returns the absolute path of the written file.
+        `<manifest_directory_abs_path>/.ai-sanity/required-reading.json`. Returns the absolute path of the written file.
         Rule dicts are serialized verbatim so tests can include invalid rules to exercise loader error handling."""
-        claude_sub_directory_abs_path = os.path.join(manifest_directory_abs_path, ".claude")
-        os.makedirs(claude_sub_directory_abs_path, exist_ok = True)
-        manifest_abs_path = os.path.join(claude_sub_directory_abs_path, "required-reading.json")
+        config_sub_directory_abs_path = os.path.join(manifest_directory_abs_path, ".ai-sanity")
+        os.makedirs(config_sub_directory_abs_path, exist_ok = True)
+        manifest_abs_path = os.path.join(config_sub_directory_abs_path, "required-reading.json")
         with open(manifest_abs_path, "w", encoding = "utf-8") as open_manifest_file_handle:
             json.dump({"rules": rule_dicts}, open_manifest_file_handle)
         return manifest_abs_path
@@ -38,12 +38,12 @@ class RequiredReadsManifestFixtureBuilder:
     @staticmethod
     def write_raw_manifest_body(manifest_directory_abs_path, raw_manifest_body_string):
 
-        """Writes an arbitrary byte body to `<manifest_directory_abs_path>/.claude/required-reading.json`. Used by
+        """Writes an arbitrary byte body to `<manifest_directory_abs_path>/.ai-sanity/required-reading.json`. Used by
         loader tests that need to exercise malformed JSON, non-object top-level shapes, or other invalid bodies that
         cannot be produced by `write_manifest_file`. Returns the absolute path of the written file."""
-        claude_sub_directory_abs_path = os.path.join(manifest_directory_abs_path, ".claude")
-        os.makedirs(claude_sub_directory_abs_path, exist_ok = True)
-        manifest_abs_path = os.path.join(claude_sub_directory_abs_path, "required-reading.json")
+        config_sub_directory_abs_path = os.path.join(manifest_directory_abs_path, ".ai-sanity")
+        os.makedirs(config_sub_directory_abs_path, exist_ok = True)
+        manifest_abs_path = os.path.join(config_sub_directory_abs_path, "required-reading.json")
         with open(manifest_abs_path, "w", encoding = "utf-8") as open_manifest_file_handle:
             open_manifest_file_handle.write(raw_manifest_body_string)
         return manifest_abs_path
@@ -61,25 +61,11 @@ class HomeOverrideEnvVarTestCaseMixin:
         self._previous_home_override_value = os.environ.get("HOOK_TEST_HOME_OVERRIDE")
         self.sandboxed_home_abs_path = tempfile.mkdtemp()
         os.environ["HOOK_TEST_HOME_OVERRIDE"] = self.sandboxed_home_abs_path
-        claude_directory_abs_path = os.path.join(self.sandboxed_home_abs_path, ".claude")
-        os.makedirs(claude_directory_abs_path, exist_ok = True)
-        for required_filename in ("CLAUDE.md", "settings.json"):
-            with open(os.path.join(claude_directory_abs_path, required_filename), "w", encoding = "utf-8") as file_handle:
-                file_handle.write("")
-
-    def satisfy_hooks_repo_global_wildcard_rules(self):
-
-        """Pre-satisfies the hooks-repo global wildcard rules (CLAUDE.md, settings.json) by invoking the posttooluse
-        observer for each file. Call this in tests that expect passthrough after satisfying only their own rules."""
-        for sandboxed_doc_relative_path in (".claude/CLAUDE.md", ".claude/settings.json"):
-            sandboxed_doc_abs_path = os.path.join(self.sandboxed_home_abs_path, sandboxed_doc_relative_path)
-            self._satisfy_read_via_observer(sandboxed_doc_abs_path)
 
     def satisfy_hooks_repo_global_rules_for_extension(self, extension_suffix):
 
-        """Pre-satisfies the hooks-repo global wildcard rules and the extension-specific styleguide rule."""
+        """Pre-satisfies the extension-specific styleguide rule from the hooks-repo global manifest."""
         from required_reading._manifest import RequiredReadsManifestLoader, RequiredReadsPathNormalizer
-        self.satisfy_hooks_repo_global_wildcard_rules()
         hooks_repo_root_abs_path = RequiredReadsManifestLoader.get_hooks_repo_root_abs_path()
         global_manifest_abs_path = os.path.join(
             hooks_repo_root_abs_path,

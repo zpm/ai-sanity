@@ -33,7 +33,7 @@ class TestRequiredReadsPathNormalizer(tests.fixtures_required_reads.HomeOverride
 
     def test_relative_path_resolved_against_base_directory(self):
 
-        base_directory_abs_path = os.path.join(self.sandboxed_home_abs_path, "some", "project", ".claude")
+        base_directory_abs_path = os.path.join(self.sandboxed_home_abs_path, "some", "project", ".ai-sanity")
         normalized_path_string = RequiredReadsPathNormalizer.normalize_path(
             "../docs/stack.md",
             base_directory_abs_path = base_directory_abs_path
@@ -259,7 +259,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
         self.assertEqual(len(loaded_rule_records), 1)
         expected_read_abs_path_suffix = "/some-project/docs/python.md"
         self.assertTrue(loaded_rule_records[0].read_abs_path.endswith(expected_read_abs_path_suffix))
-        self.assertNotIn("/.claude/docs/", loaded_rule_records[0].read_abs_path)
+        self.assertNotIn("/.ai-sanity/docs/", loaded_rule_records[0].read_abs_path)
 
     def test_dedupe_key_defaults_to_normalized_read_path(self):
 
@@ -305,18 +305,14 @@ class TestRequiredReadsManifestLoaderDiscovery(tests.fixtures_required_reads.Hom
         ]
         self.assertTrue(len(non_project_manifests) >= 1)
         self.assertTrue(any(
-            dm.manifest_abs_path.endswith("/.claude/required-reading.global.json")
+            dm.manifest_abs_path.endswith("/.ai-sanity/required-reading.global.json")
             for dm in non_project_manifests
         ))
 
-    def test_discovery_order_is_global_then_home_then_project(self):
+    def test_discovery_order_is_global_then_project(self):
 
         project_directory_abs_path = os.path.join(self.sandboxed_home_abs_path, "some", "project")
         os.makedirs(project_directory_abs_path, exist_ok = True)
-        tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
-            manifest_directory_abs_path = self.sandboxed_home_abs_path,
-            rule_dicts = []
-        )
         tests.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
             manifest_directory_abs_path = project_directory_abs_path,
             rule_dicts = []
@@ -327,14 +323,8 @@ class TestRequiredReadsManifestLoaderDiscovery(tests.fixtures_required_reads.Hom
         )
         manifest_paths = [dm.manifest_abs_path for dm in discovered_manifests]
         global_index = next(i for i, p in enumerate(manifest_paths) if "required-reading.global.json" in p)
-        home_index = next(
-            i for i, p in enumerate(manifest_paths)
-            if p.endswith("/.claude/required-reading.json") and "required-reading.global" not in p
-            and not discovered_manifests[i].is_project_walkup_manifest
-        )
         project_index = next(i for i, dm in enumerate(discovered_manifests) if dm.is_project_walkup_manifest)
-        self.assertLess(global_index, home_index)
-        self.assertLess(home_index, project_index)
+        self.assertLess(global_index, project_index)
 
     def test_walk_passes_intermediate_directories_without_manifests(self):
 
@@ -350,7 +340,7 @@ class TestRequiredReadsManifestLoaderDiscovery(tests.fixtures_required_reads.Hom
         )
         project_manifests = [dm for dm in discovered_manifests if dm.is_project_walkup_manifest]
         self.assertEqual(len(project_manifests), 1)
-        self.assertIn("/a/b/.claude/required-reading.json", project_manifests[0].manifest_abs_path)
+        self.assertIn("/a/b/.ai-sanity/required-reading.json", project_manifests[0].manifest_abs_path)
 
     def test_walk_stops_at_home_and_does_not_escape_above(self):
 
@@ -841,13 +831,13 @@ class TestBuildDenyReasonString(unittest.TestCase):
 
         first_unsatisfied_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
             rule_id = "required-reads.json#0",
-            manifest_abs_path = "/home/zachm/.claude/required-reads.json",
+            manifest_abs_path = "/home/zachm/Dev/project/.ai-sanity/required-reads.json",
             read_abs_path = "/home/zachm/Dev/ai-sanity/styleguides/python.md"
         )
         second_unsatisfied_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
             rule_id = "required-reads.json#3",
-            manifest_abs_path = "/home/zachm/.claude/required-reads.json",
-            read_abs_path = "/home/zachm/.claude/CLAUDE.md"
+            manifest_abs_path = "/home/zachm/Dev/project/.ai-sanity/required-reads.json",
+            read_abs_path = "/home/zachm/Dev/project/docs/CLAUDE.md"
         )
         deny_reason_string = PreToolUseRequiredReadsRuleChecks.build_deny_reason_string(
             unsatisfied_rule_records = [first_unsatisfied_rule_record, second_unsatisfied_rule_record],
@@ -855,7 +845,7 @@ class TestBuildDenyReasonString(unittest.TestCase):
         )
         self.assertIn("/home/zachm/Dev/project/src/main.py", deny_reason_string)
         self.assertIn("/home/zachm/Dev/ai-sanity/styleguides/python.md", deny_reason_string)
-        self.assertIn("/home/zachm/.claude/CLAUDE.md", deny_reason_string)
+        self.assertIn("/home/zachm/Dev/project/docs/CLAUDE.md", deny_reason_string)
         self.assertIn("required-reads.json#0", deny_reason_string)
         self.assertIn("required-reads.json#3", deny_reason_string)
 
@@ -883,53 +873,48 @@ class TestBuildDenyReasonString(unittest.TestCase):
         self.assertEqual(len(required_missing_records), 1)
         self.assertEqual(required_missing_records[0].rule_id, "m#missing")
 
-    def test_partition_rules_silently_drops_missing_home_claude_docs(self):
-
-        effective_home_abs_path = RequiredReadsPathNormalizer.get_effective_home_abs_path()
-        missing_home_doc_abs_path = effective_home_abs_path + "/.claude/nonexistent-doc.md"
-        home_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
-            rule_id = "m#home",
-            read_abs_path = missing_home_doc_abs_path
-        )
-        present_records, required_missing_records = (
-            PreToolUseRequiredReadsRuleChecks.partition_rules_by_missing_read_targets(
-                rule_records = [home_rule_record]
-            )
-        )
-        self.assertEqual(present_records, [])
-        self.assertEqual(required_missing_records, [])
-
-
-class TestIsFileInsideDotClaudeDirectory(unittest.TestCase):
+class TestIsFileInsideConfigDirectory(unittest.TestCase):
 
     def test_file_under_home_dot_claude_returns_true(self):
 
-        self.assertTrue(PreToolUseRequiredReadsRuleChecks.is_file_inside_dot_claude_directory(
+        self.assertTrue(PreToolUseRequiredReadsRuleChecks.is_file_inside_config_directory(
             edited_file_abs_path = "c:/users/zachm/.claude/plans/foo.md"
         ))
 
     def test_settings_json_under_home_dot_claude_returns_true(self):
 
-        self.assertTrue(PreToolUseRequiredReadsRuleChecks.is_file_inside_dot_claude_directory(
+        self.assertTrue(PreToolUseRequiredReadsRuleChecks.is_file_inside_config_directory(
             edited_file_abs_path = "c:/users/zachm/.claude/settings.json"
         ))
 
     def test_file_under_project_dot_claude_returns_true(self):
 
-        self.assertTrue(PreToolUseRequiredReadsRuleChecks.is_file_inside_dot_claude_directory(
+        self.assertTrue(PreToolUseRequiredReadsRuleChecks.is_file_inside_config_directory(
             edited_file_abs_path = "c:/users/zachm/dev/project/.claude/required-reads.json"
+        ))
+
+    def test_file_under_project_dot_ai_sanity_returns_true(self):
+
+        self.assertTrue(PreToolUseRequiredReadsRuleChecks.is_file_inside_config_directory(
+            edited_file_abs_path = "c:/users/zachm/dev/project/.ai-sanity/required-reading.json"
         ))
 
     def test_regular_project_file_returns_false(self):
 
-        self.assertFalse(PreToolUseRequiredReadsRuleChecks.is_file_inside_dot_claude_directory(
+        self.assertFalse(PreToolUseRequiredReadsRuleChecks.is_file_inside_config_directory(
             edited_file_abs_path = "c:/users/zachm/dev/project/src/foo.py"
         ))
 
-    def test_partial_name_match_without_segment_boundary_returns_false(self):
+    def test_partial_dot_claude_name_match_without_segment_boundary_returns_false(self):
 
-        self.assertFalse(PreToolUseRequiredReadsRuleChecks.is_file_inside_dot_claude_directory(
+        self.assertFalse(PreToolUseRequiredReadsRuleChecks.is_file_inside_config_directory(
             edited_file_abs_path = "c:/users/zachm/dev/project/src/.claude-config/foo.py"
+        ))
+
+    def test_partial_dot_ai_sanity_name_match_without_segment_boundary_returns_false(self):
+
+        self.assertFalse(PreToolUseRequiredReadsRuleChecks.is_file_inside_config_directory(
+            edited_file_abs_path = "c:/users/zachm/dev/project/src/.ai-sanity-extra/foo.py"
         ))
 
 

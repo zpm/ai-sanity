@@ -50,7 +50,6 @@ class PreToolUseRequiredReadsSubprocessTestCase(
                 {"extension": ".py", "read": python_style_doc_abs_path}
             ]
         )
-        self.satisfy_hooks_repo_global_wildcard_rules()
         edited_file_abs_path = os.path.join(self.sandboxed_home_abs_path, "notes.txt")
         exit_code, parsed_stdout = tests._subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
             entry_script_relative_path = "required_reading/pretooluse.py",
@@ -279,7 +278,6 @@ class PreToolUseRequiredReadsSubprocessTestCase(
                 {"extension": ".py", "read": python_style_doc_abs_path}
             ]
         )
-        self.satisfy_hooks_repo_global_wildcard_rules()
         read_target_abs_path = os.path.join(self.sandboxed_home_abs_path, "notes.txt")
         exit_code, parsed_stdout = tests._subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
             entry_script_relative_path = "required_reading/pretooluse.py",

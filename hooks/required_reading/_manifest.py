@@ -68,8 +68,8 @@ class RequiredReadsManifestLoader:
     """Discovers and loads required-reading manifests. Failure modes (missing file, bad JSON, invalid rules) return
     empty lists or skip the offending rule so hook execution never crashes an edit."""
 
-    _project_manifest_relative_path = ".claude/required-reading.json"
-    _global_manifest_relative_path_from_repo_root = ".claude/required-reading.global.json"
+    _project_manifest_relative_path = ".ai-sanity/required-reading.json"
+    _global_manifest_relative_path_from_repo_root = ".ai-sanity/required-reading.global.json"
 
     @staticmethod
     def get_hooks_repo_root_abs_path():
@@ -82,12 +82,12 @@ class RequiredReadsManifestLoader:
     @staticmethod
     def discover_manifests(edited_file_abs_path):
 
-        """Returns discovered manifests in order: hooks-repo global, home, project walk-up."""
+        """Returns discovered manifests in order: hooks-repo global, project walk-up."""
         loader_class = RequiredReadsManifestLoader
         discovered_manifests = []
         seen_abs_paths = set()
 
-        # hooks-repo global (.claude/required-reading.global.json resolved via __file__)
+        # hooks-repo global (.ai-sanity/required-reading.global.json resolved via __file__)
         global_manifest_abs_path = RequiredReadsPathNormalizer.normalize_path(
             os.path.join(
                 loader_class.get_hooks_repo_root_abs_path(),
@@ -101,27 +101,14 @@ class RequiredReadsManifestLoader:
             ))
             seen_abs_paths.add(global_manifest_abs_path)
 
-        # home directory (~/.claude/required-reading.json, hardcoded, not via walk-up)
+        # project walk-up (stops at $HOME after checking it, visited set guards against symlink loops)
         effective_home_abs_path = RequiredReadsPathNormalizer.get_effective_home_abs_path()
-        home_manifest_abs_path = RequiredReadsPathNormalizer.normalize_path(
-            os.path.join(effective_home_abs_path, loader_class._project_manifest_relative_path)
-        )
-        if home_manifest_abs_path not in seen_abs_paths and os.path.isfile(home_manifest_abs_path):
-            discovered_manifests.append(DiscoveredManifest(
-                manifest_abs_path = home_manifest_abs_path,
-                is_project_walkup_manifest = False
-            ))
-            seen_abs_paths.add(home_manifest_abs_path)
-
-        # project walk-up (stops before $HOME, visited set guards against symlink loops)
         visited_directory_abs_paths = set()
         current_directory_abs_path = RequiredReadsPathNormalizer.normalize_path(
             os.path.dirname(edited_file_abs_path)
         )
         while True:
             if current_directory_abs_path in visited_directory_abs_paths:
-                break
-            if current_directory_abs_path == effective_home_abs_path:
                 break
             visited_directory_abs_paths.add(current_directory_abs_path)
             candidate_project_manifest_abs_path = RequiredReadsPathNormalizer.normalize_path(
@@ -133,6 +120,8 @@ class RequiredReadsManifestLoader:
                     is_project_walkup_manifest = True
                 ))
                 seen_abs_paths.add(candidate_project_manifest_abs_path)
+            if current_directory_abs_path == effective_home_abs_path:
+                break
             parent_directory_abs_path = RequiredReadsPathNormalizer.normalize_path(
                 os.path.dirname(current_directory_abs_path)
             )
@@ -156,10 +145,10 @@ class RequiredReadsManifestLoader:
         raw_rule_objects = parsed_manifest_object.get("rules")
         if not isinstance(raw_rule_objects, list):
             return []
-        # .claude/ manifests resolve relative paths against the project root (parent of .claude/),
-        # non-.claude/ manifests resolve against their own directory
+        # .ai-sanity/ manifests resolve relative paths against the project root (parent of .ai-sanity/),
+        # other manifests resolve against their own directory
         manifest_parent_directory_basename = os.path.basename(os.path.dirname(manifest_abs_path))
-        if manifest_parent_directory_basename == ".claude":
+        if manifest_parent_directory_basename == ".ai-sanity":
             base_directory_abs_path_for_relative_reads = RequiredReadsPathNormalizer.normalize_path(
                 os.path.dirname(os.path.dirname(manifest_abs_path))
             )
