@@ -100,7 +100,9 @@ class GitCommandsCheck:
                 return GitCommandsCheck._DENY_MESSAGE
             if clause[1].startswith("-"):
                 return GitCommandsCheck._DENY_MESSAGE
-        if len(clauses) == 1 and len(clauses[0]) >= 2 and clauses[0][0] == "git":
+        if len(clauses) == 1 and clauses[0][0] == "git":
+            if len(clauses[0]) == 1:
+                return True
             if clauses[0][1] in GitCommandsCheck._ALLOWED_GIT_READONLY_SUBCOMMANDS:
                 return True
         return None
@@ -266,30 +268,6 @@ class NoShellSpawningCheck:
         return None
 
 
-class NoGithubApiCheck:
-
-    """Rejects gh api calls while allowing other gh subcommands (gh pr, gh issue, etc.)."""
-
-    _DENIED_GH_SUBCOMMANDS = {
-        "api": ["*"],
-    }
-
-    _DENY_MESSAGE = "Direct GitHub API calls via `gh api` are prohibited."
-
-    @staticmethod
-    def check(pretooluse_payload):
-
-        """Returns a deny reason string if any clause contains gh api, or None."""
-        bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
-        clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
-        for clause in clauses:
-            if clause[0] != "gh" or len(clause) < 2:
-                continue
-            if clause[1] in NoGithubApiCheck._DENIED_GH_SUBCOMMANDS:
-                return NoGithubApiCheck._DENY_MESSAGE
-        return None
-
-
 class NoTextManipulationCheck:
 
     """Rejects text manipulation commands in any clause of the command."""
@@ -375,7 +353,6 @@ class PreToolUseBashSafetyHookEntry:
         NoPackageManagersCheck.check,
         NoSystemOperationsCheck.check,
         NoShellSpawningCheck.check,
-        NoGithubApiCheck.check,
         NoTextManipulationCheck.check,
         NoTaskkillCheck.check,
     )

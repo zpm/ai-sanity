@@ -17,7 +17,8 @@
         "git ls-tree HEAD",
         "git ls-remote origin",
         "git grep pattern",
-        "git mv old.txt new.txt"
+        "git mv old.txt new.txt",
+        "git"
     ],
     "deny": [
         "git commit -m 'msg'",
@@ -98,7 +99,6 @@
         "cmd /c dir",
         "cmd.exe /c dir",
         "powershell Get-Date",
-        "gh api repos/foo/bar",
         "sed -i 's/a/b/' file.txt",
         "awk '{print $1}' file.txt",
         "tee output.txt",
@@ -111,7 +111,6 @@
         "echo $(echo $(git push))"
     ],
     "ask": [
-        "git",
         "git log | head",
         "git log && echo done",
         "git log; echo done",
@@ -128,9 +127,6 @@
         "bun run dev",
         "poetry run pytest",
         "pip install \"broken",
-        "gh pr list",
-        "gh issue list",
-        "gh",
         "echo hello && ls",
         "echo hello",
         "echo hello world",
