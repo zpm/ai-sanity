@@ -18,7 +18,7 @@ import bash_safety.pretooluse_bash
 import _common._command_parser
 
 
-class TestNoGitWriteCommandsCheck(unittest.TestCase):
+class TestGitCommandsCheck(unittest.TestCase):
 
     def _build_bash_payload(self, command):
 
@@ -26,7 +26,7 @@ class TestNoGitWriteCommandsCheck(unittest.TestCase):
 
     def test_blocks_git_commit(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git commit -m 'msg'")
         )
         self.assertIsNotNone(result)
@@ -34,274 +34,394 @@ class TestNoGitWriteCommandsCheck(unittest.TestCase):
 
     def test_blocks_git_push(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git push origin main")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_pull(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git pull")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_fetch(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git fetch origin")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_merge(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git merge feature")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_rebase(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git rebase main")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_reset(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git reset --hard HEAD")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_checkout(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git checkout feature")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_branch(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git branch new-feature")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_branch_no_args(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git branch")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_stash(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git stash")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_stash_pop(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git stash pop")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_add(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git add .")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_tag(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git tag v1.0")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_rm(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git rm file.txt")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_clean(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git clean -fd")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_config(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git config user.name test")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_remote(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git remote add origin url")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_clone(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git clone https://github.com/foo/bar")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_init(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git init")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_cherry_pick(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git cherry-pick abc123")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_revert(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git revert HEAD")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_filter_branch(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git filter-branch --all")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_update_ref(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git update-ref refs/heads/main abc")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_commit_after_pipe(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("echo hello | git commit -m test")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_push_after_and(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("echo hello && git push origin main")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_add_after_semicolon(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("ls ; git add .")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_commit_no_space_semicolon(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("echo ok;git commit -m x")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_push_no_space_and(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("echo ok&&git push")
         )
         self.assertIsNotNone(result)
 
     def test_blocks_git_add_no_space_pipe(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("echo ok|git add .")
         )
         self.assertIsNotNone(result)
 
-    def test_passes_git_diff(self):
+    def test_allows_git_diff(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git diff HEAD")
         )
-        self.assertIsNone(result)
+        self.assertIs(result, True)
 
-    def test_passes_git_status(self):
+    def test_allows_git_status(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git status")
         )
-        self.assertIsNone(result)
+        self.assertIs(result, True)
 
-    def test_passes_git_log(self):
+    def test_allows_git_log(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git log --oneline")
         )
-        self.assertIsNone(result)
+        self.assertIs(result, True)
 
-    def test_passes_git_ls_files(self):
+    def test_allows_git_ls_files(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git ls-files")
         )
-        self.assertIsNone(result)
+        self.assertIs(result, True)
 
-    def test_passes_git_show(self):
+    def test_allows_git_show(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git show HEAD")
         )
-        self.assertIsNone(result)
+        self.assertIs(result, True)
 
-    def test_passes_git_mv(self):
+    def test_allows_git_blame(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
+            self._build_bash_payload("git blame file.py")
+        )
+        self.assertIs(result, True)
+
+    def test_allows_git_shortlog(self):
+
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
+            self._build_bash_payload("git shortlog -sn")
+        )
+        self.assertIs(result, True)
+
+    def test_allows_git_describe(self):
+
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
+            self._build_bash_payload("git describe --tags")
+        )
+        self.assertIs(result, True)
+
+    def test_allows_git_rev_parse(self):
+
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
+            self._build_bash_payload("git rev-parse HEAD")
+        )
+        self.assertIs(result, True)
+
+    def test_allows_git_rev_list(self):
+
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
+            self._build_bash_payload("git rev-list --count HEAD")
+        )
+        self.assertIs(result, True)
+
+    def test_allows_git_cat_file(self):
+
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
+            self._build_bash_payload("git cat-file -t HEAD")
+        )
+        self.assertIs(result, True)
+
+    def test_allows_git_name_rev(self):
+
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
+            self._build_bash_payload("git name-rev HEAD")
+        )
+        self.assertIs(result, True)
+
+    def test_allows_git_for_each_ref(self):
+
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
+            self._build_bash_payload("git for-each-ref refs/heads")
+        )
+        self.assertIs(result, True)
+
+    def test_allows_git_ls_tree(self):
+
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
+            self._build_bash_payload("git ls-tree HEAD")
+        )
+        self.assertIs(result, True)
+
+    def test_allows_git_ls_remote(self):
+
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
+            self._build_bash_payload("git ls-remote origin")
+        )
+        self.assertIs(result, True)
+
+    def test_allows_git_grep(self):
+
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
+            self._build_bash_payload("git grep pattern")
+        )
+        self.assertIs(result, True)
+
+    def test_allows_git_log_with_many_flags(self):
+
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
+            self._build_bash_payload("git log --oneline --graph --all")
+        )
+        self.assertIs(result, True)
+
+    def test_passes_through_git_mv(self):
+
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git mv old.txt new.txt")
         )
         self.assertIsNone(result)
 
     def test_passes_non_git_command(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("echo hello")
         )
         self.assertIsNone(result)
 
     def test_passes_git_alone(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git")
         )
         self.assertIsNone(result)
 
     def test_passes_on_malformed_quoting(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("git commit -m \"broken")
         )
         self.assertIsNone(result)
 
     def test_passes_on_empty_command(self):
 
-        result = bash_safety.pretooluse_bash.NoGitWriteCommandsCheck.check(
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
             self._build_bash_payload("")
+        )
+        self.assertIsNone(result)
+
+    def test_blocks_git_reflog(self):
+
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
+            self._build_bash_payload("git reflog")
+        )
+        self.assertIsNotNone(result)
+        self.assertIn("strictly prohibited", result)
+
+    def test_passes_through_git_log_piped(self):
+
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
+            self._build_bash_payload("git log | head")
+        )
+        self.assertIsNone(result)
+
+    def test_passes_through_git_log_and_then(self):
+
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
+            self._build_bash_payload("git log && echo done")
+        )
+        self.assertIsNone(result)
+
+    def test_passes_through_git_log_semicolon(self):
+
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
+            self._build_bash_payload("git log; echo done")
+        )
+        self.assertIsNone(result)
+
+    def test_passes_through_unknown_git_subcommand(self):
+
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
+            self._build_bash_payload("git foo")
         )
         self.assertIsNone(result)
 

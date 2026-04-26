@@ -78,9 +78,37 @@ class TestPreToolUseBashSafetyEntryScript(unittest.TestCase):
             self, exit_code, parsed_stdout, "strictly prohibited"
         )
 
-    def test_git_diff_passes_through(self):
+    def test_git_diff_is_allowed(self):
 
         exit_code, parsed_stdout = self._invoke("git diff HEAD")
+        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_allow_decision(
+            self, exit_code, parsed_stdout
+        )
+
+    def test_git_status_is_allowed(self):
+
+        exit_code, parsed_stdout = self._invoke("git status")
+        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_allow_decision(
+            self, exit_code, parsed_stdout
+        )
+
+    def test_git_log_is_allowed(self):
+
+        exit_code, parsed_stdout = self._invoke("git log --oneline")
+        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_allow_decision(
+            self, exit_code, parsed_stdout
+        )
+
+    def test_git_log_piped_passes_through(self):
+
+        exit_code, parsed_stdout = self._invoke("git log | head")
+        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
+            self, exit_code, parsed_stdout
+        )
+
+    def test_git_mv_passes_through(self):
+
+        exit_code, parsed_stdout = self._invoke("git mv old.txt new.txt")
         tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
             self, exit_code, parsed_stdout
         )

@@ -16,10 +16,10 @@ import _common._command_parser
 import _common._hook_io
 
 
-class NoGitWriteCommandsCheck:
+class GitCommandsCheck:
 
-    """Rejects git write subcommands in any clause. Only read-only commands (diff, status, log, ls-files, show) and
-    git mv are allowed."""
+    """Denies git write subcommands and auto-allows known read-only subcommands. Returns a deny reason string, True
+    to allow, or None to passthrough."""
 
     _DENIED_GIT_SUBCOMMANDS = {
         "add": ["*"],
@@ -46,6 +46,7 @@ class NoGitWriteCommandsCheck:
         "push": ["*"],
         "rebase": ["*"],
         "remote": ["*"],
+        "reflog": ["*"],
         "repack": ["*"],
         "reset": ["*"],
         "restore": ["*"],
@@ -60,6 +61,25 @@ class NoGitWriteCommandsCheck:
         "worktree": ["*"],
     }
 
+    _ALLOWED_GIT_READONLY_SUBCOMMANDS = {
+        "blame",
+        "cat-file",
+        "describe",
+        "diff",
+        "for-each-ref",
+        "grep",
+        "log",
+        "ls-files",
+        "ls-remote",
+        "ls-tree",
+        "name-rev",
+        "rev-list",
+        "rev-parse",
+        "shortlog",
+        "show",
+        "status",
+    }
+
     _DENY_MESSAGE = (
         "Git write commands are strictly prohibited. Only read commands"
         " (diff, status, log, ls-files, show) and `git mv` are allowed."
@@ -68,14 +88,18 @@ class NoGitWriteCommandsCheck:
     @staticmethod
     def check(pretooluse_payload):
 
-        """Checks every clause for a git write subcommand. Returns a deny reason string or None."""
+        """Checks every clause for denied git write subcommands, then checks if a single-clause command is an allowed
+        read-only git subcommand. Returns a deny reason string, True to allow, or None to passthrough."""
         bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
         clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
         for clause in clauses:
             if clause[0] != "git" or len(clause) < 2:
                 continue
-            if clause[1] in NoGitWriteCommandsCheck._DENIED_GIT_SUBCOMMANDS:
-                return NoGitWriteCommandsCheck._DENY_MESSAGE
+            if clause[1] in GitCommandsCheck._DENIED_GIT_SUBCOMMANDS:
+                return GitCommandsCheck._DENY_MESSAGE
+        if len(clauses) == 1 and len(clauses[0]) >= 2 and clauses[0][0] == "git":
+            if clauses[0][1] in GitCommandsCheck._ALLOWED_GIT_READONLY_SUBCOMMANDS:
+                return True
         return None
 
 
@@ -314,10 +338,9 @@ class NoTaskkillCheck:
 
 class PreToolUseBashSafetyHookEntry:
 
-    """Composes all bash safety deny checks. Denies on first violation, otherwise passes through."""
+    """Composes all bash safety checks. Runs git deny/allow first, then other deny checks, then passthrough."""
 
     _deny_check_methods_to_run_in_order = (
-        NoGitWriteCommandsCheck.check,
         RequireGitMvForTrackedMovesCheck.check,
         NoPackageManagersCheck.check,
         NoSystemOperationsCheck.check,
@@ -330,14 +353,18 @@ class PreToolUseBashSafetyHookEntry:
     @staticmethod
     def main():
 
-        """Reads the payload, runs deny checks in order (any violation blocks immediately), otherwise passes through
-        to settings.json permission rules. Any unexpected error falls through to passthrough."""
+        """Reads the payload, runs all checks, and emits a deny, allow, or passthrough decision."""
         try:
             pretooluse_payload = _common._hook_io.PreToolUseHookIo.read_pretooluse_payload_from_stdin()
+            git_check_result = GitCommandsCheck.check(pretooluse_payload)
+            if isinstance(git_check_result, str):
+                _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(git_check_result)
             for deny_check_method in PreToolUseBashSafetyHookEntry._deny_check_methods_to_run_in_order:
                 deny_reason_or_none = deny_check_method(pretooluse_payload)
                 if deny_reason_or_none is not None:
                     _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(deny_reason_or_none)
+            if git_check_result is True:
+                _common._hook_io.PreToolUseHookIo.emit_allow_decision_and_exit()
             _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
         except Exception:
             _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
