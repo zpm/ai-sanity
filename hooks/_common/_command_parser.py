@@ -1,5 +1,5 @@
 ########################################################################################################################
-# hooks/common/_command_parser.py
+# hooks/_common/_command_parser.py
 #
 # tokenises a bash command string into individual command clauses
 ########################################################################################################################
@@ -54,3 +54,35 @@ class BashCommandParser:
         if current_clause:
             clauses.append(current_clause)
         return clauses
+
+    @staticmethod
+    def extract_command_clauses_and_separators(bash_command_string):
+
+        """Returns (clauses, separators) where clauses is a list of token-lists and separators is a list of operator
+        strings found between them. An empty command or unbalanced quotes returns ([], [])."""
+        try:
+            tokens = shlex.split(bash_command_string)
+        except ValueError:
+            return [], []
+        if not tokens:
+            return [], []
+        expanded_tokens = []
+        for token in tokens:
+            parts = BashCommandParser._EMBEDDED_OPERATOR_PATTERN.split(token)
+            for part in parts:
+                if part:
+                    expanded_tokens.append(part)
+        clauses = []
+        separators = []
+        current_clause = []
+        for token in expanded_tokens:
+            if token in BashCommandParser._CLAUSE_SEPARATORS:
+                if current_clause:
+                    clauses.append(current_clause)
+                separators.append(token)
+                current_clause = []
+            else:
+                current_clause.append(token)
+        if current_clause:
+            clauses.append(current_clause)
+        return clauses, separators

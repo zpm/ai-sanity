@@ -8,33 +8,33 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
 
 import tests.fixtures
 import tests.fixtures_required_reads
-from required_reading._manifest import RequiredReadsRuleRecord, RequiredReadsPathNormalizer, RequiredReadsManifestLoader, DiscoveredManifest
-from required_reading._state import RequiredReadsState
-from required_reading.pretooluse import PreToolUseRequiredReadsRuleChecks
+import required_reading._manifest
+import required_reading._state
+import required_reading.pretooluse
 
 
 class TestRequiredReadsPathNormalizer(tests.fixtures_required_reads.HomeOverrideEnvVarTestCaseMixin, unittest.TestCase):
 
-    """Unit tests for `RequiredReadsPathNormalizer.normalize_path`. Every path comparison in the required-reads
+    """Unit tests for `required_reading._manifest.RequiredReadsPathNormalizer.normalize_path`. Every path comparison in the required-reads
     subsystem goes through this function, so the tests focus on the three documented behaviors: tilde expansion with
     the test override, relative-path resolution against a base directory, and forward-slash output."""
 
     def test_tilde_expansion_uses_home_override_when_set(self):
 
-        normalized_path_string = RequiredReadsPathNormalizer.normalize_path("~/foo/bar.md")
+        normalized_path_string = required_reading._manifest.RequiredReadsPathNormalizer.normalize_path("~/foo/bar.md")
         expected_prefix = self.sandboxed_home_abs_path.replace("\\", "/").lower()
         self.assertTrue(normalized_path_string.startswith(expected_prefix))
         self.assertTrue(normalized_path_string.endswith("/foo/bar.md"))
 
     def test_bare_tilde_expands_to_home_override(self):
 
-        normalized_path_string = RequiredReadsPathNormalizer.normalize_path("~")
+        normalized_path_string = required_reading._manifest.RequiredReadsPathNormalizer.normalize_path("~")
         self.assertEqual(normalized_path_string, self.sandboxed_home_abs_path.replace("\\", "/").lower())
 
     def test_relative_path_resolved_against_base_directory(self):
 
         base_directory_abs_path = os.path.join(self.sandboxed_home_abs_path, "some", "project", ".ai-sanity")
-        normalized_path_string = RequiredReadsPathNormalizer.normalize_path(
+        normalized_path_string = required_reading._manifest.RequiredReadsPathNormalizer.normalize_path(
             "../docs/stack.md",
             base_directory_abs_path = base_directory_abs_path
         )
@@ -45,7 +45,7 @@ class TestRequiredReadsPathNormalizer(tests.fixtures_required_reads.HomeOverride
 
         base_directory_abs_path = os.path.join(self.sandboxed_home_abs_path, "irrelevant")
         absolute_input_path_string = os.path.join(self.sandboxed_home_abs_path, "absolute", "foo.md")
-        normalized_path_string = RequiredReadsPathNormalizer.normalize_path(
+        normalized_path_string = required_reading._manifest.RequiredReadsPathNormalizer.normalize_path(
             absolute_input_path_string,
             base_directory_abs_path = base_directory_abs_path
         )
@@ -53,18 +53,18 @@ class TestRequiredReadsPathNormalizer(tests.fixtures_required_reads.HomeOverride
 
     def test_output_uses_forward_slashes_only(self):
 
-        normalized_path_string = RequiredReadsPathNormalizer.normalize_path("~/a/b/c.md")
+        normalized_path_string = required_reading._manifest.RequiredReadsPathNormalizer.normalize_path("~/a/b/c.md")
         self.assertNotIn("\\", normalized_path_string)
 
     def test_output_is_lowercased(self):
 
-        normalized_path_string = RequiredReadsPathNormalizer.normalize_path("~/Foo/Bar.MD")
+        normalized_path_string = required_reading._manifest.RequiredReadsPathNormalizer.normalize_path("~/Foo/Bar.MD")
         self.assertEqual(normalized_path_string, normalized_path_string.lower())
 
 
 class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.HomeOverrideEnvVarTestCaseMixin, unittest.TestCase):
 
-    """Unit tests for `RequiredReadsManifestLoader.load_manifest_rule_records`."""
+    """Unit tests for `required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records`."""
 
     def test_well_formed_manifest_returns_one_record_per_rule(self):
 
@@ -75,7 +75,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
                 {"extension": ".md", "read": "~/docs/markdown.md"}
             ]
         )
-        loaded_rule_records = RequiredReadsManifestLoader.load_manifest_rule_records(
+        loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
             is_global_manifest = True
         )
@@ -90,7 +90,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             raw_manifest_body_string = "{not valid json"
         )
-        loaded_rule_records = RequiredReadsManifestLoader.load_manifest_rule_records(
+        loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
             is_global_manifest = True
         )
@@ -102,7 +102,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             raw_manifest_body_string = "[1, 2, 3]"
         )
-        loaded_rule_records = RequiredReadsManifestLoader.load_manifest_rule_records(
+        loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
             is_global_manifest = True
         )
@@ -114,7 +114,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             raw_manifest_body_string = "{\"other\": []}"
         )
-        loaded_rule_records = RequiredReadsManifestLoader.load_manifest_rule_records(
+        loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
             is_global_manifest = True
         )
@@ -126,7 +126,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             raw_manifest_body_string = "{\"rules\": {}}"
         )
-        loaded_rule_records = RequiredReadsManifestLoader.load_manifest_rule_records(
+        loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
             is_global_manifest = True
         )
@@ -134,7 +134,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
 
     def test_missing_file_returns_empty_list(self):
 
-        loaded_rule_records = RequiredReadsManifestLoader.load_manifest_rule_records(
+        loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = os.path.join(self.sandboxed_home_abs_path, "does", "not", "exist.json"),
             is_global_manifest = True
         )
@@ -148,7 +148,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
                 {"read": "~/docs/always.md"}
             ]
         )
-        loaded_rule_records = RequiredReadsManifestLoader.load_manifest_rule_records(
+        loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
             is_global_manifest = True
         )
@@ -165,7 +165,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
                 {"extension": ".md", "read": "~/docs/markdown.md"}
             ]
         )
-        loaded_rule_records = RequiredReadsManifestLoader.load_manifest_rule_records(
+        loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
             is_global_manifest = True
         )
@@ -181,7 +181,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
                 {"extension": ".md", "read": "~/docs/markdown.md"}
             ]
         )
-        loaded_rule_records = RequiredReadsManifestLoader.load_manifest_rule_records(
+        loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
             is_global_manifest = True
         )
@@ -196,7 +196,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
                 {"filepath": "/server/", "read": "~/docs/backend.md"}
             ]
         )
-        loaded_rule_records = RequiredReadsManifestLoader.load_manifest_rule_records(
+        loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
             is_global_manifest = True
         )
@@ -213,7 +213,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
                 {"filepath": "/Server/", "read": "~/docs/backend.md"}
             ]
         )
-        loaded_rule_records = RequiredReadsManifestLoader.load_manifest_rule_records(
+        loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
             is_global_manifest = True
         )
@@ -235,7 +235,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
                 }
             ]
         )
-        loaded_rule_records = RequiredReadsManifestLoader.load_manifest_rule_records(
+        loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
             is_global_manifest = True
         )
@@ -252,7 +252,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
                 {"extension": ".py", "read": "./docs/python.md"}
             ]
         )
-        loaded_rule_records = RequiredReadsManifestLoader.load_manifest_rule_records(
+        loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
             is_global_manifest = False
         )
@@ -269,7 +269,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
                 {"extension": ".py", "read": "~/docs/python.md"}
             ]
         )
-        loaded_rule_records = RequiredReadsManifestLoader.load_manifest_rule_records(
+        loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
             is_global_manifest = True
         )
@@ -283,7 +283,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(tests.fixtures_required_reads.H
                 {"extension": ".py", "read": "~/docs/python.md", "dedupe_key": "python-style-guide"}
             ]
         )
-        loaded_rule_records = RequiredReadsManifestLoader.load_manifest_rule_records(
+        loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
             is_global_manifest = True
         )
@@ -297,7 +297,7 @@ class TestRequiredReadsManifestLoaderDiscovery(tests.fixtures_required_reads.Hom
         project_directory_abs_path = os.path.join(self.sandboxed_home_abs_path, "some", "project")
         os.makedirs(project_directory_abs_path, exist_ok = True)
         edited_file_abs_path = os.path.join(project_directory_abs_path, "src", "foo.py")
-        discovered_manifests = RequiredReadsManifestLoader.discover_manifests(
+        discovered_manifests = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
             edited_file_abs_path = edited_file_abs_path
         )
         non_project_manifests = [
@@ -318,7 +318,7 @@ class TestRequiredReadsManifestLoaderDiscovery(tests.fixtures_required_reads.Hom
             rule_dicts = []
         )
         edited_file_abs_path = os.path.join(project_directory_abs_path, "src", "foo.py")
-        discovered_manifests = RequiredReadsManifestLoader.discover_manifests(
+        discovered_manifests = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
             edited_file_abs_path = edited_file_abs_path
         )
         manifest_paths = [dm.manifest_abs_path for dm in discovered_manifests]
@@ -335,7 +335,7 @@ class TestRequiredReadsManifestLoaderDiscovery(tests.fixtures_required_reads.Hom
             rule_dicts = []
         )
         edited_file_abs_path = os.path.join(deep_directory_abs_path, "foo.py")
-        discovered_manifests = RequiredReadsManifestLoader.discover_manifests(
+        discovered_manifests = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
             edited_file_abs_path = edited_file_abs_path
         )
         project_manifests = [dm for dm in discovered_manifests if dm.is_project_walkup_manifest]
@@ -350,7 +350,7 @@ class TestRequiredReadsManifestLoaderDiscovery(tests.fixtures_required_reads.Hom
             rule_dicts = []
         )
         edited_file_abs_path = os.path.join(self.sandboxed_home_abs_path, "project", "src", "foo.py")
-        discovered_manifests = RequiredReadsManifestLoader.discover_manifests(
+        discovered_manifests = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
             edited_file_abs_path = edited_file_abs_path
         )
         project_manifests = [dm for dm in discovered_manifests if dm.is_project_walkup_manifest]
@@ -359,7 +359,7 @@ class TestRequiredReadsManifestLoaderDiscovery(tests.fixtures_required_reads.Hom
     def test_no_manifests_anywhere_returns_only_hooks_repo_global(self):
 
         edited_file_abs_path = os.path.join(self.sandboxed_home_abs_path, "a", "b", "foo.py")
-        discovered_manifests = RequiredReadsManifestLoader.discover_manifests(
+        discovered_manifests = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
             edited_file_abs_path = edited_file_abs_path
         )
         project_manifests = [dm for dm in discovered_manifests if dm.is_project_walkup_manifest]
@@ -370,100 +370,100 @@ class TestRequiredReadsState(tests.fixtures_required_reads.HomeOverrideEnvVarTes
 
     def test_unmarked_dedupe_key_is_not_satisfied(self):
 
-        self.assertFalse(RequiredReadsState.is_dedupe_key_satisfied(
+        self.assertFalse(required_reading._state.RequiredReadsState.is_dedupe_key_satisfied(
             claude_session_id_string = "session-unmarked",
             dedupe_key_string = "some-key"
         ))
 
     def test_marked_dedupe_key_reads_back_as_satisfied(self):
 
-        RequiredReadsState.mark_dedupe_key_satisfied(
+        required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
             claude_session_id_string = "session-alpha",
             dedupe_key_string = "python-style-guide"
         )
-        self.assertTrue(RequiredReadsState.is_dedupe_key_satisfied(
+        self.assertTrue(required_reading._state.RequiredReadsState.is_dedupe_key_satisfied(
             claude_session_id_string = "session-alpha",
             dedupe_key_string = "python-style-guide"
         ))
 
     def test_second_mark_for_same_key_is_idempotent(self):
 
-        RequiredReadsState.mark_dedupe_key_satisfied(
+        required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
             claude_session_id_string = "session-beta",
             dedupe_key_string = "k"
         )
-        RequiredReadsState.mark_dedupe_key_satisfied(
+        required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
             claude_session_id_string = "session-beta",
             dedupe_key_string = "k"
         )
-        self.assertTrue(RequiredReadsState.is_dedupe_key_satisfied(
+        self.assertTrue(required_reading._state.RequiredReadsState.is_dedupe_key_satisfied(
             claude_session_id_string = "session-beta",
             dedupe_key_string = "k"
         ))
 
     def test_different_sessions_do_not_share_flags(self):
 
-        RequiredReadsState.mark_dedupe_key_satisfied(
+        required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
             claude_session_id_string = "session-one",
             dedupe_key_string = "shared-key"
         )
-        self.assertFalse(RequiredReadsState.is_dedupe_key_satisfied(
+        self.assertFalse(required_reading._state.RequiredReadsState.is_dedupe_key_satisfied(
             claude_session_id_string = "session-two",
             dedupe_key_string = "shared-key"
         ))
 
     def test_clear_session_removes_all_flags_for_that_session(self):
 
-        RequiredReadsState.mark_dedupe_key_satisfied(
+        required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
             claude_session_id_string = "session-clear",
             dedupe_key_string = "a"
         )
-        RequiredReadsState.mark_dedupe_key_satisfied(
+        required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
             claude_session_id_string = "session-clear",
             dedupe_key_string = "b"
         )
-        RequiredReadsState.clear_session(claude_session_id_string = "session-clear")
-        self.assertFalse(RequiredReadsState.is_dedupe_key_satisfied(
+        required_reading._state.RequiredReadsState.clear_session(claude_session_id_string = "session-clear")
+        self.assertFalse(required_reading._state.RequiredReadsState.is_dedupe_key_satisfied(
             claude_session_id_string = "session-clear",
             dedupe_key_string = "a"
         ))
-        self.assertFalse(RequiredReadsState.is_dedupe_key_satisfied(
+        self.assertFalse(required_reading._state.RequiredReadsState.is_dedupe_key_satisfied(
             claude_session_id_string = "session-clear",
             dedupe_key_string = "b"
         ))
 
     def test_clear_session_on_nonexistent_session_is_a_no_op(self):
 
-        RequiredReadsState.clear_session(claude_session_id_string = "session-never-existed")
+        required_reading._state.RequiredReadsState.clear_session(claude_session_id_string = "session-never-existed")
 
     def test_sweep_stale_removes_old_session_directories_and_keeps_fresh_ones(self):
 
-        RequiredReadsState.mark_dedupe_key_satisfied(
+        required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
             claude_session_id_string = "session-old",
             dedupe_key_string = "k"
         )
-        RequiredReadsState.mark_dedupe_key_satisfied(
+        required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
             claude_session_id_string = "session-new",
             dedupe_key_string = "k"
         )
-        old_session_directory_abs_path = RequiredReadsState.get_session_directory_abs_path(
+        old_session_directory_abs_path = required_reading._state.RequiredReadsState.get_session_directory_abs_path(
             claude_session_id_string = "session-old"
         )
         ten_days_ago_wall_clock_seconds = time.time() - (10 * 24 * 60 * 60)
         os.utime(old_session_directory_abs_path, (ten_days_ago_wall_clock_seconds, ten_days_ago_wall_clock_seconds))
-        RequiredReadsState.sweep_stale_session_directories()
-        self.assertFalse(RequiredReadsState.is_dedupe_key_satisfied(
+        required_reading._state.RequiredReadsState.sweep_stale_session_directories()
+        self.assertFalse(required_reading._state.RequiredReadsState.is_dedupe_key_satisfied(
             claude_session_id_string = "session-old",
             dedupe_key_string = "k"
         ))
-        self.assertTrue(RequiredReadsState.is_dedupe_key_satisfied(
+        self.assertTrue(required_reading._state.RequiredReadsState.is_dedupe_key_satisfied(
             claude_session_id_string = "session-new",
             dedupe_key_string = "k"
         ))
 
     def test_sweep_stale_with_no_state_base_directory_is_a_no_op(self):
 
-        RequiredReadsState.sweep_stale_session_directories()
+        required_reading._state.RequiredReadsState.sweep_stale_session_directories()
 
 
 class PreToolUseRequiredReadsRuleRecordBuilder:
@@ -479,7 +479,7 @@ class PreToolUseRequiredReadsRuleRecordBuilder:
         dedupe_key = None
     ):
 
-        return RequiredReadsRuleRecord(
+        return required_reading._manifest.RequiredReadsRuleRecord(
             rule_id = rule_id,
             manifest_abs_path = manifest_abs_path,
             is_global_manifest = is_global_manifest,
@@ -499,7 +499,7 @@ class TestExtractEditedFilePath(unittest.TestCase):
             new_string_content = "x",
             file_path = "/tmp/foo.py"
         )
-        extracted_abs_path = PreToolUseRequiredReadsRuleChecks.extract_edited_file_abs_path_or_none(
+        extracted_abs_path = required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.extract_edited_file_abs_path_or_none(
             pretooluse_payload = edit_payload
         )
         self.assertIsNotNone(extracted_abs_path)
@@ -511,7 +511,7 @@ class TestExtractEditedFilePath(unittest.TestCase):
             file_content = "x",
             file_path = "/tmp/bar.py"
         )
-        extracted_abs_path = PreToolUseRequiredReadsRuleChecks.extract_edited_file_abs_path_or_none(
+        extracted_abs_path = required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.extract_edited_file_abs_path_or_none(
             pretooluse_payload = write_payload
         )
         self.assertIsNotNone(extracted_abs_path)
@@ -523,7 +523,7 @@ class TestExtractEditedFilePath(unittest.TestCase):
             tool_name = "NotebookEdit",
             tool_input = {"notebook_path": "/tmp/book.ipynb", "new_source": "x", "cell_id": "c"}
         )
-        extracted_abs_path = PreToolUseRequiredReadsRuleChecks.extract_edited_file_abs_path_or_none(
+        extracted_abs_path = required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.extract_edited_file_abs_path_or_none(
             pretooluse_payload = notebook_edit_payload
         )
         self.assertIsNotNone(extracted_abs_path)
@@ -534,7 +534,7 @@ class TestExtractEditedFilePath(unittest.TestCase):
         read_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_read_payload(
             file_path = "/tmp/foo.py"
         )
-        extracted_abs_path = PreToolUseRequiredReadsRuleChecks.extract_edited_file_abs_path_or_none(
+        extracted_abs_path = required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.extract_edited_file_abs_path_or_none(
             pretooluse_payload = read_payload
         )
         self.assertIsNotNone(extracted_abs_path)
@@ -545,7 +545,7 @@ class TestExtractEditedFilePath(unittest.TestCase):
         unrelated_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
             bash_command_string = "echo hello"
         )
-        extracted_abs_path = PreToolUseRequiredReadsRuleChecks.extract_edited_file_abs_path_or_none(
+        extracted_abs_path = required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.extract_edited_file_abs_path_or_none(
             pretooluse_payload = unrelated_payload
         )
         self.assertIsNone(extracted_abs_path)
@@ -556,7 +556,7 @@ class TestExtractEditedFilePath(unittest.TestCase):
             tool_name = "Edit",
             tool_input = {}
         )
-        extracted_abs_path = PreToolUseRequiredReadsRuleChecks.extract_edited_file_abs_path_or_none(
+        extracted_abs_path = required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.extract_edited_file_abs_path_or_none(
             pretooluse_payload = empty_edit_payload
         )
         self.assertIsNone(extracted_abs_path)
@@ -575,7 +575,7 @@ class TestApplyProjectOverridesAgainstGlobalRules(unittest.TestCase):
             read_abs_path = "/project/docs/project-python-style.md",
             override_abs_path = "/home/zachm/Dev/ai-sanity/styleguides/python.md"
         )
-        surviving_rule_records = PreToolUseRequiredReadsRuleChecks.apply_project_overrides_against_global_rules(
+        surviving_rule_records = required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.apply_project_overrides_against_global_rules(
             rule_records = [global_python_rule_record, project_override_rule_record]
         )
         self.assertEqual(len(surviving_rule_records), 1)
@@ -592,7 +592,7 @@ class TestApplyProjectOverridesAgainstGlobalRules(unittest.TestCase):
             read_abs_path = "/project/docs/product.md",
             override_abs_path = None
         )
-        surviving_rule_records = PreToolUseRequiredReadsRuleChecks.apply_project_overrides_against_global_rules(
+        surviving_rule_records = required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.apply_project_overrides_against_global_rules(
             rule_records = [global_python_rule_record, project_extra_rule_record]
         )
         self.assertEqual(len(surviving_rule_records), 2)
@@ -608,7 +608,7 @@ class TestApplyProjectOverridesAgainstGlobalRules(unittest.TestCase):
             read_abs_path = "/project/docs/alt-stack.md",
             override_abs_path = "/project/docs/stack.md"
         )
-        surviving_rule_records = PreToolUseRequiredReadsRuleChecks.apply_project_overrides_against_global_rules(
+        surviving_rule_records = required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.apply_project_overrides_against_global_rules(
             rule_records = [project_a_rule_record, project_b_override_rule_record]
         )
         self.assertEqual(len(surviving_rule_records), 2)
@@ -622,7 +622,7 @@ class TestFilterRulesByMatchCriterion(unittest.TestCase):
             match_extension_suffix = None,
             match_filepath_substring = None
         )
-        match_passed_rule_records = PreToolUseRequiredReadsRuleChecks.filter_rules_by_match_criterion(
+        match_passed_rule_records = required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.filter_rules_by_match_criterion(
             rule_records = [wildcard_rule_record],
             candidate_file_abs_path = "/anywhere/foo.xyz"
         )
@@ -634,7 +634,7 @@ class TestFilterRulesByMatchCriterion(unittest.TestCase):
             match_extension_suffix = ".py",
             match_filepath_substring = None
         )
-        match_passed_rule_records = PreToolUseRequiredReadsRuleChecks.filter_rules_by_match_criterion(
+        match_passed_rule_records = required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.filter_rules_by_match_criterion(
             rule_records = [python_rule_record],
             candidate_file_abs_path = "/c/users/zachm/dev/ai-sanity/hooks/bar.py"
         )
@@ -646,7 +646,7 @@ class TestFilterRulesByMatchCriterion(unittest.TestCase):
             match_extension_suffix = ".py",
             match_filepath_substring = None
         )
-        match_passed_rule_records = PreToolUseRequiredReadsRuleChecks.filter_rules_by_match_criterion(
+        match_passed_rule_records = required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.filter_rules_by_match_criterion(
             rule_records = [python_rule_record],
             candidate_file_abs_path = "/c/users/zachm/dev/foo.md"
         )
@@ -658,7 +658,7 @@ class TestFilterRulesByMatchCriterion(unittest.TestCase):
             match_extension_suffix = None,
             match_filepath_substring = "/server/"
         )
-        match_passed_rule_records = PreToolUseRequiredReadsRuleChecks.filter_rules_by_match_criterion(
+        match_passed_rule_records = required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.filter_rules_by_match_criterion(
             rule_records = [server_rule_record],
             candidate_file_abs_path = "/c/users/zachm/dev/project/server/api/foo.py"
         )
@@ -670,7 +670,7 @@ class TestFilterRulesByMatchCriterion(unittest.TestCase):
             match_extension_suffix = None,
             match_filepath_substring = "/server/"
         )
-        match_passed_rule_records = PreToolUseRequiredReadsRuleChecks.filter_rules_by_match_criterion(
+        match_passed_rule_records = required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.filter_rules_by_match_criterion(
             rule_records = [server_rule_record],
             candidate_file_abs_path = "/c/users/zachm/dev/project/client/index.js"
         )
@@ -690,8 +690,8 @@ class TestIsReadOfAManifestListedDoc(tests.fixtures_required_reads.HomeOverrideE
                 {"extension": ".md", "read": markdown_doc_abs_path}
             ]
         )
-        normalized_candidate_abs_path = RequiredReadsPathNormalizer.normalize_path(markdown_doc_abs_path)
-        is_manifest_listed = PreToolUseRequiredReadsRuleChecks.is_read_of_a_manifest_listed_doc(
+        normalized_candidate_abs_path = required_reading._manifest.RequiredReadsPathNormalizer.normalize_path(markdown_doc_abs_path)
+        is_manifest_listed = required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.is_read_of_a_manifest_listed_doc(
             tool_name_string = "Read",
             candidate_file_abs_path = normalized_candidate_abs_path,
             edited_file_abs_path = normalized_candidate_abs_path
@@ -713,8 +713,8 @@ class TestIsReadOfAManifestListedDoc(tests.fixtures_required_reads.HomeOverrideE
                 {"extension": ".py", "read": python_doc_abs_path}
             ]
         )
-        normalized_candidate_abs_path = RequiredReadsPathNormalizer.normalize_path(python_doc_abs_path)
-        is_manifest_listed = PreToolUseRequiredReadsRuleChecks.is_read_of_a_manifest_listed_doc(
+        normalized_candidate_abs_path = required_reading._manifest.RequiredReadsPathNormalizer.normalize_path(python_doc_abs_path)
+        is_manifest_listed = required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.is_read_of_a_manifest_listed_doc(
             tool_name_string = "Read",
             candidate_file_abs_path = normalized_candidate_abs_path,
             edited_file_abs_path = normalized_candidate_abs_path
@@ -732,10 +732,10 @@ class TestIsReadOfAManifestListedDoc(tests.fixtures_required_reads.HomeOverrideE
                 {"extension": ".md", "read": markdown_doc_abs_path}
             ]
         )
-        unrelated_abs_path = RequiredReadsPathNormalizer.normalize_path(
+        unrelated_abs_path = required_reading._manifest.RequiredReadsPathNormalizer.normalize_path(
             os.path.join(self.sandboxed_home_abs_path, "project", "notes.md")
         )
-        is_manifest_listed = PreToolUseRequiredReadsRuleChecks.is_read_of_a_manifest_listed_doc(
+        is_manifest_listed = required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.is_read_of_a_manifest_listed_doc(
             tool_name_string = "Read",
             candidate_file_abs_path = unrelated_abs_path,
             edited_file_abs_path = unrelated_abs_path
@@ -753,8 +753,8 @@ class TestIsReadOfAManifestListedDoc(tests.fixtures_required_reads.HomeOverrideE
                 {"extension": ".md", "read": markdown_doc_abs_path}
             ]
         )
-        normalized_candidate_abs_path = RequiredReadsPathNormalizer.normalize_path(markdown_doc_abs_path)
-        is_manifest_listed = PreToolUseRequiredReadsRuleChecks.is_read_of_a_manifest_listed_doc(
+        normalized_candidate_abs_path = required_reading._manifest.RequiredReadsPathNormalizer.normalize_path(markdown_doc_abs_path)
+        is_manifest_listed = required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.is_read_of_a_manifest_listed_doc(
             tool_name_string = "Edit",
             candidate_file_abs_path = normalized_candidate_abs_path,
             edited_file_abs_path = normalized_candidate_abs_path
@@ -773,7 +773,7 @@ class TestPartitionRulesIntoUnsatisfiedFireAndAlreadySatisfied(tests.fixtures_re
             dedupe_key = "markdown-style-guide"
         )
         rules_to_fire_list, rules_already_satisfied_list = (
-            PreToolUseRequiredReadsRuleChecks.partition_rules_into_unsatisfied_fire_and_already_satisfied(
+            required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.partition_rules_into_unsatisfied_fire_and_already_satisfied(
                 rule_records = [python_rule_record, markdown_rule_record],
                 claude_session_id_string = "session-empty"
             )
@@ -786,12 +786,12 @@ class TestPartitionRulesIntoUnsatisfiedFireAndAlreadySatisfied(tests.fixtures_re
         python_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
             dedupe_key = "python-style-guide"
         )
-        RequiredReadsState.mark_dedupe_key_satisfied(
+        required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
             claude_session_id_string = "session-partial",
             dedupe_key_string = "python-style-guide"
         )
         rules_to_fire_list, rules_already_satisfied_list = (
-            PreToolUseRequiredReadsRuleChecks.partition_rules_into_unsatisfied_fire_and_already_satisfied(
+            required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.partition_rules_into_unsatisfied_fire_and_already_satisfied(
                 rule_records = [python_rule_record],
                 claude_session_id_string = "session-partial"
             )
@@ -811,12 +811,12 @@ class TestPartitionRulesIntoUnsatisfiedFireAndAlreadySatisfied(tests.fixtures_re
             match_extension_suffix = ".pyi",
             dedupe_key = "shared-key"
         )
-        RequiredReadsState.mark_dedupe_key_satisfied(
+        required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
             claude_session_id_string = "session-shared",
             dedupe_key_string = "shared-key"
         )
         rules_to_fire_list, rules_already_satisfied_list = (
-            PreToolUseRequiredReadsRuleChecks.partition_rules_into_unsatisfied_fire_and_already_satisfied(
+            required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.partition_rules_into_unsatisfied_fire_and_already_satisfied(
                 rule_records = [first_rule_record, second_rule_record],
                 claude_session_id_string = "session-shared"
             )
@@ -839,7 +839,7 @@ class TestBuildDenyReasonString(unittest.TestCase):
             manifest_abs_path = "/home/zachm/Dev/project/.ai-sanity/required-reads.json",
             read_abs_path = "/home/zachm/Dev/project/docs/CLAUDE.md"
         )
-        deny_reason_string = PreToolUseRequiredReadsRuleChecks.build_deny_reason_string(
+        deny_reason_string = required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.build_deny_reason_string(
             unsatisfied_rule_records = [first_unsatisfied_rule_record, second_unsatisfied_rule_record],
             edited_file_abs_path = "/home/zachm/Dev/project/src/main.py"
         )
@@ -864,7 +864,7 @@ class TestBuildDenyReasonString(unittest.TestCase):
             read_abs_path = "/nowhere/does-not-exist.md"
         )
         present_records, required_missing_records = (
-            PreToolUseRequiredReadsRuleChecks.partition_rules_by_missing_read_targets(
+            required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.partition_rules_by_missing_read_targets(
                 rule_records = [present_rule_record, missing_rule_record]
             )
         )
@@ -877,43 +877,43 @@ class TestIsFileInsideConfigDirectory(unittest.TestCase):
 
     def test_file_under_home_dot_claude_returns_true(self):
 
-        self.assertTrue(PreToolUseRequiredReadsRuleChecks.is_file_inside_config_directory(
+        self.assertTrue(required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.is_file_inside_config_directory(
             edited_file_abs_path = "c:/users/zachm/.claude/plans/foo.md"
         ))
 
     def test_settings_json_under_home_dot_claude_returns_true(self):
 
-        self.assertTrue(PreToolUseRequiredReadsRuleChecks.is_file_inside_config_directory(
+        self.assertTrue(required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.is_file_inside_config_directory(
             edited_file_abs_path = "c:/users/zachm/.claude/settings.json"
         ))
 
     def test_file_under_project_dot_claude_returns_true(self):
 
-        self.assertTrue(PreToolUseRequiredReadsRuleChecks.is_file_inside_config_directory(
+        self.assertTrue(required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.is_file_inside_config_directory(
             edited_file_abs_path = "c:/users/zachm/dev/project/.claude/required-reads.json"
         ))
 
     def test_file_under_project_dot_ai_sanity_returns_true(self):
 
-        self.assertTrue(PreToolUseRequiredReadsRuleChecks.is_file_inside_config_directory(
+        self.assertTrue(required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.is_file_inside_config_directory(
             edited_file_abs_path = "c:/users/zachm/dev/project/.ai-sanity/required-reading.json"
         ))
 
     def test_regular_project_file_returns_false(self):
 
-        self.assertFalse(PreToolUseRequiredReadsRuleChecks.is_file_inside_config_directory(
+        self.assertFalse(required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.is_file_inside_config_directory(
             edited_file_abs_path = "c:/users/zachm/dev/project/src/foo.py"
         ))
 
     def test_partial_dot_claude_name_match_without_segment_boundary_returns_false(self):
 
-        self.assertFalse(PreToolUseRequiredReadsRuleChecks.is_file_inside_config_directory(
+        self.assertFalse(required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.is_file_inside_config_directory(
             edited_file_abs_path = "c:/users/zachm/dev/project/src/.claude-config/foo.py"
         ))
 
     def test_partial_dot_ai_sanity_name_match_without_segment_boundary_returns_false(self):
 
-        self.assertFalse(PreToolUseRequiredReadsRuleChecks.is_file_inside_config_directory(
+        self.assertFalse(required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.is_file_inside_config_directory(
             edited_file_abs_path = "c:/users/zachm/dev/project/src/.ai-sanity-extra/foo.py"
         ))
 

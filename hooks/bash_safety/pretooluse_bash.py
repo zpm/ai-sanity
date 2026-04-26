@@ -12,8 +12,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import common._command_parser
-import common._hook_io
+import _common._command_parser
+import _common._hook_io
 
 
 class NoGitWriteCommandsCheck:
@@ -70,7 +70,7 @@ class NoGitWriteCommandsCheck:
 
         """Checks every clause for a git write subcommand. Returns a deny reason string or None."""
         bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
-        clauses = common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
+        clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
         for clause in clauses:
             if clause[0] != "git" or len(clause) < 2:
                 continue
@@ -169,7 +169,7 @@ class NoPackageManagersCheck:
 
         """Returns a deny reason string if any clause contains a package install command, or None."""
         bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
-        clauses = common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
+        clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
         checks = NoPackageManagersCheck
         for clause in clauses:
             for prefix_length in range(1, len(clause) + 1):
@@ -207,7 +207,7 @@ class NoSystemOperationsCheck:
 
         """Returns a deny reason string if any clause starts with a denied system command, or None."""
         bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
-        clauses = common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
+        clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
         for clause in clauses:
             if clause[0] in NoSystemOperationsCheck._DENIED_COMMANDS:
                 return NoSystemOperationsCheck._DENY_MESSAGE
@@ -232,7 +232,7 @@ class NoShellSpawningCheck:
 
         """Returns a deny reason string if any clause starts with a denied shell command, or None."""
         bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
-        clauses = common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
+        clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
         for clause in clauses:
             if clause[0] in NoShellSpawningCheck._DENIED_COMMANDS:
                 return NoShellSpawningCheck._DENY_MESSAGE
@@ -254,7 +254,7 @@ class NoGithubApiCheck:
 
         """Returns a deny reason string if any clause contains gh api, or None."""
         bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
-        clauses = common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
+        clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
         for clause in clauses:
             if clause[0] != "gh" or len(clause) < 2:
                 continue
@@ -280,7 +280,7 @@ class NoTextManipulationCheck:
 
         """Returns a deny reason string if any clause starts with a denied text manipulation command, or None."""
         bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
-        clauses = common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
+        clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
         for clause in clauses:
             if clause[0] in NoTextManipulationCheck._DENIED_COMMANDS:
                 return NoTextManipulationCheck._DENY_MESSAGE
@@ -302,7 +302,7 @@ class NoTaskkillCheck:
 
         """Returns a deny reason string if any clause starts with taskkill, or None."""
         bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
-        clauses = common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
+        clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
         for clause in clauses:
             if clause[0] in NoTaskkillCheck._DENIED_COMMANDS:
                 return NoTaskkillCheck._DENY_MESSAGE
@@ -333,14 +333,14 @@ class PreToolUseBashSafetyHookEntry:
         """Reads the payload, runs deny checks in order (any violation blocks immediately), otherwise passes through
         to settings.json permission rules. Any unexpected error falls through to passthrough."""
         try:
-            pretooluse_payload = common._hook_io.PreToolUseHookIo.read_pretooluse_payload_from_stdin()
+            pretooluse_payload = _common._hook_io.PreToolUseHookIo.read_pretooluse_payload_from_stdin()
             for deny_check_method in PreToolUseBashSafetyHookEntry._deny_check_methods_to_run_in_order:
                 deny_reason_or_none = deny_check_method(pretooluse_payload)
                 if deny_reason_or_none is not None:
-                    common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(deny_reason_or_none)
-            common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
+                    _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(deny_reason_or_none)
+            _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
         except Exception:
-            common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
+            _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
 
 
 if __name__ == "__main__":

@@ -7,21 +7,31 @@
 
 import json
 import os
+import re
 import shlex
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import common._command_parser
-import common._hook_io
+import _common._command_parser
+import _common._hook_io
 
 
-class PlaybookExactMatchCheck:
+class PlaybookMatchCheck:
 
-    """Finds the project's .ai-sanity/playbook.json and returns a matching entry when the bash command exactly matches
-    a playbook command (after normalization). Multi-clause commands never match."""
+    """Finds the project's .ai-sanity/playbook.json and matches the first clause of a bash command against playbook
+    entries. Supports exact and prefix (trailing ` *`) matching. Allows pipe chains to safe output-filtering commands
+    and descriptor-to-descriptor redirects (2>&1). Rejects sequential operators (&&, ||, ;), file redirects, and
+    pipes to commands not in the safe allowlist."""
 
     _playbook_relative_path_from_project_root = ".ai-sanity/playbook.json"
+
+    _SAFE_PIPE_TARGET_COMMANDS = {
+        "tail", "head", "grep", "cat", "wc", "sort", "uniq", "tr", "cut", "column"
+    }
+
+    _DESCRIPTOR_MERGE_PATTERN = re.compile(r"^\d*>&\d+$")
+    _FILE_REDIRECT_PATTERN = re.compile(r"^(\d*>{1,2}|<{1,2}|&>{1,2})$")
 
     @staticmethod
     def find_playbook_abs_path(starting_directory_abs_path):
@@ -37,7 +47,7 @@ class PlaybookExactMatchCheck:
             visited_directory_abs_paths.add(current_directory_abs_path)
             candidate_playbook_abs_path = os.path.join(
                 current_directory_abs_path,
-                PlaybookExactMatchCheck._playbook_relative_path_from_project_root
+                PlaybookMatchCheck._playbook_relative_path_from_project_root
             )
             if os.path.isfile(candidate_playbook_abs_path):
                 return candidate_playbook_abs_path
@@ -52,7 +62,8 @@ class PlaybookExactMatchCheck:
     @staticmethod
     def load_playbook_entries(playbook_abs_path):
 
-        """Reads and parses a playbook JSON file. Returns a list of entry dicts, or [] on any error."""
+        """Reads and parses a playbook JSON file. Detects trailing ` *` in the bash field to enable prefix matching.
+        Returns a list of dicts with added `_match_tokens` and `_is_prefix_match` keys, or [] on any error."""
         try:
             with open(playbook_abs_path, "r", encoding = "utf-8") as open_playbook_file_handle:
                 parsed_playbook_object = json.load(open_playbook_file_handle)
@@ -67,54 +78,80 @@ class PlaybookExactMatchCheck:
             bash_command_value = candidate_entry.get("bash")
             if not isinstance(bash_command_value, str) or not bash_command_value.strip():
                 continue
-            valid_playbook_entries.append(candidate_entry)
+            stripped_bash_value = bash_command_value.strip()
+            is_prefix_match = stripped_bash_value.endswith(" *")
+            command_to_tokenize = stripped_bash_value[:-2] if is_prefix_match else stripped_bash_value
+            try:
+                match_tokens = shlex.split(command_to_tokenize)
+            except ValueError:
+                continue
+            if not match_tokens:
+                continue
+            enriched_entry = dict(candidate_entry)
+            enriched_entry["_match_tokens"] = match_tokens
+            enriched_entry["_is_prefix_match"] = is_prefix_match
+            valid_playbook_entries.append(enriched_entry)
         return valid_playbook_entries
 
     @staticmethod
-    def normalize_command_for_matching(command_string):
+    def strip_descriptor_merge_tokens_from_clause(clause_tokens):
 
-        """Normalizes a command string by tokenizing via shlex and rejoining, which strips redundant quoting and
-        whitespace. Falls back to strip() on malformed quoting so the caller always gets a comparable string."""
-        stripped_command_string = command_string.strip()
-        if not stripped_command_string:
-            return ""
-        try:
-            tokenized_command_parts = shlex.split(stripped_command_string)
-            if not tokenized_command_parts:
-                return ""
-            return " ".join(tokenized_command_parts)
-        except ValueError:
-            return stripped_command_string
+        """Removes self-contained descriptor-to-descriptor redirects (like 2>&1) from a token list. Returns the cleaned
+        list, or None if a file redirect operator is detected (signaling the caller should passthrough)."""
+        check_class = PlaybookMatchCheck
+        cleaned_tokens = []
+        for token in clause_tokens:
+            if check_class._DESCRIPTOR_MERGE_PATTERN.match(token):
+                continue
+            if check_class._FILE_REDIRECT_PATTERN.match(token):
+                return None
+            cleaned_tokens.append(token)
+        return cleaned_tokens
 
     @staticmethod
     def check(pretooluse_payload):
 
-        """Returns a matching playbook entry dict if the command exactly matches (after normalization) a single-clause
-        playbook command, or None if no match (passthrough signal)."""
+        """Returns a matching playbook entry if the first clause matches (exact or prefix) and all pipes target safe
+        output-filtering commands. Returns None on no match, unsafe pipes, file redirects, or sequential operators."""
         bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
         bash_command_cwd = pretooluse_payload.get("cwd") or "."
-        playbook_abs_path = PlaybookExactMatchCheck.find_playbook_abs_path(
+        check_class = PlaybookMatchCheck
+        playbook_abs_path = check_class.find_playbook_abs_path(
             starting_directory_abs_path = bash_command_cwd
         )
         if playbook_abs_path is None:
             return None
-        playbook_entries = PlaybookExactMatchCheck.load_playbook_entries(
+        playbook_entries = check_class.load_playbook_entries(
             playbook_abs_path = playbook_abs_path
         )
         if not playbook_entries:
             return None
-        command_clauses = common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
-        if len(command_clauses) != 1:
+        command_clauses, command_separators = (
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators(bash_command_string)
+        )
+        if not command_clauses:
             return None
-        normalized_command_string = PlaybookExactMatchCheck.normalize_command_for_matching(bash_command_string)
-        if not normalized_command_string:
+        if any(separator != "|" for separator in command_separators):
+            return None
+        for downstream_clause in command_clauses[1:]:
+            if not downstream_clause or downstream_clause[0] not in check_class._SAFE_PIPE_TARGET_COMMANDS:
+                return None
+        first_clause_tokens = check_class.strip_descriptor_merge_tokens_from_clause(command_clauses[0])
+        if first_clause_tokens is None:
+            return None
+        if not first_clause_tokens:
             return None
         for candidate_playbook_entry in playbook_entries:
-            normalized_playbook_bash_string = PlaybookExactMatchCheck.normalize_command_for_matching(
-                candidate_playbook_entry["bash"]
-            )
-            if normalized_command_string == normalized_playbook_bash_string:
-                return candidate_playbook_entry
+            entry_match_tokens = candidate_playbook_entry["_match_tokens"]
+            if candidate_playbook_entry["_is_prefix_match"]:
+                if (
+                    len(first_clause_tokens) >= len(entry_match_tokens)
+                    and first_clause_tokens[:len(entry_match_tokens)] == entry_match_tokens
+                ):
+                    return candidate_playbook_entry
+            else:
+                if first_clause_tokens == entry_match_tokens:
+                    return candidate_playbook_entry
         return None
 
 
@@ -123,22 +160,22 @@ class PlaybookExactMatchCheck:
 
 class PreToolUsePlaybookHookEntry:
 
-    """Entry point. Allows exact playbook matches, passes through everything else. Errors fall through to passthrough
-    so a bug in this hook cannot block a command."""
+    """Entry point. Allows playbook matches, passes through everything else. Errors fall through to passthrough so a
+    bug in this hook cannot block a command."""
 
     @staticmethod
     def main():
 
         try:
-            pretooluse_payload = common._hook_io.PreToolUseHookIo.read_pretooluse_payload_from_stdin()
-            matched_playbook_entry = PlaybookExactMatchCheck.check(
+            pretooluse_payload = _common._hook_io.PreToolUseHookIo.read_pretooluse_payload_from_stdin()
+            matched_playbook_entry = PlaybookMatchCheck.check(
                 pretooluse_payload = pretooluse_payload
             )
             if matched_playbook_entry is not None:
-                common._hook_io.PreToolUseHookIo.emit_allow_decision_and_exit()
-            common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
+                _common._hook_io.PreToolUseHookIo.emit_allow_decision_and_exit()
+            _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
         except Exception:
-            common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
+            _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 ########################################################################################################################
 # tests/playbook/test_rule_checks.py
 #
-# unit tests for playbook exact match check
+# unit tests for playbook match check
 ########################################################################################################################
 
 
@@ -17,7 +17,7 @@ import tests.fixtures
 import playbook.pretooluse_bash
 
 
-class TestPlaybookExactMatchCheck(unittest.TestCase):
+class TestPlaybookMatchCheck(unittest.TestCase):
 
     def setUp(self):
 
@@ -27,19 +27,14 @@ class TestPlaybookExactMatchCheck(unittest.TestCase):
         self.playbook_abs_path = os.path.join(self.dot_ai_sanity_directory, "playbook.json")
         self._write_playbook([
             {
-                "bash": "./test_hooks.sh",
-                "what": "Runs repo tests on mac",
+                "bash": "python -m unittest discover -s tests -t . -v",
+                "what": "Runs the full test suite",
                 "when": "Run as a final step after all changes have landed"
             },
             {
-                "bash": "pwsh ./test_hooks.ps1",
-                "what": "Runs repo tests on Windows",
-                "when": "Run as a final step after all changes have landed"
-            },
-            {
-                "bash": "./test_hooks.sh --verbose",
-                "what": "Runs repo tests with verbose output",
-                "when": "When debugging test failures"
+                "bash": "python -m unittest *",
+                "what": "Run targeted tests",
+                "when": "After modifying a specific hook"
             }
         ])
 
@@ -55,111 +50,302 @@ class TestPlaybookExactMatchCheck(unittest.TestCase):
             working_directory = self.temp_project_directory
         )
 
+    ####################################################################################################################
+    # EXACT MATCH
+
     def test_exact_match_returns_entry(self):
 
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.check(
-            self._build_bash_payload("./test_hooks.sh")
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v")
         )
         self.assertIsNotNone(result)
-        self.assertEqual(result["bash"], "./test_hooks.sh")
-
-    def test_second_entry_matches(self):
-
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.check(
-            self._build_bash_payload("pwsh ./test_hooks.ps1")
-        )
-        self.assertIsNotNone(result)
-        self.assertEqual(result["bash"], "pwsh ./test_hooks.ps1")
+        self.assertEqual(result["bash"], "python -m unittest discover -s tests -t . -v")
 
     def test_non_matching_command_returns_none(self):
 
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.check(
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("ls -la")
         )
         self.assertIsNone(result)
 
-    def test_multi_clause_and_rejects_even_if_first_matches(self):
+    def test_exact_entry_rejects_extra_args(self):
 
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.check(
-            self._build_bash_payload("./test_hooks.sh && rm -rf /")
-        )
-        self.assertIsNone(result)
-
-    def test_multi_clause_semicolon_rejects(self):
-
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.check(
-            self._build_bash_payload("./test_hooks.sh; rm -rf /")
-        )
-        self.assertIsNone(result)
-
-    def test_multi_clause_pipe_rejects(self):
-
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.check(
-            self._build_bash_payload("./test_hooks.sh | cat")
+        self._write_playbook([
+            {"bash": "python -m unittest discover -s tests -t . -v", "what": "exact only", "when": "test"}
+        ])
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v --extra")
         )
         self.assertIsNone(result)
 
     def test_extra_whitespace_still_matches(self):
 
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.check(
-            self._build_bash_payload("  ./test_hooks.sh  ")
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("  python -m unittest discover -s tests -t . -v  ")
         )
         self.assertIsNotNone(result)
-        self.assertEqual(result["bash"], "./test_hooks.sh")
-
-    def test_quoted_command_still_matches(self):
-
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.check(
-            self._build_bash_payload("'./test_hooks.sh'")
-        )
-        self.assertIsNotNone(result)
-        self.assertEqual(result["bash"], "./test_hooks.sh")
 
     def test_empty_command_returns_none(self):
 
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.check(
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("")
         )
         self.assertIsNone(result)
 
     def test_malformed_quoting_returns_none(self):
 
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.check(
-            self._build_bash_payload("./test_hooks.sh \"broken")
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest \"broken")
         )
         self.assertIsNone(result)
 
-    def test_command_with_args_matches_entry_with_args(self):
+    ####################################################################################################################
+    # PREFIX WILDCARD
 
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.check(
-            self._build_bash_payload("./test_hooks.sh --verbose")
+    def test_prefix_match_targeted_test(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest tests.playbook.test_rule_checks -v")
         )
         self.assertIsNotNone(result)
-        self.assertEqual(result["bash"], "./test_hooks.sh --verbose")
+        self.assertEqual(result["bash"], "python -m unittest *")
 
-    def test_command_with_args_does_not_match_bare_entry(self):
+    def test_prefix_match_bare_command(self):
 
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.check(
-            self._build_bash_payload("./test_hooks.sh --unexpected")
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest")
+        )
+        self.assertIsNotNone(result)
+        self.assertEqual(result["bash"], "python -m unittest *")
+
+    def test_prefix_no_partial_token_match(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittesting")
         )
         self.assertIsNone(result)
+
+    def test_prefix_with_safe_pipe(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest tests.foo -v 2>&1 | tail -80")
+        )
+        self.assertIsNotNone(result)
+
+    def test_prefix_rejects_sequential_operator(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest tests.foo && rm -rf /")
+        )
+        self.assertIsNone(result)
+
+    def test_exact_match_preferred_over_prefix_when_both_match(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v")
+        )
+        self.assertIsNotNone(result)
+        self.assertEqual(result["bash"], "python -m unittest discover -s tests -t . -v")
+
+    ####################################################################################################################
+    # PIPES WITH SAFE ALLOWLIST
+
+    def test_pipe_to_tail_allows(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v | tail -5")
+        )
+        self.assertIsNotNone(result)
+
+    def test_pipe_to_grep_allows(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v | grep FAIL")
+        )
+        self.assertIsNotNone(result)
+
+    def test_pipe_to_head_allows(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v | head -20")
+        )
+        self.assertIsNotNone(result)
+
+    def test_pipe_to_cat_allows(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v | cat")
+        )
+        self.assertIsNotNone(result)
+
+    def test_pipe_chain_safe_targets_allows(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v | head -20 | grep ERROR")
+        )
+        self.assertIsNotNone(result)
+
+    def test_pipe_to_unsafe_rm_rejects(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v | rm -rf /tmp")
+        )
+        self.assertIsNone(result)
+
+    def test_pipe_to_python_rejects(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v | python -c 'import os'")
+        )
+        self.assertIsNone(result)
+
+    def test_pipe_to_mv_rejects(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v | mv a b")
+        )
+        self.assertIsNone(result)
+
+    def test_piped_command_not_first_clause_rejects(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("echo pwned | python -m unittest discover -s tests -t . -v")
+        )
+        self.assertIsNone(result)
+
+    def test_mixed_safe_and_unsafe_pipe_rejects(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v | tail -5 | rm foo")
+        )
+        self.assertIsNone(result)
+
+    def test_no_space_pipe_to_cat_allows(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v|cat")
+        )
+        self.assertIsNotNone(result)
+
+    ####################################################################################################################
+    # SEQUENTIAL OPERATORS
+
+    def test_and_then_rejects(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v && echo done")
+        )
+        self.assertIsNone(result)
+
+    def test_or_else_rejects(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v || echo failed")
+        )
+        self.assertIsNone(result)
+
+    def test_semicolon_rejects(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v; echo done")
+        )
+        self.assertIsNone(result)
+
+    def test_no_space_semicolon_rejects(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v;rm -rf /")
+        )
+        self.assertIsNone(result)
+
+    def test_no_space_and_rejects(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v&&rm -rf /")
+        )
+        self.assertIsNone(result)
+
+    ####################################################################################################################
+    # DESCRIPTOR MERGES VS FILE REDIRECTS
+
+    def test_descriptor_merge_2_to_1_with_pipe_allows(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v 2>&1 | tail -5")
+        )
+        self.assertIsNotNone(result)
+
+    def test_descriptor_merge_to_stderr_allows(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v >&2")
+        )
+        self.assertIsNotNone(result)
+
+    def test_file_redirect_stdout_rejects(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v > output.txt")
+        )
+        self.assertIsNone(result)
+
+    def test_file_redirect_append_rejects(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v >> log.txt")
+        )
+        self.assertIsNone(result)
+
+    def test_file_redirect_stderr_rejects(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v 2> /dev/null")
+        )
+        self.assertIsNone(result)
+
+    def test_stdin_redirect_rejects(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v < input.txt")
+        )
+        self.assertIsNone(result)
+
+    def test_redirect_only_no_command_rejects(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("> /tmp/file")
+        )
+        self.assertIsNone(result)
+
+    ####################################################################################################################
+    # KNOWN LIMITATION: QUOTED OPERATORS
+
+    def test_quoted_pipe_literal_matches_known_parser_limitation(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest '|' cat")
+        )
+        self.assertIsNotNone(result)
+
+    ####################################################################################################################
+    # PLAYBOOK FILE ERRORS
 
     def test_missing_playbook_returns_none(self):
 
         empty_temp_directory = tempfile.mkdtemp()
         payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
-            bash_command_string = "./test_hooks.sh",
+            bash_command_string = "python -m unittest discover -s tests -t . -v",
             working_directory = empty_temp_directory
         )
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.check(payload)
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(payload)
         self.assertIsNone(result)
 
     def test_bad_json_playbook_returns_none(self):
 
         with open(self.playbook_abs_path, "w", encoding = "utf-8") as open_playbook_file_handle:
             open_playbook_file_handle.write("{not valid json")
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.check(
-            self._build_bash_payload("./test_hooks.sh")
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v")
         )
         self.assertIsNone(result)
 
@@ -167,8 +353,8 @@ class TestPlaybookExactMatchCheck(unittest.TestCase):
 
         with open(self.playbook_abs_path, "w", encoding = "utf-8") as open_playbook_file_handle:
             json.dump({"not": "a list"}, open_playbook_file_handle)
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.check(
-            self._build_bash_payload("./test_hooks.sh")
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v")
         )
         self.assertIsNone(result)
 
@@ -177,29 +363,8 @@ class TestPlaybookExactMatchCheck(unittest.TestCase):
         self._write_playbook([
             {"what": "no bash field", "when": "never"}
         ])
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.check(
-            self._build_bash_payload("./test_hooks.sh")
-        )
-        self.assertIsNone(result)
-
-    def test_no_space_semicolon_injection_rejects(self):
-
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.check(
-            self._build_bash_payload("./test_hooks.sh;rm -rf /")
-        )
-        self.assertIsNone(result)
-
-    def test_no_space_and_injection_rejects(self):
-
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.check(
-            self._build_bash_payload("./test_hooks.sh&&rm -rf /")
-        )
-        self.assertIsNone(result)
-
-    def test_no_space_pipe_injection_rejects(self):
-
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.check(
-            self._build_bash_payload("./test_hooks.sh|cat")
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest discover -s tests -t . -v")
         )
         self.assertIsNone(result)
 
@@ -214,7 +379,7 @@ class TestFindPlaybookAbsPath(unittest.TestCase):
         playbook_abs_path = os.path.join(dot_ai_sanity_directory, "playbook.json")
         with open(playbook_abs_path, "w") as open_file_handle:
             open_file_handle.write("[]")
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.find_playbook_abs_path(temp_project_directory)
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.find_playbook_abs_path(temp_project_directory)
         self.assertEqual(result, playbook_abs_path)
 
     def test_finds_playbook_in_parent_directory(self):
@@ -227,50 +392,71 @@ class TestFindPlaybookAbsPath(unittest.TestCase):
             open_file_handle.write("[]")
         child_directory = os.path.join(temp_project_directory, "src", "hooks")
         os.makedirs(child_directory)
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.find_playbook_abs_path(child_directory)
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.find_playbook_abs_path(child_directory)
         self.assertEqual(result, playbook_abs_path)
 
     def test_returns_none_when_no_playbook_exists(self):
 
         temp_directory = tempfile.mkdtemp()
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.find_playbook_abs_path(temp_directory)
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.find_playbook_abs_path(temp_directory)
         self.assertIsNone(result)
 
 
-class TestNormalizeCommandForMatching(unittest.TestCase):
+class TestStripDescriptorMergeTokensFromClause(unittest.TestCase):
 
-    def test_strips_whitespace(self):
+    def test_no_redirects_unchanged(self):
 
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.normalize_command_for_matching(
-            "  ./test_hooks.sh  "
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.strip_descriptor_merge_tokens_from_clause(
+            ["python", "-m", "unittest"]
         )
-        self.assertEqual(result, "./test_hooks.sh")
+        self.assertEqual(result, ["python", "-m", "unittest"])
 
-    def test_strips_quotes(self):
+    def test_strips_2_to_1(self):
 
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.normalize_command_for_matching(
-            "'./test_hooks.sh'"
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.strip_descriptor_merge_tokens_from_clause(
+            ["python", "-m", "unittest", "2>&1"]
         )
-        self.assertEqual(result, "./test_hooks.sh")
+        self.assertEqual(result, ["python", "-m", "unittest"])
 
-    def test_preserves_arguments(self):
+    def test_strips_to_stderr(self):
 
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.normalize_command_for_matching(
-            "./test_hooks.sh --verbose"
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.strip_descriptor_merge_tokens_from_clause(
+            ["python", "-m", "unittest", ">&2"]
         )
-        self.assertEqual(result, "./test_hooks.sh --verbose")
+        self.assertEqual(result, ["python", "-m", "unittest"])
 
-    def test_empty_string_returns_empty(self):
+    def test_preserves_args_before_redirect(self):
 
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.normalize_command_for_matching("")
-        self.assertEqual(result, "")
-
-    def test_malformed_quoting_falls_back_to_strip(self):
-
-        result = playbook.pretooluse_bash.PlaybookExactMatchCheck.normalize_command_for_matching(
-            "./test_hooks.sh \"broken"
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.strip_descriptor_merge_tokens_from_clause(
+            ["python", "-m", "unittest", "--verbose", "2>&1"]
         )
-        self.assertEqual(result, "./test_hooks.sh \"broken")
+        self.assertEqual(result, ["python", "-m", "unittest", "--verbose"])
+
+    def test_file_redirect_returns_none(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.strip_descriptor_merge_tokens_from_clause(
+            ["python", "-m", "unittest", ">", "out.txt"]
+        )
+        self.assertIsNone(result)
+
+    def test_stderr_file_redirect_returns_none(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.strip_descriptor_merge_tokens_from_clause(
+            ["python", "-m", "unittest", "2>", "/dev/null"]
+        )
+        self.assertIsNone(result)
+
+    def test_stdin_redirect_returns_none(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.strip_descriptor_merge_tokens_from_clause(
+            ["python", "-m", "unittest", "<", "input.txt"]
+        )
+        self.assertIsNone(result)
+
+    def test_empty_list_unchanged(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.strip_descriptor_merge_tokens_from_clause([])
+        self.assertEqual(result, [])
 
 
 if __name__ == "__main__":

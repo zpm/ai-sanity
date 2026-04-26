@@ -3,9 +3,9 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from common import _hook_io
-from required_reading._manifest import RequiredReadsPathNormalizer, RequiredReadsManifestLoader
-from required_reading._state import RequiredReadsState
+import _common._hook_io
+import required_reading._manifest
+import required_reading._state
 
 
 class PreToolUseRequiredReadsRuleChecks:
@@ -32,7 +32,7 @@ class PreToolUseRequiredReadsRuleChecks:
         raw_file_path_string = tool_input_dict.get(file_path_field_name)
         if not isinstance(raw_file_path_string, str) or not raw_file_path_string:
             return None
-        return RequiredReadsPathNormalizer.normalize_path(raw_file_path_string)
+        return required_reading._manifest.RequiredReadsPathNormalizer.normalize_path(raw_file_path_string)
 
     @staticmethod
     def is_file_inside_config_directory(edited_file_abs_path):
@@ -45,13 +45,13 @@ class PreToolUseRequiredReadsRuleChecks:
 
         """Loads all manifests, applies overrides, and returns rules matching the edited file."""
         rule_checks_class = PreToolUseRequiredReadsRuleChecks
-        discovered_manifests = RequiredReadsManifestLoader.discover_manifests(
+        discovered_manifests = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
             edited_file_abs_path = edited_file_abs_path
         )
         flattened_rule_records = []
         for discovered_manifest in discovered_manifests:
             is_global_manifest_bool = not discovered_manifest.is_project_walkup_manifest
-            flattened_rule_records.extend(RequiredReadsManifestLoader.load_manifest_rule_records(
+            flattened_rule_records.extend(required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
                 manifest_abs_path = discovered_manifest.manifest_abs_path,
                 is_global_manifest = is_global_manifest_bool
             ))
@@ -107,11 +107,11 @@ class PreToolUseRequiredReadsRuleChecks:
         """Reads of required docs always passthrough to break circular deadlocks."""
         if tool_name_string != "Read":
             return False
-        discovered_manifests = RequiredReadsManifestLoader.discover_manifests(
+        discovered_manifests = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
             edited_file_abs_path = edited_file_abs_path
         )
         for discovered_manifest in discovered_manifests:
-            loaded_rule_records = RequiredReadsManifestLoader.load_manifest_rule_records(
+            loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
                 manifest_abs_path = discovered_manifest.manifest_abs_path,
                 is_global_manifest = False
             )
@@ -127,7 +127,7 @@ class PreToolUseRequiredReadsRuleChecks:
         rules_to_fire_list = []
         rules_already_satisfied_list = []
         for candidate_rule_record in rule_records:
-            is_satisfied_bool = RequiredReadsState.is_dedupe_key_satisfied(
+            is_satisfied_bool = required_reading._state.RequiredReadsState.is_dedupe_key_satisfied(
                 claude_session_id_string = claude_session_id_string,
                 dedupe_key_string = candidate_rule_record.dedupe_key
             )
@@ -194,9 +194,9 @@ class PreToolUseRequiredReadsHookEntry:
 
         rule_checks_class = PreToolUseRequiredReadsRuleChecks
         try:
-            pretooluse_payload = _hook_io.PreToolUseHookIo.read_pretooluse_payload_from_stdin()
+            pretooluse_payload = _common._hook_io.PreToolUseHookIo.read_pretooluse_payload_from_stdin()
             try:
-                RequiredReadsState.sweep_stale_session_directories()
+                required_reading._state.RequiredReadsState.sweep_stale_session_directories()
             except OSError:
                 pass
             claude_session_id_string = pretooluse_payload.get("session_id") or "unknown-session"
@@ -204,19 +204,19 @@ class PreToolUseRequiredReadsHookEntry:
                 pretooluse_payload = pretooluse_payload
             )
             if edited_file_abs_path is None:
-                _hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
+                _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
                 return
             if rule_checks_class.is_file_inside_config_directory(
                 edited_file_abs_path = edited_file_abs_path
             ):
-                _hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
+                _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
                 return
             if rule_checks_class.is_read_of_a_manifest_listed_doc(
                 tool_name_string = pretooluse_payload.get("tool_name", ""),
                 candidate_file_abs_path = edited_file_abs_path,
                 edited_file_abs_path = edited_file_abs_path
             ):
-                _hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
+                _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
                 return
             applicable_rule_records = rule_checks_class.collect_applicable_rule_records(
                 edited_file_abs_path = edited_file_abs_path
@@ -226,7 +226,7 @@ class PreToolUseRequiredReadsHookEntry:
                 claude_session_id_string = claude_session_id_string
             )
             if not rules_to_fire_list:
-                _hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
+                _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
                 return
             rules_to_fire_list, required_missing_rule_records = (
                 rule_checks_class.partition_rules_by_missing_read_targets(
@@ -238,18 +238,18 @@ class PreToolUseRequiredReadsHookEntry:
                     rules_with_missing_targets = required_missing_rule_records,
                     edited_file_abs_path = edited_file_abs_path
                 )
-                _hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(missing_target_deny_reason_string)
+                _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(missing_target_deny_reason_string)
                 return
             if not rules_to_fire_list:
-                _hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
+                _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
                 return
             deny_reason_string = rule_checks_class.build_deny_reason_string(
                 unsatisfied_rule_records = rules_to_fire_list,
                 edited_file_abs_path = edited_file_abs_path
             )
-            _hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(deny_reason_string)
+            _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(deny_reason_string)
         except Exception:
-            _hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
+            _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
 
 
 if __name__ == "__main__":

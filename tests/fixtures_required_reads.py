@@ -12,6 +12,7 @@ import tempfile
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "hooks"))
 
+import required_reading._manifest
 import tests._subprocess_helpers
 import tests.fixtures
 
@@ -65,13 +66,12 @@ class HomeOverrideEnvVarTestCaseMixin:
     def satisfy_hooks_repo_global_rules_for_extension(self, extension_suffix):
 
         """Pre-satisfies the extension-specific styleguide rule from the hooks-repo global manifest."""
-        from required_reading._manifest import RequiredReadsManifestLoader, RequiredReadsPathNormalizer
-        hooks_repo_root_abs_path = RequiredReadsManifestLoader.get_hooks_repo_root_abs_path()
+        hooks_repo_root_abs_path = required_reading._manifest.RequiredReadsManifestLoader.get_hooks_repo_root_abs_path()
         global_manifest_abs_path = os.path.join(
             hooks_repo_root_abs_path,
-            RequiredReadsManifestLoader._global_manifest_relative_path_from_repo_root
+            required_reading._manifest.RequiredReadsManifestLoader._global_manifest_relative_path_from_repo_root
         )
-        loaded_rule_records = RequiredReadsManifestLoader.load_manifest_rule_records(
+        loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = global_manifest_abs_path,
             is_global_manifest = True
         )

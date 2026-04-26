@@ -27,14 +27,14 @@ class TestPreToolUsePlaybookEntryScript(unittest.TestCase):
         self.playbook_abs_path = os.path.join(self.dot_ai_sanity_directory, "playbook.json")
         playbook_entries = [
             {
-                "bash": "./test_hooks.sh",
-                "what": "Runs repo tests on mac",
+                "bash": "python -m unittest discover -s tests -t . -v",
+                "what": "Runs the full test suite",
                 "when": "Run as a final step after all changes have landed"
             },
             {
-                "bash": "pwsh ./test_hooks.ps1",
-                "what": "Runs repo tests on Windows",
-                "when": "Run as a final step after all changes have landed"
+                "bash": "python -m unittest *",
+                "what": "Run targeted tests",
+                "when": "After modifying a specific hook"
             }
         ]
         with open(self.playbook_abs_path, "w", encoding = "utf-8") as open_playbook_file_handle:
@@ -52,16 +52,25 @@ class TestPreToolUsePlaybookEntryScript(unittest.TestCase):
             )
         )
 
-    def test_matching_command_is_allowed(self):
+    def test_exact_matching_command_is_allowed(self):
 
-        exit_code, parsed_stdout = self._invoke("./test_hooks.sh")
+        exit_code, parsed_stdout = self._invoke("python -m unittest discover -s tests -t . -v")
         tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_allow_decision(
             self, exit_code, parsed_stdout
         )
 
-    def test_second_matching_command_is_allowed(self):
+    def test_prefix_matching_command_is_allowed(self):
 
-        exit_code, parsed_stdout = self._invoke("pwsh ./test_hooks.ps1")
+        exit_code, parsed_stdout = self._invoke("python -m unittest tests.playbook.test_rule_checks -v")
+        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_allow_decision(
+            self, exit_code, parsed_stdout
+        )
+
+    def test_pipe_with_safe_target_is_allowed(self):
+
+        exit_code, parsed_stdout = self._invoke(
+            "python -m unittest discover -s tests -t . -v 2>&1 | tail -5"
+        )
         tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_allow_decision(
             self, exit_code, parsed_stdout
         )
@@ -73,9 +82,29 @@ class TestPreToolUsePlaybookEntryScript(unittest.TestCase):
             self, exit_code, parsed_stdout
         )
 
-    def test_multi_clause_with_match_passes_through(self):
+    def test_sequential_operator_passes_through(self):
 
-        exit_code, parsed_stdout = self._invoke("./test_hooks.sh && rm -rf /")
+        exit_code, parsed_stdout = self._invoke(
+            "python -m unittest discover -s tests -t . -v && rm -rf /"
+        )
+        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
+            self, exit_code, parsed_stdout
+        )
+
+    def test_unsafe_pipe_target_passes_through(self):
+
+        exit_code, parsed_stdout = self._invoke(
+            "python -m unittest discover -s tests -t . -v | rm -rf /"
+        )
+        tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
+            self, exit_code, parsed_stdout
+        )
+
+    def test_file_redirect_passes_through(self):
+
+        exit_code, parsed_stdout = self._invoke(
+            "python -m unittest discover -s tests -t . -v > output.txt"
+        )
         tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
             self, exit_code, parsed_stdout
         )
@@ -84,7 +113,7 @@ class TestPreToolUsePlaybookEntryScript(unittest.TestCase):
 
         empty_temp_directory = tempfile.mkdtemp()
         exit_code, parsed_stdout = self._invoke(
-            command = "./test_hooks.sh",
+            command = "python -m unittest discover -s tests -t . -v",
             working_directory = empty_temp_directory
         )
         tests._subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(

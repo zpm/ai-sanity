@@ -3,9 +3,9 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from common import _hook_io
-from required_reading._manifest import RequiredReadsPathNormalizer, RequiredReadsManifestLoader
-from required_reading._state import RequiredReadsState
+import _common._hook_io
+import required_reading._manifest
+import required_reading._state
 
 
 class PostToolUseReadObserverRuleChecks:
@@ -22,17 +22,17 @@ class PostToolUseReadObserverRuleChecks:
         raw_file_path_string = tool_input_dict.get("file_path")
         if not isinstance(raw_file_path_string, str) or not raw_file_path_string:
             return None
-        return RequiredReadsPathNormalizer.normalize_path(raw_file_path_string)
+        return required_reading._manifest.RequiredReadsPathNormalizer.normalize_path(raw_file_path_string)
 
     @staticmethod
     def collect_dedupe_keys_whose_read_target_matches(read_file_abs_path, cwd_abs_path):
 
         """Returns dedupe keys for rules whose read target matches the file just Read."""
-        discovered_manifests = RequiredReadsManifestLoader.discover_manifests(
+        discovered_manifests = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
             edited_file_abs_path = read_file_abs_path
         )
         if cwd_abs_path:
-            cwd_discovered_manifests = RequiredReadsManifestLoader.discover_manifests(
+            cwd_discovered_manifests = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
                 edited_file_abs_path = os.path.join(cwd_abs_path, "placeholder-filename")
             )
             seen_abs_paths = set(
@@ -46,7 +46,7 @@ class PostToolUseReadObserverRuleChecks:
         matching_dedupe_key_strings = set()
         for discovered_manifest in discovered_manifests:
             is_global_manifest_bool = not discovered_manifest.is_project_walkup_manifest
-            loaded_rule_records = RequiredReadsManifestLoader.load_manifest_rule_records(
+            loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
                 manifest_abs_path = discovered_manifest.manifest_abs_path,
                 is_global_manifest = is_global_manifest_bool
             )
@@ -64,12 +64,12 @@ class PostToolUseReadObserverEntry:
     def main():
 
         try:
-            posttooluse_payload = _hook_io.PostToolUseHookIo.read_posttooluse_payload_from_stdin()
+            posttooluse_payload = _common._hook_io.PostToolUseHookIo.read_posttooluse_payload_from_stdin()
             read_file_abs_path = PostToolUseReadObserverRuleChecks.extract_read_file_abs_path_or_none(
                 posttooluse_payload = posttooluse_payload
             )
             if read_file_abs_path is None:
-                _hook_io.PostToolUseHookIo.emit_passthrough_and_exit()
+                _common._hook_io.PostToolUseHookIo.emit_passthrough_and_exit()
                 return
             cwd_abs_path_from_payload = posttooluse_payload.get("cwd") or ""
             matching_dedupe_key_strings = PostToolUseReadObserverRuleChecks.collect_dedupe_keys_whose_read_target_matches(
@@ -78,13 +78,13 @@ class PostToolUseReadObserverEntry:
             )
             claude_session_id_string = posttooluse_payload.get("session_id") or "unknown-session"
             for dedupe_key_string in matching_dedupe_key_strings:
-                RequiredReadsState.mark_dedupe_key_satisfied(
+                required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
                     claude_session_id_string = claude_session_id_string,
                     dedupe_key_string = dedupe_key_string
                 )
-            _hook_io.PostToolUseHookIo.emit_passthrough_and_exit()
+            _common._hook_io.PostToolUseHookIo.emit_passthrough_and_exit()
         except Exception:
-            _hook_io.PostToolUseHookIo.emit_passthrough_and_exit()
+            _common._hook_io.PostToolUseHookIo.emit_passthrough_and_exit()
 
 
 if __name__ == "__main__":

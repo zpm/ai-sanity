@@ -12,13 +12,13 @@ Every rule that can be a programmatic check lives here instead to force Claude i
 
 Copy [./settings.example.json](./settings.example.json) to `~/.claude/settings.json` and adjust paths.
 
-On Windows, `CLAUDE_CODE_GIT_BASH_PATH` must point to Git Bash (which it should by default).
+The `permissions.allow` list should include the path to this repo (e.g., `Read(~/Dev/ai-sanity/**)`) so the required-reading hook can load styleguides from this repo without prompting.
 
 ## Required Reading
 
 The `required_reading` hook forces Claude to Read specified documents before it can touch matching files.
 
-The manifest filename is `.ai-sanity/required-reading.json` in all repos. Discovery checks two sources in order: hooks-repo global, then project walk-up.
+The manifest filename is `.ai-sanity/required-reading.json` in all repos. Discovery checks two sources in order: the `ai-sanity` global list, and then project walk-up.
 
 ### Project repo (any repo Claude is working in)
 
@@ -40,32 +40,38 @@ The global manifest is always present because it ships with this repo. Its style
 
 ## Playbook
 
-The `playbook` hook auto-whitelists bash commands listed in a project's `.ai-sanity/playbook.json`. Commands that exactly match a playbook entry are allowed without a permission prompt. Multi-clause commands (using `&&`, `;`, `|`) never match, even if the first clause is in the playbook.
+The `playbook` hook auto-whitelists bash commands listed in a project's `.ai-sanity/playbook.json`. The first clause of a command is matched against playbook entries (exact or prefix). Pipes to safe output-filtering commands (`tail`, `head`, `grep`, `cat`, `wc`, `sort`, `uniq`, `tr`, `cut`, `column`) and descriptor merges (`2>&1`) are allowed. Sequential operators (`&&`, `||`, `;`) and file redirects (`>`, `<`) cause passthrough to normal permissions.
 
 Each project that wants playbook support creates `.ai-sanity/playbook.json`:
 
 ```json
 [
   {
-    "bash": "./test_hooks.sh",
-    "what": "Runs repo tests on mac",
+    "bash": "python -m unittest discover -s tests -t . -v",
+    "what": "Runs the full test suite",
     "when": "Run as a final step after all changes have landed"
+  },
+  {
+    "bash": "python -m unittest *",
+    "what": "Run targeted tests for a specific module",
+    "when": "After modifying a specific hook, run its targeted tests"
   }
 ]
 ```
+
+A trailing ` *` in the `bash` field enables prefix matching (token-level, not string). Without it, the match is exact.
 
 To inject the playbook into Claude's context before file operations, add it to the project's `.ai-sanity/required-reading.json`.
 
 ## Other Hooks
 
 - `bash_safety`: Deny-list for dangerous shell commands (git writes, package managers, system ops, shell spawning, text manipulation). Enforces `git mv` for tracked file moves. Unknown commands fall through to the default permission mode.
-- `no_memory`: Blocks Claude from reading or writing to the auto-memory directory or any `MEMORY.md` file, enforcing the CLAUDE.md preference for version-controlled persistence.
+- `no_memory`: Blocks Claude from reading or writing to the auto-memory directory or any `MEMORY.md` file.
 
 ## Tests
 
 Run from the repo root:
 
 ```sh
-./test_hooks.sh         # unix/mac
-pwsh ./test_hooks.ps1   # windows
+python -m unittest discover -s tests -t . -v
 ```

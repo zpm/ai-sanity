@@ -3,8 +3,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from common import _hook_io
-from no_memory._checker import MemoryPathChecker
+import _common._hook_io
+import no_memory._checker
 
 
 class PreToolUseReadRuleChecks:
@@ -22,14 +22,14 @@ class PreToolUseReadRuleChecks:
         read_like_tool_name = pretooluse_payload.get("tool_name", "")
         tool_input_dict = pretooluse_payload.get("tool_input") or {}
         if read_like_tool_name == "Read":
-            return MemoryPathChecker.assert_paths_are_not_memory_locations(tool_input_dict.get("file_path"))
+            return no_memory._checker.MemoryPathChecker.assert_paths_are_not_memory_locations(tool_input_dict.get("file_path"))
         if read_like_tool_name == "Glob":
-            return MemoryPathChecker.assert_paths_are_not_memory_locations(
+            return no_memory._checker.MemoryPathChecker.assert_paths_are_not_memory_locations(
                 tool_input_dict.get("path"),
                 tool_input_dict.get("pattern")
             )
         if read_like_tool_name == "Grep":
-            return MemoryPathChecker.assert_paths_are_not_memory_locations(tool_input_dict.get("path"))
+            return no_memory._checker.MemoryPathChecker.assert_paths_are_not_memory_locations(tool_input_dict.get("path"))
         return None
 
 
@@ -47,14 +47,14 @@ class PreToolUseReadHookEntry:
         """Reads the payload, runs every applicable rule check, denies on the first violation, otherwise passes
         through. Any unexpected error falls through to passthrough so a bug in this hook cannot block a read."""
         try:
-            pretooluse_payload = _hook_io.PreToolUseHookIo.read_pretooluse_payload_from_stdin()
+            pretooluse_payload = _common._hook_io.PreToolUseHookIo.read_pretooluse_payload_from_stdin()
             for rule_check_method in PreToolUseReadHookEntry._rule_check_methods_to_run_in_order:
                 deny_reason_or_none = rule_check_method(pretooluse_payload)
                 if deny_reason_or_none is not None:
-                    _hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(deny_reason_or_none)
-            _hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
+                    _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(deny_reason_or_none)
+            _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
         except Exception:
-            _hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
+            _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
 
 
 if __name__ == "__main__":

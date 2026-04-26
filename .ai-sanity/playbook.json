@@ -1,12 +1,12 @@
 [
   {
-    "bash": "./test_hooks.sh",
-    "what": "Runs repo tests on mac",
+    "bash": "python -m unittest discover -s tests -t . -v",
+    "what": "Runs the full test suite",
     "when": "Run as a final step after all changes have landed"
   },
   {
-    "bash": "pwsh ./test_hooks.ps1",
-    "what": "Runs repo tests on Windows",
-    "when": "Run as a final step after all changes have landed"
+    "bash": "python -m unittest *",
+    "what": "Run targeted tests for a specific module",
+    "when": "After modifying a specific hook, run its targeted tests"
   }
 ]

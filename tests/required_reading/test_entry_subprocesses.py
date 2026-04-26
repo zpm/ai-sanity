@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
 import tests.fixtures
 import tests.fixtures_required_reads
 import tests._subprocess_helpers
-from required_reading._manifest import RequiredReadsManifestLoader
+import required_reading._manifest
 
 
 class PreToolUseRequiredReadsSubprocessTestCase(
@@ -289,7 +289,7 @@ class PreToolUseRequiredReadsSubprocessTestCase(
 
     def test_project_override_silences_global_rule_end_to_end(self):
 
-        hooks_repo_root_abs_path = RequiredReadsManifestLoader.get_hooks_repo_root_abs_path()
+        hooks_repo_root_abs_path = required_reading._manifest.RequiredReadsManifestLoader.get_hooks_repo_root_abs_path()
         hooks_repo_python_style_abs_path = os.path.join(hooks_repo_root_abs_path, "styleguides", "python.md")
         project_directory_abs_path = os.path.join(self.sandboxed_home_abs_path, "project")
         project_python_doc_abs_path = os.path.join(project_directory_abs_path, "project-python.md")

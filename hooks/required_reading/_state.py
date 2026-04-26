@@ -3,7 +3,7 @@ import os
 import shutil
 import time
 
-from required_reading._manifest import RequiredReadsPathNormalizer
+import required_reading._manifest
 
 
 class RequiredReadsState:
@@ -27,8 +27,8 @@ class RequiredReadsState:
         state_directory_override_abs_path = os.environ.get("HOOK_TEST_STATE_DIR")
         if state_directory_override_abs_path:
             return state_directory_override_abs_path.replace("\\", "/")
-        effective_home_abs_path = RequiredReadsPathNormalizer.get_effective_home_abs_path()
-        return RequiredReadsPathNormalizer.normalize_path(
+        effective_home_abs_path = required_reading._manifest.RequiredReadsPathNormalizer.get_effective_home_abs_path()
+        return required_reading._manifest.RequiredReadsPathNormalizer.normalize_path(
             os.path.join(effective_home_abs_path, state_class._state_directory_relative_path_from_home)
         )
 

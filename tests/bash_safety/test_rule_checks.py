@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
 
 import tests.fixtures
 import bash_safety.pretooluse_bash
+import _common._command_parser
 
 
 class TestNoGitWriteCommandsCheck(unittest.TestCase):
@@ -925,6 +926,79 @@ class TestNoTaskkillCheck(unittest.TestCase):
             self._build_bash_payload("echo hello")
         )
         self.assertIsNone(result)
+
+
+class TestBashCommandParserClausesAndSeparators(unittest.TestCase):
+
+    def test_single_command_returns_empty_separators(self):
+
+        clauses, separators = (
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators("python -m unittest")
+        )
+        self.assertEqual(clauses, [["python", "-m", "unittest"]])
+        self.assertEqual(separators, [])
+
+    def test_pipe_returns_pipe_separator(self):
+
+        clauses, separators = (
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators(
+                "python -m unittest | tail"
+            )
+        )
+        self.assertEqual(clauses, [["python", "-m", "unittest"], ["tail"]])
+        self.assertEqual(separators, ["|"])
+
+    def test_and_then_returns_and_separator(self):
+
+        clauses, separators = (
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators(
+                "python -m unittest && echo done"
+            )
+        )
+        self.assertEqual(clauses, [["python", "-m", "unittest"], ["echo", "done"]])
+        self.assertEqual(separators, ["&&"])
+
+    def test_mixed_operators_returns_all_separators(self):
+
+        clauses, separators = (
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators(
+                "python -m unittest | tail && echo"
+            )
+        )
+        self.assertEqual(clauses, [["python", "-m", "unittest"], ["tail"], ["echo"]])
+        self.assertEqual(separators, ["|", "&&"])
+
+    def test_semicolon_returns_semicolon_separator(self):
+
+        clauses, separators = (
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators("a; b")
+        )
+        self.assertEqual(clauses, [["a"], ["b"]])
+        self.assertEqual(separators, [";"])
+
+    def test_or_else_returns_or_separator(self):
+
+        clauses, separators = (
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators("a || b")
+        )
+        self.assertEqual(clauses, [["a"], ["b"]])
+        self.assertEqual(separators, ["||"])
+
+    def test_empty_command_returns_empty(self):
+
+        clauses, separators = (
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators("")
+        )
+        self.assertEqual(clauses, [])
+        self.assertEqual(separators, [])
+
+    def test_malformed_quoting_returns_empty(self):
+
+        clauses, separators = (
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators("echo \"broken")
+        )
+        self.assertEqual(clauses, [])
+        self.assertEqual(separators, [])
 
 
 if __name__ == "__main__":
