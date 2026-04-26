@@ -6,7 +6,6 @@
 
 
 import os
-import re
 import shlex
 import subprocess
 import sys
@@ -200,30 +199,61 @@ class DeferToUserCommandsCheck:
         "bun": [
             "add",
             "install",
+            "remove",
         ],
         "cargo": [
             "add",
             "install",
+            "uninstall",
         ],
         "chmod": ["*"],
         "chown": ["*"],
         "curl": ["*"],
         "docker": ["*"],
-        "gem": ["install"],
-        "npm": ["install"],
-        "pip": ["install"],
-        "pip3": ["install"],
+        "gem": [
+            "install",
+            "uninstall",
+        ],
+        "npm": [
+            "ci",
+            "install",
+            "uninstall",
+            "update",
+        ],
+        "pip": [
+            "install",
+            "uninstall",
+        ],
+        "pip3": [
+            "install",
+            "uninstall",
+        ],
         "pnpm": ["*"],
         "poetry": [
             "add",
             "install",
+            "remove",
         ],
-        "py -m pip": ["install"],
-        "python -m pip": ["install"],
-        "python3 -m pip": ["install"],
+        "py -m pip": [
+            "install",
+            "uninstall",
+        ],
+        "python -m pip": [
+            "install",
+            "uninstall",
+        ],
+        "python3 -m pip": [
+            "install",
+            "uninstall",
+        ],
+        "kill": ["*"],
+        "killall": ["*"],
+        "pkill": ["*"],
         "sudo": ["*"],
         "taskkill": ["*"],
         "uv add": ["*"],
+        "uv lock": ["*"],
+        "uv sync": ["*"],
         "uv pip": [
             "compile",
             "install",
@@ -259,8 +289,11 @@ class ProhibitedCommandsCheck:
         "cmd": ["*"],
         "cmd.exe": ["*"],
         "powershell": ["*"],
+        "pwsh": ["*"],
         "sed": ["*"],
+        "sh": ["*"],
         "tee": ["*"],
+        "zsh": ["*"],
     }
 
     _DENY_MESSAGE = "This command is prohibited. Use the appropriate Claude Code tool instead."
@@ -320,15 +353,13 @@ class PreToolUseBashSafetyHookEntry:
         ProhibitedCommandsCheck.check,
     )
 
-    _FILE_REDIRECT_PATTERN = re.compile(r"(\d*>{1,2}|<{1,2}|&>{1,2})")
-
     @staticmethod
     def _strip_safe_pipe_tail_from_payload(pretooluse_payload):
 
         """If the command is a pipe chain where every downstream clause starts with a safe output-filtering command,
-        returns a copy of the payload with tool_input.command set to just the first clause. Otherwise returns the
-        payload unchanged. Bails out if the raw command contains shell substitution syntax or file redirects, since
-        stripping would hide those from downstream checks."""
+        returns a copy of the payload with tool_input.command set to just the first clause (with descriptor merges
+        stripped). Otherwise returns the payload unchanged. Bails out if the raw command contains shell substitution
+        syntax, since stripping would hide those from downstream checks."""
         bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
         for marker in NoShellSubstitutionCheck._SUBSTITUTION_MARKERS:
             if marker in bash_command_string:
@@ -340,14 +371,20 @@ class PreToolUseBashSafetyHookEntry:
             return pretooluse_payload
         if not all(separator == "|" for separator in separators):
             return pretooluse_payload
-        for clause in clauses:
-            for token in clause:
-                if PreToolUseBashSafetyHookEntry._FILE_REDIRECT_PATTERN.search(token):
-                    return pretooluse_payload
         for downstream_clause in clauses[1:]:
-            if downstream_clause[0] not in _common._command_parser.SAFE_PIPE_TARGET_COMMANDS:
+            cleaned_downstream_clause = (
+                _common._command_parser.RedirectTokenClassifier.strip_descriptor_merge_tokens_from_clause(
+                    clause_tokens = downstream_clause
+                )
+            )
+            if not cleaned_downstream_clause:
                 return pretooluse_payload
-        first_clause_command_string = " ".join(clauses[0])
+            if cleaned_downstream_clause[0] not in _common._command_parser.SAFE_PIPE_TARGET_COMMANDS:
+                return pretooluse_payload
+        first_clause_cleaned = _common._command_parser.RedirectTokenClassifier.strip_descriptor_merge_tokens_from_clause(
+            clause_tokens = clauses[0]
+        )
+        first_clause_command_string = " ".join(first_clause_cleaned)
         stripped_payload = dict(pretooluse_payload)
         stripped_payload["tool_input"] = dict(pretooluse_payload["tool_input"])
         stripped_payload["tool_input"]["command"] = first_clause_command_string

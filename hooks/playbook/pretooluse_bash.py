@@ -7,7 +7,6 @@
 
 import json
 import os
-import re
 import shlex
 import sys
 
@@ -27,10 +26,6 @@ class PlaybookMatchCheck:
     _playbook_relative_path_from_project_root = ".ai-sanity/playbook.json"
 
     _SAFE_PIPE_TARGET_COMMANDS = _common._command_parser.SAFE_PIPE_TARGET_COMMANDS
-
-    _DESCRIPTOR_MERGE_PATTERN = re.compile(r"^\d*>&\d+$")
-    _FILE_REDIRECT_PATTERN = re.compile(r"^(\d*>{1,2}|<{1,2}|&>{1,2})$")
-    _ATTACHED_FILE_REDIRECT_PATTERN = re.compile(r"^(\d*>{1,2}|<{1,2}|&>{1,2})[^&>\s]")
 
     @staticmethod
     def find_playbook_abs_path(starting_directory_abs_path):
@@ -95,19 +90,13 @@ class PlaybookMatchCheck:
     @staticmethod
     def strip_descriptor_merge_tokens_from_clause(clause_tokens):
 
-        """Removes self-contained descriptor-to-descriptor redirects (like 2>&1) from a token list. Returns the cleaned
-        list, or None if a file redirect operator is detected (signaling the caller should passthrough)."""
-        check_class = PlaybookMatchCheck
-        cleaned_tokens = []
-        for token in clause_tokens:
-            if check_class._DESCRIPTOR_MERGE_PATTERN.match(token):
-                continue
-            if check_class._FILE_REDIRECT_PATTERN.match(token):
-                return None
-            if check_class._ATTACHED_FILE_REDIRECT_PATTERN.match(token):
-                return None
-            cleaned_tokens.append(token)
-        return cleaned_tokens
+        """Removes descriptor merges and checks for file redirects. Returns the cleaned list, or None if a file
+        redirect operator is detected (signaling the caller should passthrough)."""
+        if _common._command_parser.RedirectTokenClassifier.clause_contains_file_redirect(clause_tokens):
+            return None
+        return _common._command_parser.RedirectTokenClassifier.strip_descriptor_merge_tokens_from_clause(
+            clause_tokens = clause_tokens
+        )
 
     @staticmethod
     def check(pretooluse_payload):

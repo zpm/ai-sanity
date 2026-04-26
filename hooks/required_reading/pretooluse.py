@@ -40,6 +40,17 @@ class PreToolUseRequiredReadsRuleChecks:
         """Files in `.claude/` or `.ai-sanity/` are operational space where style guide enforcement does not apply."""
         return "/.claude/" in edited_file_abs_path or "/.ai-sanity/" in edited_file_abs_path
 
+    _claude_configuration_doc_basenames = frozenset(("claude.md", "agents.md"))
+
+    @staticmethod
+    def is_read_of_claude_configuration_doc(tool_name_string, edited_file_abs_path):
+
+        """CLAUDE.md and agents.md can always be read without styleguide enforcement. Edits still require it."""
+        if tool_name_string != "Read":
+            return False
+        basename_string = os.path.basename(edited_file_abs_path)
+        return basename_string in PreToolUseRequiredReadsRuleChecks._claude_configuration_doc_basenames
+
     @staticmethod
     def collect_applicable_rule_records(edited_file_abs_path):
 
@@ -207,6 +218,12 @@ class PreToolUseRequiredReadsHookEntry:
                 _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
                 return
             if rule_checks_class.is_file_inside_config_directory(
+                edited_file_abs_path = edited_file_abs_path
+            ):
+                _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
+                return
+            if rule_checks_class.is_read_of_claude_configuration_doc(
+                tool_name_string = pretooluse_payload.get("tool_name", ""),
                 edited_file_abs_path = edited_file_abs_path
             ):
                 _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()

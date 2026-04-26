@@ -123,6 +123,35 @@ class TestRequireGitMvForTrackedMovesCheck(unittest.TestCase):
         self.assertIn("tracked-example.txt", result)
 
 
+class TestMalformedInputPassthrough(unittest.TestCase):
+
+    """Verifies that malformed or empty commands pass through gracefully instead of crashing or denying. These are not
+    valid commands so they live here instead of in command_tests.json."""
+
+    _MALFORMED_COMMANDS = (
+        "",
+        "git commit -m \"broken",
+        "mv \"broken",
+        "pip install \"broken",
+    )
+
+    def test_malformed_commands_pass_through(self):
+
+        for bash_command_string in self._MALFORMED_COMMANDS:
+            with self.subTest(command = bash_command_string):
+                exit_code, parsed_stdout = (
+                    tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
+                        entry_script_relative_path = "bash_safety/pretooluse_bash.py",
+                        pretooluse_payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
+                            bash_command_string = bash_command_string
+                        )
+                    )
+                )
+                tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
+                    self, exit_code, parsed_stdout
+                )
+
+
 class TestBashCommandParserClausesAndSeparators(unittest.TestCase):
 
     def test_single_command_returns_empty_separators(self):
@@ -166,7 +195,7 @@ class TestBashCommandParserClausesAndSeparators(unittest.TestCase):
     def test_semicolon_returns_semicolon_separator(self):
 
         clauses, separators = (
-            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators("a; b")
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators("a ; b")
         )
         self.assertEqual(clauses, [["a"], ["b"]])
         self.assertEqual(separators, [";"])

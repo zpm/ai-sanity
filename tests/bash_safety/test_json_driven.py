@@ -66,6 +66,18 @@ class TestBashSafetyJsonDriven(unittest.TestCase):
                     tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough
                 )
 
+    def test_command_lists_are_alphabetized(self):
+
+        for category_key in self.command_tests:
+            with self.subTest(category = category_key):
+                command_list = self.command_tests[category_key]
+                alphabetized_command_list = sorted(command_list, key = lambda s: s.lower())
+                self.assertEqual(
+                    command_list,
+                    alphabetized_command_list,
+                    f"'{category_key}' list in command_tests.json is not alphabetized"
+                )
+
 
 if __name__ == "__main__":
     unittest.main()

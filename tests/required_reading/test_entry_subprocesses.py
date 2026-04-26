@@ -320,6 +320,72 @@ class PreToolUseRequiredReadsSubprocessTestCase(
         self.assertIn("project-python.md", permission_decision_reason_value)
         self.assertNotIn("styleguides/python.md", permission_decision_reason_value)
 
+    def test_read_of_claude_md_passes_through_without_styleguide(self):
+
+        markdown_style_doc_abs_path = os.path.join(self.sandboxed_home_abs_path, "markdown.md")
+        with open(markdown_style_doc_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
+            open_doc_file_handle.write("# markdown style\n")
+        tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+            manifest_directory_abs_path = self.sandboxed_home_abs_path,
+            rule_dicts = [
+                {"extension": ".md", "read": markdown_style_doc_abs_path}
+            ]
+        )
+        claude_md_abs_path = os.path.join(self.sandboxed_home_abs_path, "project", "CLAUDE.md")
+        os.makedirs(os.path.dirname(claude_md_abs_path), exist_ok = True)
+        exit_code, parsed_stdout = tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
+            entry_script_relative_path = "required_reading/pretooluse.py",
+            pretooluse_payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_read_payload(
+                file_path = claude_md_abs_path
+            )
+        )
+        tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(self, exit_code, parsed_stdout)
+
+    def test_read_of_agents_md_passes_through_without_styleguide(self):
+
+        markdown_style_doc_abs_path = os.path.join(self.sandboxed_home_abs_path, "markdown.md")
+        with open(markdown_style_doc_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
+            open_doc_file_handle.write("# markdown style\n")
+        tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+            manifest_directory_abs_path = self.sandboxed_home_abs_path,
+            rule_dicts = [
+                {"extension": ".md", "read": markdown_style_doc_abs_path}
+            ]
+        )
+        agents_md_abs_path = os.path.join(self.sandboxed_home_abs_path, "project", "agents.md")
+        os.makedirs(os.path.dirname(agents_md_abs_path), exist_ok = True)
+        exit_code, parsed_stdout = tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
+            entry_script_relative_path = "required_reading/pretooluse.py",
+            pretooluse_payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_read_payload(
+                file_path = agents_md_abs_path
+            )
+        )
+        tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(self, exit_code, parsed_stdout)
+
+    def test_edit_of_claude_md_still_demands_styleguide(self):
+
+        markdown_style_doc_abs_path = os.path.join(self.sandboxed_home_abs_path, "markdown.md")
+        with open(markdown_style_doc_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
+            open_doc_file_handle.write("# markdown style\n")
+        tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(
+            manifest_directory_abs_path = self.sandboxed_home_abs_path,
+            rule_dicts = [
+                {"extension": ".md", "read": markdown_style_doc_abs_path}
+            ]
+        )
+        claude_md_abs_path = os.path.join(self.sandboxed_home_abs_path, "project", "CLAUDE.md")
+        os.makedirs(os.path.dirname(claude_md_abs_path), exist_ok = True)
+        exit_code, parsed_stdout = tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
+            entry_script_relative_path = "required_reading/pretooluse.py",
+            pretooluse_payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_edit_payload(
+                new_string_content = "x",
+                file_path = claude_md_abs_path
+            )
+        )
+        tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_deny_decision(
+            self, exit_code, parsed_stdout, expected_message_substring = "markdown.md"
+        )
+
     def test_rule_with_missing_read_target_hard_fails_with_configuration_error(self):
 
         tests.required_reading.fixtures_required_reads.RequiredReadsManifestFixtureBuilder.write_manifest_file(

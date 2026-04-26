@@ -918,5 +918,57 @@ class TestIsFileInsideConfigDirectory(unittest.TestCase):
         ))
 
 
+class TestIsReadOfClaudeConfigurationDoc(unittest.TestCase):
+
+    def test_read_of_project_root_claude_md_returns_true(self):
+
+        self.assertTrue(required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.is_read_of_claude_configuration_doc(
+            tool_name_string = "Read",
+            edited_file_abs_path = "/users/zachm/dev/project/claude.md"
+        ))
+
+    def test_read_of_nested_claude_md_returns_true(self):
+
+        self.assertTrue(required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.is_read_of_claude_configuration_doc(
+            tool_name_string = "Read",
+            edited_file_abs_path = "/users/zachm/dev/project/src/claude.md"
+        ))
+
+    def test_read_of_agents_md_returns_true(self):
+
+        self.assertTrue(required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.is_read_of_claude_configuration_doc(
+            tool_name_string = "Read",
+            edited_file_abs_path = "/users/zachm/dev/project/agents.md"
+        ))
+
+    def test_edit_of_claude_md_returns_false(self):
+
+        self.assertFalse(required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.is_read_of_claude_configuration_doc(
+            tool_name_string = "Edit",
+            edited_file_abs_path = "/users/zachm/dev/project/claude.md"
+        ))
+
+    def test_write_of_agents_md_returns_false(self):
+
+        self.assertFalse(required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.is_read_of_claude_configuration_doc(
+            tool_name_string = "Write",
+            edited_file_abs_path = "/users/zachm/dev/project/agents.md"
+        ))
+
+    def test_read_of_unrelated_markdown_file_returns_false(self):
+
+        self.assertFalse(required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.is_read_of_claude_configuration_doc(
+            tool_name_string = "Read",
+            edited_file_abs_path = "/users/zachm/dev/project/readme.md"
+        ))
+
+    def test_read_of_file_with_claude_md_as_directory_component_returns_false(self):
+
+        self.assertFalse(required_reading.pretooluse.PreToolUseRequiredReadsRuleChecks.is_read_of_claude_configuration_doc(
+            tool_name_string = "Read",
+            edited_file_abs_path = "/users/zachm/dev/project/claude.md/something.txt"
+        ))
+
+
 if __name__ == "__main__":
     unittest.main()
