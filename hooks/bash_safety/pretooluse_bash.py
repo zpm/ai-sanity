@@ -88,14 +88,16 @@ class GitCommandsCheck:
     @staticmethod
     def check(pretooluse_payload):
 
-        """Checks every clause for denied git write subcommands, then checks if a single-clause command is an allowed
-        read-only git subcommand. Returns a deny reason string, True to allow, or None to passthrough."""
+        """Checks every clause for denied git subcommands or global options, then checks if a single-clause command
+        is an allowed read-only git subcommand. Returns a deny reason string, True to allow, or None to passthrough."""
         bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
         clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
         for clause in clauses:
             if clause[0] != "git" or len(clause) < 2:
                 continue
             if clause[1] in GitCommandsCheck._DENIED_GIT_SUBCOMMANDS:
+                return GitCommandsCheck._DENY_MESSAGE
+            if clause[1].startswith("-"):
                 return GitCommandsCheck._DENY_MESSAGE
         if len(clauses) == 1 and len(clauses[0]) >= 2 and clauses[0][0] == "git":
             if clauses[0][1] in GitCommandsCheck._ALLOWED_GIT_READONLY_SUBCOMMANDS:
@@ -333,14 +335,41 @@ class NoTaskkillCheck:
         return None
 
 
+class NoShellSubstitutionCheck:
+
+    """Rejects commands containing shell substitution syntax. These hide commands inside arguments where the clause
+    parser cannot see them."""
+
+    # TODO: this denies quoted literals too (e.g. rg '$(' or echo '$(').
+    # if that becomes a problem, scan with single-quote awareness so 'literal' content is skipped.
+    _SUBSTITUTION_MARKERS = ("$(", "`", "<(", ">(")
+
+    _DENY_MESSAGE = (
+        "Shell substitution syntax ($(), backticks, <(), >()) is prohibited."
+        " Run each command separately instead."
+    )
+
+    @staticmethod
+    def check(pretooluse_payload):
+
+        """Returns a deny reason string if the raw command contains substitution syntax, or None."""
+        bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
+        for marker in NoShellSubstitutionCheck._SUBSTITUTION_MARKERS:
+            if marker in bash_command_string:
+                return NoShellSubstitutionCheck._DENY_MESSAGE
+        return None
+
+
 ########################################################################################################################
 
 
 class PreToolUseBashSafetyHookEntry:
 
-    """Composes all bash safety checks. Runs git deny/allow first, then other deny checks, then passthrough."""
+    """Composes all bash safety checks. Outcomes: deny (string) blocks the command, allow (True) bypasses permission
+    prompting, passthrough (None) falls back to Claude Code's normal permission/prompt UI."""
 
     _deny_check_methods_to_run_in_order = (
+        NoShellSubstitutionCheck.check,
         RequireGitMvForTrackedMovesCheck.check,
         NoPackageManagersCheck.check,
         NoSystemOperationsCheck.check,

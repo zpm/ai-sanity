@@ -165,8 +165,8 @@ class PlaybookMatchCheck:
 
 class PreToolUsePlaybookHookEntry:
 
-    """Entry point. Allows playbook matches, passes through everything else. Errors fall through to passthrough so a
-    bug in this hook cannot block a command."""
+    """Entry point. Outcomes: allow (playbook match) bypasses Claude Code's normal permission prompt, passthrough (no
+    match) falls back to the normal permission/prompt UI. Errors fall through to passthrough so a bug cannot block."""
 
     @staticmethod
     def main():

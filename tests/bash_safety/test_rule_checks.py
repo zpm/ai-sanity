@@ -425,6 +425,34 @@ class TestGitCommandsCheck(unittest.TestCase):
         )
         self.assertIsNone(result)
 
+    def test_blocks_git_with_global_option_dash_capital_c(self):
+
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
+            self._build_bash_payload("git -C /tmp reset --hard HEAD")
+        )
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_with_global_option_dash_c(self):
+
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
+            self._build_bash_payload("git -c user.name=test commit -m msg")
+        )
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_with_global_option_git_dir(self):
+
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
+            self._build_bash_payload("git --git-dir=/tmp/.git push origin main")
+        )
+        self.assertIsNotNone(result)
+
+    def test_blocks_git_with_global_option_no_pager(self):
+
+        result = bash_safety.pretooluse_bash.GitCommandsCheck.check(
+            self._build_bash_payload("git --no-pager push origin main")
+        )
+        self.assertIsNotNone(result)
+
 
 class TestRequireGitMvForTrackedMovesCheck(unittest.TestCase):
 
@@ -1119,6 +1147,63 @@ class TestBashCommandParserClausesAndSeparators(unittest.TestCase):
         )
         self.assertEqual(clauses, [])
         self.assertEqual(separators, [])
+
+
+class TestNoShellSubstitutionCheck(unittest.TestCase):
+
+    def _build_bash_payload(self, command):
+
+        return tests.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(command)
+
+    def test_blocks_dollar_paren(self):
+
+        result = bash_safety.pretooluse_bash.NoShellSubstitutionCheck.check(
+            self._build_bash_payload("echo $(git push)")
+        )
+        self.assertIsNotNone(result)
+        self.assertIn("substitution", result)
+
+    def test_blocks_backticks(self):
+
+        result = bash_safety.pretooluse_bash.NoShellSubstitutionCheck.check(
+            self._build_bash_payload("echo `git push`")
+        )
+        self.assertIsNotNone(result)
+
+    def test_blocks_input_process_substitution(self):
+
+        result = bash_safety.pretooluse_bash.NoShellSubstitutionCheck.check(
+            self._build_bash_payload("cat <(git log)")
+        )
+        self.assertIsNotNone(result)
+
+    def test_blocks_output_process_substitution(self):
+
+        result = bash_safety.pretooluse_bash.NoShellSubstitutionCheck.check(
+            self._build_bash_payload("tee >(git push)")
+        )
+        self.assertIsNotNone(result)
+
+    def test_blocks_nested_substitution(self):
+
+        result = bash_safety.pretooluse_bash.NoShellSubstitutionCheck.check(
+            self._build_bash_payload("echo $(echo $(git push))")
+        )
+        self.assertIsNotNone(result)
+
+    def test_passes_normal_command(self):
+
+        result = bash_safety.pretooluse_bash.NoShellSubstitutionCheck.check(
+            self._build_bash_payload("echo hello && ls")
+        )
+        self.assertIsNone(result)
+
+    def test_passes_empty_command(self):
+
+        result = bash_safety.pretooluse_bash.NoShellSubstitutionCheck.check(
+            self._build_bash_payload("")
+        )
+        self.assertIsNone(result)
 
 
 if __name__ == "__main__":

@@ -63,9 +63,21 @@ A trailing ` *` in the `bash` field enables prefix matching (token-level, not st
 
 To inject the playbook into Claude's context before file operations, add it to the project's `.ai-sanity/required-reading.json`.
 
+## Permission Model
+
+Hooks participate in a three-outcome decision chain:
+
+| Outcome | Source | Effect |
+|---|---|---|
+| deny | bash_safety | Hard block. The command is rejected and Claude cannot proceed. |
+| passthrough | bash_safety (default) | No opinion. Falls back to Claude Code's normal permission/prompt UI, where the user approves or rejects. |
+| allow | playbook | Bypasses the normal permission prompt entirely. The command runs without user interaction. |
+
+Execution order matters: bash_safety deny checks run before playbook allow checks, so a denied command can never be auto-allowed by the playbook.
+
 ## Other Hooks
 
-- `bash_safety`: Deny-list for dangerous shell commands (git writes, package managers, system ops, shell spawning, text manipulation). Enforces `git mv` for tracked file moves. Unknown commands fall through to the default permission mode.
+- `bash_safety`: Deny-list for dangerous shell commands (git writes, package managers, system ops, shell spawning, text manipulation). Enforces `git mv` for tracked file moves. Unknown commands pass through to Claude Code's normal permission UI.
 - `no_memory`: Blocks Claude from reading or writing to the auto-memory directory or any `MEMORY.md` file.
 
 ## Tests
