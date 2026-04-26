@@ -317,6 +317,41 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         )
         self.assertIsNone(result)
 
+    def test_attached_file_redirect_rejects(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest tests.foo >out.txt")
+        )
+        self.assertIsNone(result)
+
+    def test_attached_stderr_redirect_rejects(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest tests.foo 2>/dev/null")
+        )
+        self.assertIsNone(result)
+
+    def test_attached_append_redirect_rejects(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest tests.foo >>log.txt")
+        )
+        self.assertIsNone(result)
+
+    def test_pipe_downstream_file_redirect_rejects(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest tests.foo | tail -5 > out.txt")
+        )
+        self.assertIsNone(result)
+
+    def test_pipe_downstream_attached_redirect_rejects(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python -m unittest tests.foo | tail -5 >out.txt")
+        )
+        self.assertIsNone(result)
+
     ####################################################################################################################
     # KNOWN LIMITATION: QUOTED OPERATORS
 
@@ -457,6 +492,27 @@ class TestStripDescriptorMergeTokensFromClause(unittest.TestCase):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.strip_descriptor_merge_tokens_from_clause([])
         self.assertEqual(result, [])
+
+    def test_attached_stdout_redirect_returns_none(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.strip_descriptor_merge_tokens_from_clause(
+            ["python", "-m", "unittest", ">out.txt"]
+        )
+        self.assertIsNone(result)
+
+    def test_attached_stderr_redirect_returns_none(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.strip_descriptor_merge_tokens_from_clause(
+            ["python", "-m", "unittest", "2>/dev/null"]
+        )
+        self.assertIsNone(result)
+
+    def test_attached_append_redirect_returns_none(self):
+
+        result = playbook.pretooluse_bash.PlaybookMatchCheck.strip_descriptor_merge_tokens_from_clause(
+            ["python", "-m", "unittest", ">>log.txt"]
+        )
+        self.assertIsNone(result)
 
 
 if __name__ == "__main__":

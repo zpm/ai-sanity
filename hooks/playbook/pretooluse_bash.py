@@ -32,6 +32,7 @@ class PlaybookMatchCheck:
 
     _DESCRIPTOR_MERGE_PATTERN = re.compile(r"^\d*>&\d+$")
     _FILE_REDIRECT_PATTERN = re.compile(r"^(\d*>{1,2}|<{1,2}|&>{1,2})$")
+    _ATTACHED_FILE_REDIRECT_PATTERN = re.compile(r"^(\d*>{1,2}|<{1,2}|&>{1,2})[^&>\s]")
 
     @staticmethod
     def find_playbook_abs_path(starting_directory_abs_path):
@@ -105,6 +106,8 @@ class PlaybookMatchCheck:
                 continue
             if check_class._FILE_REDIRECT_PATTERN.match(token):
                 return None
+            if check_class._ATTACHED_FILE_REDIRECT_PATTERN.match(token):
+                return None
             cleaned_tokens.append(token)
         return cleaned_tokens
 
@@ -135,6 +138,8 @@ class PlaybookMatchCheck:
             return None
         for downstream_clause in command_clauses[1:]:
             if not downstream_clause or downstream_clause[0] not in check_class._SAFE_PIPE_TARGET_COMMANDS:
+                return None
+            if check_class.strip_descriptor_merge_tokens_from_clause(downstream_clause) is None:
                 return None
         first_clause_tokens = check_class.strip_descriptor_merge_tokens_from_clause(command_clauses[0])
         if first_clause_tokens is None:
