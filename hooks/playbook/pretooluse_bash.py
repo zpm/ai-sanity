@@ -26,9 +26,7 @@ class PlaybookMatchCheck:
 
     _playbook_relative_path_from_project_root = ".ai-sanity/playbook.json"
 
-    _SAFE_PIPE_TARGET_COMMANDS = {
-        "tail", "head", "grep", "cat", "wc", "sort", "uniq", "tr", "cut", "column"
-    }
+    _SAFE_PIPE_TARGET_COMMANDS = _common._command_parser.SAFE_PIPE_TARGET_COMMANDS
 
     _DESCRIPTOR_MERGE_PATTERN = re.compile(r"^\d*>&\d+$")
     _FILE_REDIRECT_PATTERN = re.compile(r"^(\d*>{1,2}|<{1,2}|&>{1,2})$")

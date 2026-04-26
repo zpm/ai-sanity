@@ -18,7 +18,9 @@
         "git ls-remote origin",
         "git grep pattern",
         "git mv old.txt new.txt",
-        "git"
+        "git",
+        "git log | head",
+        "git diff HEAD | head -100"
     ],
     "deny": [
         "git commit -m 'msg'",
@@ -108,10 +110,12 @@
         "echo `git push`",
         "cat <(git log)",
         "tee >(git push)",
-        "echo $(echo $(git push))"
+        "echo $(echo $(git push))",
+        "git commit -m 'test' | head",
+        "pip install requests | tail",
+        "git log | head $(git push)"
     ],
     "ask": [
-        "git log | head",
         "git log && echo done",
         "git log; echo done",
         "git foo",
@@ -135,6 +139,11 @@
         "cp src.txt dst.txt",
         "python script.py",
         "python -c 'print(1)'",
+        "git log | python -c 'import sys'",
+        "git log > /tmp/out | head",
+        "git diff HEAD > /tmp/out | head",
+        "git log | head > /tmp/out",
+        "git log | grep pattern > /tmp/out",
         "mv \"broken",
         ""
     ]

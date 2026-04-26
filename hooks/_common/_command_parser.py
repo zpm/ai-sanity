@@ -9,6 +9,11 @@ import re
 import shlex
 
 
+SAFE_PIPE_TARGET_COMMANDS = {
+    "tail", "head", "grep", "cat", "wc", "sort", "uniq", "tr", "cut", "column"
+}
+
+
 class BashCommandParser:
 
     """Tokenises a Bash command string and splits it into individual command clauses separated by pipes, logical

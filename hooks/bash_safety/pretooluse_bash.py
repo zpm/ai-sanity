@@ -6,6 +6,7 @@
 
 
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -22,43 +23,45 @@ class GitCommandsCheck:
     to allow, or None to passthrough."""
 
     _DENIED_GIT_SUBCOMMANDS = {
-        "add": ["*"],
-        "am": ["*"],
-        "apply": ["*"],
-        "bisect": ["*"],
-        "branch": ["*"],
-        "cherry-pick": ["*"],
-        "checkout": ["*"],
-        "clean": ["*"],
-        "clone": ["*"],
-        "commit": ["*"],
-        "config": ["*"],
-        "fetch": ["*"],
-        "filter-branch": ["*"],
-        "filter-repo": ["*"],
-        "gc": ["*"],
-        "init": ["*"],
-        "merge": ["*"],
-        "notes": ["*"],
-        "pack-refs": ["*"],
-        "prune": ["*"],
-        "pull": ["*"],
-        "push": ["*"],
-        "rebase": ["*"],
-        "remote": ["*"],
-        "reflog": ["*"],
-        "repack": ["*"],
-        "reset": ["*"],
-        "restore": ["*"],
-        "revert": ["*"],
-        "rm": ["*"],
-        "stash": ["*"],
-        "submodule": ["*"],
-        "switch": ["*"],
-        "tag": ["*"],
-        "update-index": ["*"],
-        "update-ref": ["*"],
-        "worktree": ["*"],
+        "git": [
+            "add",
+            "am",
+            "apply",
+            "bisect",
+            "branch",
+            "cherry-pick",
+            "checkout",
+            "clean",
+            "clone",
+            "commit",
+            "config",
+            "fetch",
+            "filter-branch",
+            "filter-repo",
+            "gc",
+            "init",
+            "merge",
+            "notes",
+            "pack-refs",
+            "prune",
+            "pull",
+            "push",
+            "rebase",
+            "reflog",
+            "remote",
+            "repack",
+            "reset",
+            "restore",
+            "revert",
+            "rm",
+            "stash",
+            "submodule",
+            "switch",
+            "tag",
+            "update-index",
+            "update-ref",
+            "worktree",
+        ],
     }
 
     _ALLOWED_GIT_READONLY_SUBCOMMANDS = {
@@ -87,19 +90,20 @@ class GitCommandsCheck:
     )
 
     @staticmethod
-    def check(pretooluse_payload):
+    def check(clauses):
 
         """Checks every clause for denied git subcommands or global options, then checks if a single-clause command
         is an allowed read-only git subcommand. Returns a deny reason string, True to allow, or None to passthrough."""
-        bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
-        clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
         for clause in clauses:
             if clause[0] != "git" or len(clause) < 2:
                 continue
-            if clause[1] in GitCommandsCheck._DENIED_GIT_SUBCOMMANDS:
-                return GitCommandsCheck._DENY_MESSAGE
             if clause[1].startswith("-"):
                 return GitCommandsCheck._DENY_MESSAGE
+        if DeniedCommandMatcher.any_clause_matches_denied_commands(
+            clauses,
+            GitCommandsCheck._DENIED_GIT_SUBCOMMANDS
+        ):
+            return GitCommandsCheck._DENY_MESSAGE
         if len(clauses) == 1 and clauses[0][0] == "git":
             if len(clauses[0]) == 1:
                 return True
@@ -164,153 +168,112 @@ class RequireGitMvForTrackedMovesCheck:
         return None
 
 
-class NoPackageManagersCheck:
+class DeniedCommandMatcher:
 
-    """Rejects package manager install/add commands. Keys are command prefixes (multi-word for nested commands like
-    uv pip or python -m pip). Values are lists of denied subcommands, or ["*"] to deny all subcommands."""
-
-    _DENIED_PACKAGE_MANAGERS = {
-        "yarn": ["*"],
-        "pnpm": ["*"],
-        "brew": ["*"],
-        "pip": ["install"],
-        "pip3": ["install"],
-        "npm": ["install"],
-        "cargo": ["install", "add"],
-        "gem": ["install"],
-        "bun": ["install", "add"],
-        "poetry": ["add", "install"],
-        "uv add": ["*"],
-        "uv remove": ["*"],
-        "uv pip": ["install", "uninstall", "sync", "compile"],
-        "python -m pip": ["install"],
-        "python3 -m pip": ["install"],
-        "py -m pip": ["install"],
-    }
-
-    _DENY_MESSAGE = (
-        "Package installation is strictly prohibited."
-        " Suggest the command to the user instead of running it."
-    )
+    """Shared matching engine for command/subcommand deny dicts. Keys are command prefixes (single or multi-word),
+    values are lists of denied subcommands or ["*"] to deny all uses of the command."""
 
     @staticmethod
-    def check(pretooluse_payload):
+    def any_clause_matches_denied_commands(clauses, denied_commands):
 
-        """Returns a deny reason string if any clause contains a package install command, or None."""
-        bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
-        clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
-        checks = NoPackageManagersCheck
+        """Returns True if any clause matches an entry in the denied commands dict."""
         for clause in clauses:
             for prefix_length in range(1, len(clause) + 1):
                 prefix_key = " ".join(clause[:prefix_length])
-                if prefix_key not in checks._DENIED_PACKAGE_MANAGERS:
+                if prefix_key not in denied_commands:
                     continue
-                denied_subcommands = checks._DENIED_PACKAGE_MANAGERS[prefix_key]
+                denied_subcommands = denied_commands[prefix_key]
                 if denied_subcommands == ["*"]:
-                    return checks._DENY_MESSAGE
+                    return True
                 if prefix_length < len(clause) and clause[prefix_length] in denied_subcommands:
-                    return checks._DENY_MESSAGE
-        return None
+                    return True
+        return False
 
 
-class NoSystemOperationsCheck:
+class DeferToUserCommandsCheck:
 
-    """Rejects system operation commands in any clause of the command."""
+    """Rejects commands that Claude should not run but the user might need to. Covers package managers, system
+    operations, and process management. Deny message tells Claude to suggest the command to the user."""
 
     _DENIED_COMMANDS = {
-        "sudo": ["*"],
+        "brew": ["*"],
+        "bun": [
+            "add",
+            "install",
+        ],
+        "cargo": [
+            "add",
+            "install",
+        ],
         "chmod": ["*"],
         "chown": ["*"],
         "curl": ["*"],
-        "wget": ["*"],
         "docker": ["*"],
+        "gem": ["install"],
+        "npm": ["install"],
+        "pip": ["install"],
+        "pip3": ["install"],
+        "pnpm": ["*"],
+        "poetry": [
+            "add",
+            "install",
+        ],
+        "py -m pip": ["install"],
+        "python -m pip": ["install"],
+        "python3 -m pip": ["install"],
+        "sudo": ["*"],
+        "taskkill": ["*"],
+        "uv add": ["*"],
+        "uv pip": [
+            "compile",
+            "install",
+            "sync",
+            "uninstall",
+        ],
+        "uv remove": ["*"],
+        "wget": ["*"],
+        "yarn": ["*"],
     }
 
-    _DENY_MESSAGE = (
-        "System operations (sudo, chmod, chown, curl, wget, docker) are strictly prohibited."
-        " Have the user run the command instead."
-    )
+    _DENY_MESSAGE = "This command is prohibited. Suggest it to the user instead of running it."
 
     @staticmethod
-    def check(pretooluse_payload):
+    def check(clauses):
 
-        """Returns a deny reason string if any clause starts with a denied system command, or None."""
-        bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
-        clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
-        for clause in clauses:
-            if clause[0] in NoSystemOperationsCheck._DENIED_COMMANDS:
-                return NoSystemOperationsCheck._DENY_MESSAGE
+        """Returns a deny reason string if any clause matches a denied command, or None."""
+        if DeniedCommandMatcher.any_clause_matches_denied_commands(
+            clauses,
+            DeferToUserCommandsCheck._DENIED_COMMANDS
+        ):
+            return DeferToUserCommandsCheck._DENY_MESSAGE
         return None
 
 
-class NoShellSpawningCheck:
+class ProhibitedCommandsCheck:
 
-    """Rejects sub-shell invocations in any clause of the command."""
+    """Rejects commands that should never be used. Better alternatives exist within Claude's toolset."""
 
     _DENIED_COMMANDS = {
+        "awk": ["*"],
         "bash": ["*"],
         "cmd": ["*"],
         "cmd.exe": ["*"],
         "powershell": ["*"],
-    }
-
-    _DENY_MESSAGE = "Spawning sub-shells is strictly prohibited. Run commands directly."
-
-    @staticmethod
-    def check(pretooluse_payload):
-
-        """Returns a deny reason string if any clause starts with a denied shell command, or None."""
-        bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
-        clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
-        for clause in clauses:
-            if clause[0] in NoShellSpawningCheck._DENIED_COMMANDS:
-                return NoShellSpawningCheck._DENY_MESSAGE
-        return None
-
-
-class NoTextManipulationCheck:
-
-    """Rejects text manipulation commands in any clause of the command."""
-
-    _DENIED_COMMANDS = {
         "sed": ["*"],
-        "awk": ["*"],
         "tee": ["*"],
     }
 
-    _DENY_MESSAGE = "Text manipulation via sed/awk/tee is prohibited. Use the Edit tool instead."
+    _DENY_MESSAGE = "This command is prohibited. Use the appropriate Claude Code tool instead."
 
     @staticmethod
-    def check(pretooluse_payload):
+    def check(clauses):
 
-        """Returns a deny reason string if any clause starts with a denied text manipulation command, or None."""
-        bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
-        clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
-        for clause in clauses:
-            if clause[0] in NoTextManipulationCheck._DENIED_COMMANDS:
-                return NoTextManipulationCheck._DENY_MESSAGE
-        return None
-
-
-class NoTaskkillCheck:
-
-    """Rejects taskkill commands in any clause of the command."""
-
-    _DENIED_COMMANDS = {
-        "taskkill": ["*"],
-    }
-
-    _DENY_MESSAGE = "Process termination via taskkill is prohibited. Have the user run the command instead."
-
-    @staticmethod
-    def check(pretooluse_payload):
-
-        """Returns a deny reason string if any clause starts with taskkill, or None."""
-        bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
-        clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
-        for clause in clauses:
-            if clause[0] in NoTaskkillCheck._DENIED_COMMANDS:
-                return NoTaskkillCheck._DENY_MESSAGE
+        """Returns a deny reason string if any clause matches a denied command, or None."""
+        if DeniedCommandMatcher.any_clause_matches_denied_commands(
+            clauses,
+            ProhibitedCommandsCheck._DENIED_COMMANDS
+        ):
+            return ProhibitedCommandsCheck._DENY_MESSAGE
         return None
 
 
@@ -347,15 +310,48 @@ class PreToolUseBashSafetyHookEntry:
     """Composes all bash safety checks. Outcomes: deny (string) blocks the command, allow (True) bypasses permission
     prompting, passthrough (None) falls back to Claude Code's normal permission/prompt UI."""
 
-    _deny_check_methods_to_run_in_order = (
+    _payload_based_deny_check_methods = (
         NoShellSubstitutionCheck.check,
         RequireGitMvForTrackedMovesCheck.check,
-        NoPackageManagersCheck.check,
-        NoSystemOperationsCheck.check,
-        NoShellSpawningCheck.check,
-        NoTextManipulationCheck.check,
-        NoTaskkillCheck.check,
     )
+
+    _clause_based_deny_check_methods = (
+        DeferToUserCommandsCheck.check,
+        ProhibitedCommandsCheck.check,
+    )
+
+    _FILE_REDIRECT_PATTERN = re.compile(r"(\d*>{1,2}|<{1,2}|&>{1,2})")
+
+    @staticmethod
+    def _strip_safe_pipe_tail_from_payload(pretooluse_payload):
+
+        """If the command is a pipe chain where every downstream clause starts with a safe output-filtering command,
+        returns a copy of the payload with tool_input.command set to just the first clause. Otherwise returns the
+        payload unchanged. Bails out if the raw command contains shell substitution syntax or file redirects, since
+        stripping would hide those from downstream checks."""
+        bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
+        for marker in NoShellSubstitutionCheck._SUBSTITUTION_MARKERS:
+            if marker in bash_command_string:
+                return pretooluse_payload
+        clauses, separators = (
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators(bash_command_string)
+        )
+        if len(clauses) < 2:
+            return pretooluse_payload
+        if not all(separator == "|" for separator in separators):
+            return pretooluse_payload
+        for clause in clauses:
+            for token in clause:
+                if PreToolUseBashSafetyHookEntry._FILE_REDIRECT_PATTERN.search(token):
+                    return pretooluse_payload
+        for downstream_clause in clauses[1:]:
+            if downstream_clause[0] not in _common._command_parser.SAFE_PIPE_TARGET_COMMANDS:
+                return pretooluse_payload
+        first_clause_command_string = " ".join(clauses[0])
+        stripped_payload = dict(pretooluse_payload)
+        stripped_payload["tool_input"] = dict(pretooluse_payload["tool_input"])
+        stripped_payload["tool_input"]["command"] = first_clause_command_string
+        return stripped_payload
 
     @staticmethod
     def main():
@@ -363,11 +359,18 @@ class PreToolUseBashSafetyHookEntry:
         """Reads the payload, runs all checks, and emits a deny, allow, or passthrough decision."""
         try:
             pretooluse_payload = _common._hook_io.PreToolUseHookIo.read_pretooluse_payload_from_stdin()
-            git_check_result = GitCommandsCheck.check(pretooluse_payload)
+            pretooluse_payload = PreToolUseBashSafetyHookEntry._strip_safe_pipe_tail_from_payload(pretooluse_payload)
+            bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
+            clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
+            git_check_result = GitCommandsCheck.check(clauses)
             if isinstance(git_check_result, str):
                 _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(git_check_result)
-            for deny_check_method in PreToolUseBashSafetyHookEntry._deny_check_methods_to_run_in_order:
-                deny_reason_or_none = deny_check_method(pretooluse_payload)
+            for payload_deny_check_method in PreToolUseBashSafetyHookEntry._payload_based_deny_check_methods:
+                deny_reason_or_none = payload_deny_check_method(pretooluse_payload)
+                if deny_reason_or_none is not None:
+                    _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(deny_reason_or_none)
+            for clause_deny_check_method in PreToolUseBashSafetyHookEntry._clause_based_deny_check_methods:
+                deny_reason_or_none = clause_deny_check_method(clauses)
                 if deny_reason_or_none is not None:
                     _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(deny_reason_or_none)
             if git_check_result is True:
