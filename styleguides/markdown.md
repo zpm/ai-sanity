@@ -34,12 +34,16 @@ Fenced code blocks must have a language tag.
 
 ## Tables
 
-Prefer tables over lists unless the data is flat (single column, no attributes).
+Prefer tables over lists when presenting records with multiple attributes, such as commands by platform or options with descriptions. Use lists for flat items, ordered steps, and examples where each item is a short label plus a code example.
 
 ## Links
 
-Use relative paths from the doc's location.
+Use project-root-relative display paths and document-relative link targets.
+
+The display path is the visible link text. It always starts with `./` for files inside the project, such as `[./styleguides/python.md](python.md)`.
+
+The link target is the hyperlink destination. It is relative to the current document's location so the link works when clicked, such as `(python.md)` from `./styleguides/markdown.md` to `./styleguides/python.md`, or `(../README.md)` from `./styleguides/markdown.md` to `./README.md`.
 
 ## Paths
 
-All file references must use dot-prefix paths. Within a project, use `./` (e.g., `./docs/stack/backend.md`). For user-level files in `~/.claude/`, always use the home path `~/` (e.g., `~/.claude/styleguides/python.md`). Never use absolute paths (`/Users/...`) or naked paths without a dot prefix (`docs/stack/backend.md`).
+All displayed file references must use dot-prefix paths. Within a project, display paths from the project root with `./` (e.g., `./docs/stack/backend.md`). For user-level files in `~/.claude/`, always use the home path `~/` (e.g., `~/.claude/styleguides/python.md`). Never display absolute paths (`/Users/...`) or naked paths without a dot prefix (`docs/stack/backend.md`).
