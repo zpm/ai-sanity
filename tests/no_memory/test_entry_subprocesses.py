@@ -167,7 +167,7 @@ class TestUnicodePayloadHandling(unittest.TestCase):
     def test_git_safety_pretooluse_with_unicode_in_command_passes_through(self):
 
         exit_code, parsed_stdout = tests._subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
-            entry_script_relative_path = "git_safety/pretooluse_bash.py",
+            entry_script_relative_path = "bash_safety/pretooluse_bash.py",
             pretooluse_payload = tests.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
                 bash_command_string = "echo 'café \U0001f680'"
             )

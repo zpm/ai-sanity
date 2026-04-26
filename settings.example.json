@@ -24,16 +24,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python $HOME/Dev/ai-sanity/hooks/git_safety/pretooluse_bash.py"
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python $HOME/Dev/ai-sanity/hooks/bash_commands/pretooluse_bash.py"
+            "command": "python $HOME/Dev/ai-sanity/hooks/bash_safety/pretooluse_bash.py"
           }
         ]
       },

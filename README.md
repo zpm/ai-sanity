@@ -48,8 +48,7 @@ The global manifest is always present because it ships with this repo. Its style
 
 ## Other Hooks
 
-- `bash_commands`: Deny-list for dangerous shell commands (package managers, system ops, shell spawning) and allow-list for safe ones (echo, cp, mkdir). Unknown commands fall through to the default permission mode.
-- `git_safety`: Restricts Claude to read-only git commands and enforces `git mv` for tracked file moves.
+- `bash_safety`: Deny-list for dangerous shell commands (git writes, package managers, system ops, shell spawning, text manipulation). Enforces `git mv` for tracked file moves. Unknown commands fall through to the default permission mode.
 - `no_memory`: Blocks Claude from reading or writing to the auto-memory directory or any `MEMORY.md` file, enforcing the CLAUDE.md preference for version-controlled persistence.
 
 ## Tests
