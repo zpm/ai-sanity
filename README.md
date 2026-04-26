@@ -1,4 +1,4 @@
-# ai-common
+# ai-sanity
 
 Shared Claude Code hooks and style guides.
 

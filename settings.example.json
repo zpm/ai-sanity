@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python $HOME/Dev/ai-common/hooks/no_memory/pretooluse_write.py"
+            "command": "python $HOME/Dev/ai-sanity/hooks/no_memory/pretooluse_write.py"
           }
         ]
       },
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python $HOME/Dev/ai-common/hooks/no_memory/pretooluse_bash.py"
+            "command": "python $HOME/Dev/ai-sanity/hooks/no_memory/pretooluse_bash.py"
           }
         ]
       },
@@ -24,7 +24,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python $HOME/Dev/ai-common/hooks/git_safety/pretooluse_bash.py"
+            "command": "python $HOME/Dev/ai-sanity/hooks/git_safety/pretooluse_bash.py"
           }
         ]
       },
@@ -33,7 +33,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python $HOME/Dev/ai-common/hooks/bash_commands/pretooluse_bash.py"
+            "command": "python $HOME/Dev/ai-sanity/hooks/bash_commands/pretooluse_bash.py"
           }
         ]
       },
@@ -42,7 +42,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python $HOME/Dev/ai-common/hooks/no_memory/pretooluse_read.py"
+            "command": "python $HOME/Dev/ai-sanity/hooks/no_memory/pretooluse_read.py"
           }
         ]
       },
@@ -51,7 +51,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python $HOME/Dev/ai-common/hooks/required_reading/pretooluse.py"
+            "command": "python $HOME/Dev/ai-sanity/hooks/required_reading/pretooluse.py"
           }
         ]
       }
@@ -62,7 +62,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python $HOME/Dev/ai-common/hooks/required_reading/posttooluse_observer.py"
+            "command": "python $HOME/Dev/ai-sanity/hooks/required_reading/posttooluse_observer.py"
           }
         ]
       }
@@ -72,7 +72,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python $HOME/Dev/ai-common/hooks/required_reading/precompact.py"
+            "command": "python $HOME/Dev/ai-sanity/hooks/required_reading/precompact.py"
           }
         ]
       }

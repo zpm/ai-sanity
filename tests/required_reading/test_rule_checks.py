@@ -566,12 +566,12 @@ class TestApplyProjectOverridesAgainstGlobalRules(unittest.TestCase):
 
         global_python_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
             is_global_manifest = True,
-            read_abs_path = "/home/zachm/Dev/ai-common/styleguides/python.md"
+            read_abs_path = "/home/zachm/Dev/ai-sanity/styleguides/python.md"
         )
         project_override_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
             is_global_manifest = False,
             read_abs_path = "/project/docs/project-python-style.md",
-            override_abs_path = "/home/zachm/Dev/ai-common/styleguides/python.md"
+            override_abs_path = "/home/zachm/Dev/ai-sanity/styleguides/python.md"
         )
         surviving_rule_records = PreToolUseRequiredReadsRuleChecks.apply_project_overrides_against_global_rules(
             rule_records = [global_python_rule_record, project_override_rule_record]
@@ -583,7 +583,7 @@ class TestApplyProjectOverridesAgainstGlobalRules(unittest.TestCase):
 
         global_python_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
             is_global_manifest = True,
-            read_abs_path = "/home/zachm/Dev/ai-common/styleguides/python.md"
+            read_abs_path = "/home/zachm/Dev/ai-sanity/styleguides/python.md"
         )
         project_extra_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
             is_global_manifest = False,
@@ -634,7 +634,7 @@ class TestFilterRulesByMatchCriterion(unittest.TestCase):
         )
         match_passed_rule_records = PreToolUseRequiredReadsRuleChecks.filter_rules_by_match_criterion(
             rule_records = [python_rule_record],
-            candidate_file_abs_path = "/c/users/zachm/dev/ai-common/hooks/bar.py"
+            candidate_file_abs_path = "/c/users/zachm/dev/ai-sanity/hooks/bar.py"
         )
         self.assertEqual(len(match_passed_rule_records), 1)
 
@@ -830,7 +830,7 @@ class TestBuildDenyReasonString(unittest.TestCase):
         first_unsatisfied_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
             rule_id = "required-reads.json#0",
             manifest_abs_path = "/home/zachm/.claude/required-reads.json",
-            read_abs_path = "/home/zachm/Dev/ai-common/styleguides/python.md"
+            read_abs_path = "/home/zachm/Dev/ai-sanity/styleguides/python.md"
         )
         second_unsatisfied_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
             rule_id = "required-reads.json#3",
@@ -842,7 +842,7 @@ class TestBuildDenyReasonString(unittest.TestCase):
             edited_file_abs_path = "/home/zachm/Dev/project/src/main.py"
         )
         self.assertIn("/home/zachm/Dev/project/src/main.py", deny_reason_string)
-        self.assertIn("/home/zachm/Dev/ai-common/styleguides/python.md", deny_reason_string)
+        self.assertIn("/home/zachm/Dev/ai-sanity/styleguides/python.md", deny_reason_string)
         self.assertIn("/home/zachm/.claude/CLAUDE.md", deny_reason_string)
         self.assertIn("required-reads.json#0", deny_reason_string)
         self.assertIn("required-reads.json#3", deny_reason_string)
