@@ -64,14 +64,12 @@ myapp.services.logging.critical(
 
 ## Spacing
 
-- Between major code blocks: Use three newlines (two empty lines) between module-level classes. For large files with distinct logical sections (e.g., base/model classes vs. service classes vs. router setup), use a `########` separator line (120 `#` chars). Do not add a label comment after the separator; the class name below is label enough:
+- File headers are followed by three newlines (two empty lines) before imports or code.
+- Import groups are separated by one empty line: standard library imports, third-party imports, then project imports. After the final import group, use three newlines (two empty lines) before the first module section separator or first class.
+- Major module sections use a full-width separator block with a label line. Use three newlines (two empty lines) before and after each separator block:
   ```python
-  class UserService:
-      def __init__(self):
-
-          pass
-
-
+  ########################################################################################################################
+  # SERVICE :: AUDIT
   ########################################################################################################################
 
 
@@ -79,7 +77,9 @@ myapp.services.logging.critical(
       def __init__(self):
 
           pass
-
+  ```
+- Module-level classes are separated by three newlines (two empty lines). For large files with distinct logical sections, prefer a labeled full-width separator block before the next class or group of classes:
+  ```python
   class Config:
       def __init__(self):
 
@@ -91,6 +91,7 @@ myapp.services.logging.critical(
 
           pass
   ```
+- Methods inside a class are separated by three newlines (two empty lines).
 - Always include an empty newline after every function/method definition (between the `def` line and the function body). This applies to every `def`, including single-line bodies, `pass` stubs, and docstring-only bodies. The cost of one blank line is trivial, and consistency with real function bodies matters more than visual density on stubs. Do not collapse for elegance.
 
 ## Method Signatures
@@ -300,6 +301,9 @@ Every Python file must have a standard header at the top (120 `#` chars for sepa
 #
 # configuration service
 ########################################################################################################################
+
+
+import os
 ```
 
 ## Comments

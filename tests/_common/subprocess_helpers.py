@@ -1,10 +1,19 @@
+########################################################################################################################
+# tests/_common/subprocess_helpers.py
+#
+# subprocess helper assertions for hook entry scripts
+########################################################################################################################
+
+
 import json
 import os
 import subprocess
 import sys
 
 
-HOOKS_DIRECTORY_ABSOLUTE_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "hooks")
+TESTS_DIRECTORY_ABSOLUTE_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_DIRECTORY_ABSOLUTE_PATH = os.path.dirname(TESTS_DIRECTORY_ABSOLUTE_PATH)
+HOOKS_DIRECTORY_ABSOLUTE_PATH = os.path.join(PROJECT_DIRECTORY_ABSOLUTE_PATH, "hooks")
 PYTHON_INTERPRETER_FOR_TESTS = os.environ.get("HOOK_TEST_PYTHON_INTERPRETER", sys.executable)
 
 
@@ -12,6 +21,7 @@ class HookEntryScriptInvocationHelper:
 
     """Subprocess wrapper around hook entry scripts. Centralises stdin piping, stdout JSON parsing, and exit code
     capture so test bodies stay focused on the assertion."""
+
 
     @staticmethod
     def invoke_entry_script(entry_script_relative_path, pretooluse_payload):
@@ -32,6 +42,7 @@ class HookEntryScriptInvocationHelper:
         parsed_stdout_or_none = json.loads(stdout_text) if stdout_text.strip() else None
         return completed_subprocess.returncode, parsed_stdout_or_none
 
+
     @staticmethod
     def assert_deny_decision(testcase, exit_code, parsed_stdout, expected_message_substring = ""):
 
@@ -45,6 +56,7 @@ class HookEntryScriptInvocationHelper:
             permission_decision_reason_value = parsed_stdout["hookSpecificOutput"]["permissionDecisionReason"]
             testcase.assertIn(expected_message_substring, permission_decision_reason_value)
 
+
     @staticmethod
     def assert_allow_decision(testcase, exit_code, parsed_stdout):
 
@@ -53,6 +65,7 @@ class HookEntryScriptInvocationHelper:
         testcase.assertIsNotNone(parsed_stdout)
         permission_decision_value = parsed_stdout["hookSpecificOutput"]["permissionDecision"]
         testcase.assertEqual(permission_decision_value, "allow")
+
 
     @staticmethod
     def assert_passthrough(testcase, exit_code, parsed_stdout):

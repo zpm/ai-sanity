@@ -27,6 +27,7 @@ class PlaybookMatchCheck:
 
     _SAFE_PIPE_TARGET_COMMANDS = _common._command_parser.SAFE_PIPE_TARGET_COMMANDS
 
+
     @staticmethod
     def find_playbook_abs_path(starting_directory_abs_path):
 
@@ -52,6 +53,7 @@ class PlaybookMatchCheck:
                 break
             current_directory_abs_path = parent_directory_abs_path
         return None
+
 
     @staticmethod
     def load_playbook_entries(playbook_abs_path):
@@ -87,6 +89,7 @@ class PlaybookMatchCheck:
             valid_playbook_entries.append(enriched_entry)
         return valid_playbook_entries
 
+
     @staticmethod
     def strip_descriptor_merge_tokens_from_clause(clause_tokens):
 
@@ -97,6 +100,7 @@ class PlaybookMatchCheck:
         return _common._command_parser.RedirectTokenClassifier.strip_descriptor_merge_tokens_from_clause(
             clause_tokens = clause_tokens
         )
+
 
     @staticmethod
     def check(pretooluse_payload):
@@ -154,6 +158,7 @@ class PreToolUsePlaybookHookEntry:
 
     """Entry point. Outcomes: allow (playbook match) bypasses Claude Code's normal permission prompt, passthrough (no
     match) falls back to the normal permission/prompt UI. Errors fall through to passthrough so a bug cannot block."""
+
 
     @staticmethod
     def main():

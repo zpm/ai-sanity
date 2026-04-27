@@ -1,3 +1,10 @@
+########################################################################################################################
+# hooks/no_memory/pretooluse_read.py
+#
+# no-memory read pre-tool hook
+########################################################################################################################
+
+
 import os
 import sys
 
@@ -7,10 +14,14 @@ import _common._hook_io
 import no_memory._checker
 
 
+MEMORY_PATH_CHECKER = no_memory._checker.MemoryPathChecker
+
+
 class PreToolUseReadRuleChecks:
 
     """Rule checks that apply only to the Read, Glob, and Grep matcher. Each method takes the full PreToolUse payload
     dict and returns either a string deny-reason on violation or None to pass."""
+
 
     @staticmethod
     def check_no_memory_access_for_read_or_glob_or_grep(pretooluse_payload):
@@ -22,14 +33,14 @@ class PreToolUseReadRuleChecks:
         read_like_tool_name = pretooluse_payload.get("tool_name", "")
         tool_input_dict = pretooluse_payload.get("tool_input") or {}
         if read_like_tool_name == "Read":
-            return no_memory._checker.MemoryPathChecker.assert_paths_are_not_memory_locations(tool_input_dict.get("file_path"))
+            return MEMORY_PATH_CHECKER.assert_paths_are_not_memory_locations(tool_input_dict.get("file_path"))
         if read_like_tool_name == "Glob":
-            return no_memory._checker.MemoryPathChecker.assert_paths_are_not_memory_locations(
+            return MEMORY_PATH_CHECKER.assert_paths_are_not_memory_locations(
                 tool_input_dict.get("path"),
                 tool_input_dict.get("pattern")
             )
         if read_like_tool_name == "Grep":
-            return no_memory._checker.MemoryPathChecker.assert_paths_are_not_memory_locations(tool_input_dict.get("path"))
+            return MEMORY_PATH_CHECKER.assert_paths_are_not_memory_locations(tool_input_dict.get("path"))
         return None
 
 
@@ -40,6 +51,7 @@ class PreToolUseReadHookEntry:
     _rule_check_methods_to_run_in_order = (
         PreToolUseReadRuleChecks.check_no_memory_access_for_read_or_glob_or_grep,
     )
+
 
     @staticmethod
     def main():

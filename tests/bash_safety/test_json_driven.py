@@ -29,6 +29,7 @@ class TestBashSafetyJsonDriven(unittest.TestCase):
         with open(COMMAND_TESTS_JSON_ABS_PATH, "r", encoding = "utf-8") as open_json_file_handle:
             self.command_tests = json.load(open_json_file_handle)
 
+
     def _invoke_and_assert(self, bash_command_string, assert_method):
 
         exit_code, parsed_stdout = tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
@@ -39,6 +40,7 @@ class TestBashSafetyJsonDriven(unittest.TestCase):
         )
         assert_method(self, exit_code, parsed_stdout)
 
+
     def test_allow_commands(self):
 
         for bash_command_string in self.command_tests["allow"]:
@@ -47,6 +49,7 @@ class TestBashSafetyJsonDriven(unittest.TestCase):
                     bash_command_string,
                     tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_allow_decision
                 )
+
 
     def test_deny_commands(self):
 
@@ -57,6 +60,7 @@ class TestBashSafetyJsonDriven(unittest.TestCase):
                     tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_deny_decision
                 )
 
+
     def test_ask_commands(self):
 
         for bash_command_string in self.command_tests["ask"]:
@@ -65,6 +69,7 @@ class TestBashSafetyJsonDriven(unittest.TestCase):
                     bash_command_string,
                     tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough
                 )
+
 
     def test_command_lists_are_alphabetized(self):
 

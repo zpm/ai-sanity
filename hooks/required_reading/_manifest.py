@@ -1,3 +1,10 @@
+########################################################################################################################
+# hooks/required_reading/_manifest.py
+#
+# required-reading manifest loading and path matching
+########################################################################################################################
+
+
 import collections
 import json
 import os
@@ -30,6 +37,7 @@ class RequiredReadsPathNormalizer:
 
     """Canonicalizes every path in the required-reads subsystem to forward-slash, lowercased absolute form."""
 
+
     @staticmethod
     def normalize_path(raw_path_string, base_directory_abs_path = None):
 
@@ -40,6 +48,7 @@ class RequiredReadsPathNormalizer:
         absolutised_path_string = os.path.abspath(home_expanded_path_string)
         # lowercasing handles Windows case-insensitivity; harmless on Posix for doc paths
         return absolutised_path_string.replace("\\", "/").lower()
+
 
     @staticmethod
     def _expand_home_honoring_test_override(raw_path_string):
@@ -52,6 +61,7 @@ class RequiredReadsPathNormalizer:
             if raw_path_string[1] in ("/", "\\"):
                 return home_override_abs_path + raw_path_string[1:]
         return os.path.expanduser(raw_path_string)
+
 
     @staticmethod
     def get_effective_home_abs_path():
@@ -71,6 +81,7 @@ class RequiredReadsManifestLoader:
     _project_manifest_relative_path = ".ai-sanity/required-reading.json"
     _global_manifest_relative_path_from_repo_root = ".ai-sanity/required-reading.global.json"
 
+
     @staticmethod
     def get_hooks_repo_root_abs_path():
 
@@ -78,6 +89,7 @@ class RequiredReadsManifestLoader:
         return RequiredReadsPathNormalizer.normalize_path(
             os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
         )
+
 
     @staticmethod
     def discover_manifests(edited_file_abs_path):
@@ -130,6 +142,7 @@ class RequiredReadsManifestLoader:
             current_directory_abs_path = parent_directory_abs_path
         return discovered_manifests
 
+
     @staticmethod
     def load_manifest_rule_records(manifest_abs_path, is_global_manifest):
 
@@ -170,6 +183,7 @@ class RequiredReadsManifestLoader:
             if rule_record_or_none is not None:
                 produced_rule_records.append(rule_record_or_none)
         return produced_rule_records
+
 
     @staticmethod
     def _build_rule_record_or_none(raw_rule_object,

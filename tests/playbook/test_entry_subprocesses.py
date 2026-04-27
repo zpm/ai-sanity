@@ -40,6 +40,7 @@ class TestPreToolUsePlaybookEntryScript(unittest.TestCase):
         with open(self.playbook_abs_path, "w", encoding = "utf-8") as open_playbook_file_handle:
             json.dump(playbook_entries, open_playbook_file_handle)
 
+
     def _invoke(self, command, working_directory = None):
 
         if working_directory is None:
@@ -52,6 +53,7 @@ class TestPreToolUsePlaybookEntryScript(unittest.TestCase):
             )
         )
 
+
     def test_exact_matching_command_is_allowed(self):
 
         exit_code, parsed_stdout = self._invoke("python -m unittest discover -s tests -t . -v")
@@ -59,12 +61,14 @@ class TestPreToolUsePlaybookEntryScript(unittest.TestCase):
             self, exit_code, parsed_stdout
         )
 
+
     def test_prefix_matching_command_is_allowed(self):
 
         exit_code, parsed_stdout = self._invoke("python -m unittest tests.playbook.test_rule_checks -v")
         tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_allow_decision(
             self, exit_code, parsed_stdout
         )
+
 
     def test_pipe_with_safe_target_is_allowed(self):
 
@@ -75,12 +79,14 @@ class TestPreToolUsePlaybookEntryScript(unittest.TestCase):
             self, exit_code, parsed_stdout
         )
 
+
     def test_non_matching_command_passes_through(self):
 
         exit_code, parsed_stdout = self._invoke("ls -la")
         tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
             self, exit_code, parsed_stdout
         )
+
 
     def test_sequential_operator_passes_through(self):
 
@@ -91,6 +97,7 @@ class TestPreToolUsePlaybookEntryScript(unittest.TestCase):
             self, exit_code, parsed_stdout
         )
 
+
     def test_unsafe_pipe_target_passes_through(self):
 
         exit_code, parsed_stdout = self._invoke(
@@ -100,6 +107,7 @@ class TestPreToolUsePlaybookEntryScript(unittest.TestCase):
             self, exit_code, parsed_stdout
         )
 
+
     def test_file_redirect_passes_through(self):
 
         exit_code, parsed_stdout = self._invoke(
@@ -108,6 +116,7 @@ class TestPreToolUsePlaybookEntryScript(unittest.TestCase):
         tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
             self, exit_code, parsed_stdout
         )
+
 
     def test_no_playbook_passes_through(self):
 
@@ -119,6 +128,7 @@ class TestPreToolUsePlaybookEntryScript(unittest.TestCase):
         tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
             self, exit_code, parsed_stdout
         )
+
 
     def test_empty_command_passes_through(self):
 

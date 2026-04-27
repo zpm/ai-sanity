@@ -1,3 +1,10 @@
+########################################################################################################################
+# hooks/required_reading/precompact.py
+#
+# required-reading pre-compact hook
+########################################################################################################################
+
+
 import os
 import sys
 
@@ -12,6 +19,7 @@ class PreCompactRequiredReadsEntry:
     """Single-purpose entry: read the PreCompact payload, extract the session id, clear the session's required-reads
     state directory. Any error falls through to a silent exit 0; this hook cannot usefully deny or emit anything."""
 
+
     @staticmethod
     def main():
 
@@ -20,7 +28,9 @@ class PreCompactRequiredReadsEntry:
         try:
             precompact_payload = _common._hook_io.PreCompactHookIo.read_precompact_payload_from_stdin()
             claude_session_id_string = precompact_payload.get("session_id") or "unknown-session"
-            required_reading._state.RequiredReadsState.clear_session(claude_session_id_string = claude_session_id_string)
+            required_reading._state.RequiredReadsState.clear_session(
+                claude_session_id_string = claude_session_id_string
+            )
             _common._hook_io.PreCompactHookIo.emit_passthrough_and_exit()
         except Exception:
             _common._hook_io.PreCompactHookIo.emit_passthrough_and_exit()

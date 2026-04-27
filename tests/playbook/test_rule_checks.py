@@ -38,10 +38,12 @@ class TestPlaybookMatchCheck(unittest.TestCase):
             }
         ])
 
+
     def _write_playbook(self, playbook_entries):
 
         with open(self.playbook_abs_path, "w", encoding = "utf-8") as open_playbook_file_handle:
             json.dump(playbook_entries, open_playbook_file_handle)
+
 
     def _build_bash_payload(self, command):
 
@@ -53,6 +55,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
     ####################################################################################################################
     # EXACT MATCH
 
+
     def test_exact_match_returns_entry(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
@@ -61,12 +64,14 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertEqual(result["bash"], "python -m unittest discover -s tests -t . -v")
 
+
     def test_non_matching_command_returns_none(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("ls -la")
         )
         self.assertIsNone(result)
+
 
     def test_exact_entry_rejects_extra_args(self):
 
@@ -78,6 +83,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         )
         self.assertIsNone(result)
 
+
     def test_extra_whitespace_still_matches(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
@@ -85,12 +91,14 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         )
         self.assertIsNotNone(result)
 
+
     def test_empty_command_returns_none(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("")
         )
         self.assertIsNone(result)
+
 
     def test_malformed_quoting_returns_none(self):
 
@@ -102,6 +110,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
     ####################################################################################################################
     # PREFIX WILDCARD
 
+
     def test_prefix_match_targeted_test(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
@@ -109,6 +118,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         )
         self.assertIsNotNone(result)
         self.assertEqual(result["bash"], "python -m unittest *")
+
 
     def test_prefix_match_bare_command(self):
 
@@ -118,12 +128,14 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertEqual(result["bash"], "python -m unittest *")
 
+
     def test_prefix_no_partial_token_match(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittesting")
         )
         self.assertIsNone(result)
+
 
     def test_prefix_with_safe_pipe(self):
 
@@ -132,12 +144,14 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         )
         self.assertIsNotNone(result)
 
+
     def test_prefix_rejects_sequential_operator(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest tests.foo && rm -rf /")
         )
         self.assertIsNone(result)
+
 
     def test_exact_match_preferred_over_prefix_when_both_match(self):
 
@@ -150,12 +164,14 @@ class TestPlaybookMatchCheck(unittest.TestCase):
     ####################################################################################################################
     # PIPES WITH SAFE ALLOWLIST
 
+
     def test_pipe_to_tail_allows(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest discover -s tests -t . -v | tail -5")
         )
         self.assertIsNotNone(result)
+
 
     def test_pipe_to_grep_allows(self):
 
@@ -164,12 +180,14 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         )
         self.assertIsNotNone(result)
 
+
     def test_pipe_to_head_allows(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest discover -s tests -t . -v | head -20")
         )
         self.assertIsNotNone(result)
+
 
     def test_pipe_to_cat_allows(self):
 
@@ -178,12 +196,14 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         )
         self.assertIsNotNone(result)
 
+
     def test_pipe_chain_safe_targets_allows(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest discover -s tests -t . -v | head -20 | grep ERROR")
         )
         self.assertIsNotNone(result)
+
 
     def test_pipe_to_unsafe_rm_rejects(self):
 
@@ -192,12 +212,14 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         )
         self.assertIsNone(result)
 
+
     def test_pipe_to_python_rejects(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest discover -s tests -t . -v | python -c 'import os'")
         )
         self.assertIsNone(result)
+
 
     def test_pipe_to_mv_rejects(self):
 
@@ -206,12 +228,14 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         )
         self.assertIsNone(result)
 
+
     def test_piped_command_not_first_clause_rejects(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("echo pwned | python -m unittest discover -s tests -t . -v")
         )
         self.assertIsNone(result)
+
 
     def test_mixed_safe_and_unsafe_pipe_rejects(self):
 
@@ -223,6 +247,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
     ####################################################################################################################
     # SEQUENTIAL OPERATORS
 
+
     def test_and_then_rejects(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
@@ -230,12 +255,14 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         )
         self.assertIsNone(result)
 
+
     def test_or_else_rejects(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest discover -s tests -t . -v || echo failed")
         )
         self.assertIsNone(result)
+
 
     def test_semicolon_rejects(self):
 
@@ -247,12 +274,14 @@ class TestPlaybookMatchCheck(unittest.TestCase):
     ####################################################################################################################
     # DESCRIPTOR MERGES VS FILE REDIRECTS
 
+
     def test_descriptor_merge_2_to_1_with_pipe_allows(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest discover -s tests -t . -v 2>&1 | tail -5")
         )
         self.assertIsNotNone(result)
+
 
     def test_descriptor_merge_to_stderr_allows(self):
 
@@ -261,12 +290,14 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         )
         self.assertIsNotNone(result)
 
+
     def test_file_redirect_stdout_rejects(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest discover -s tests -t . -v > output.txt")
         )
         self.assertIsNone(result)
+
 
     def test_file_redirect_append_rejects(self):
 
@@ -275,12 +306,14 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         )
         self.assertIsNone(result)
 
+
     def test_file_redirect_stderr_rejects(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest discover -s tests -t . -v 2> /dev/null")
         )
         self.assertIsNone(result)
+
 
     def test_stdin_redirect_rejects(self):
 
@@ -289,12 +322,14 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         )
         self.assertIsNone(result)
 
+
     def test_redirect_only_no_command_rejects(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("> /tmp/file")
         )
         self.assertIsNone(result)
+
 
     def test_attached_file_redirect_rejects(self):
 
@@ -303,12 +338,14 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         )
         self.assertIsNone(result)
 
+
     def test_attached_stderr_redirect_rejects(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest tests.foo 2>/dev/null")
         )
         self.assertIsNone(result)
+
 
     def test_attached_append_redirect_rejects(self):
 
@@ -317,12 +354,14 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         )
         self.assertIsNone(result)
 
+
     def test_pipe_downstream_file_redirect_rejects(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest tests.foo | tail -5 > out.txt")
         )
         self.assertIsNone(result)
+
 
     def test_pipe_downstream_attached_redirect_rejects(self):
 
@@ -334,6 +373,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
     ####################################################################################################################
     # KNOWN LIMITATION: QUOTED OPERATORS
 
+
     def test_quoted_pipe_literal_matches_known_parser_limitation(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(
@@ -343,6 +383,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
 
     ####################################################################################################################
     # PLAYBOOK FILE ERRORS
+
 
     def test_missing_playbook_returns_none(self):
 
@@ -354,6 +395,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         result = playbook.pretooluse_bash.PlaybookMatchCheck.check(payload)
         self.assertIsNone(result)
 
+
     def test_bad_json_playbook_returns_none(self):
 
         with open(self.playbook_abs_path, "w", encoding = "utf-8") as open_playbook_file_handle:
@@ -363,6 +405,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         )
         self.assertIsNone(result)
 
+
     def test_playbook_with_wrong_shape_returns_none(self):
 
         with open(self.playbook_abs_path, "w", encoding = "utf-8") as open_playbook_file_handle:
@@ -371,6 +414,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
             self._build_bash_payload("python -m unittest discover -s tests -t . -v")
         )
         self.assertIsNone(result)
+
 
     def test_playbook_entry_missing_bash_field_is_skipped(self):
 
@@ -396,6 +440,7 @@ class TestFindPlaybookAbsPath(unittest.TestCase):
         result = playbook.pretooluse_bash.PlaybookMatchCheck.find_playbook_abs_path(temp_project_directory)
         self.assertEqual(result, playbook_abs_path)
 
+
     def test_finds_playbook_in_parent_directory(self):
 
         temp_project_directory = tempfile.mkdtemp()
@@ -408,6 +453,7 @@ class TestFindPlaybookAbsPath(unittest.TestCase):
         os.makedirs(child_directory)
         result = playbook.pretooluse_bash.PlaybookMatchCheck.find_playbook_abs_path(child_directory)
         self.assertEqual(result, playbook_abs_path)
+
 
     def test_returns_none_when_no_playbook_exists(self):
 
@@ -425,12 +471,14 @@ class TestStripDescriptorMergeTokensFromClause(unittest.TestCase):
         )
         self.assertEqual(result, ["python", "-m", "unittest"])
 
+
     def test_strips_2_to_1(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.strip_descriptor_merge_tokens_from_clause(
             ["python", "-m", "unittest", "2>&1"]
         )
         self.assertEqual(result, ["python", "-m", "unittest"])
+
 
     def test_strips_to_stderr(self):
 
@@ -439,12 +487,14 @@ class TestStripDescriptorMergeTokensFromClause(unittest.TestCase):
         )
         self.assertEqual(result, ["python", "-m", "unittest"])
 
+
     def test_preserves_args_before_redirect(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.strip_descriptor_merge_tokens_from_clause(
             ["python", "-m", "unittest", "--verbose", "2>&1"]
         )
         self.assertEqual(result, ["python", "-m", "unittest", "--verbose"])
+
 
     def test_file_redirect_returns_none(self):
 
@@ -453,12 +503,14 @@ class TestStripDescriptorMergeTokensFromClause(unittest.TestCase):
         )
         self.assertIsNone(result)
 
+
     def test_stderr_file_redirect_returns_none(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.strip_descriptor_merge_tokens_from_clause(
             ["python", "-m", "unittest", "2>", "/dev/null"]
         )
         self.assertIsNone(result)
+
 
     def test_stdin_redirect_returns_none(self):
 
@@ -467,10 +519,12 @@ class TestStripDescriptorMergeTokensFromClause(unittest.TestCase):
         )
         self.assertIsNone(result)
 
+
     def test_empty_list_unchanged(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.strip_descriptor_merge_tokens_from_clause([])
         self.assertEqual(result, [])
+
 
     def test_attached_stdout_redirect_returns_none(self):
 
@@ -479,12 +533,14 @@ class TestStripDescriptorMergeTokensFromClause(unittest.TestCase):
         )
         self.assertIsNone(result)
 
+
     def test_attached_stderr_redirect_returns_none(self):
 
         result = playbook.pretooluse_bash.PlaybookMatchCheck.strip_descriptor_merge_tokens_from_clause(
             ["python", "-m", "unittest", "2>/dev/null"]
         )
         self.assertIsNone(result)
+
 
     def test_attached_append_redirect_returns_none(self):
 

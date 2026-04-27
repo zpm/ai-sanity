@@ -1,8 +1,7 @@
 ########################################################################################################################
 # tests/bash_safety/test_entry_subprocesses.py
 #
-# integration tests requiring filesystem fixtures (git repos, temp dirs) that cannot be expressed as flat
-# command-to-outcome mappings in command_tests.json
+# bash safety entry-script filesystem fixture tests
 ########################################################################################################################
 
 
@@ -41,6 +40,7 @@ class TestPreToolUseBashSafetyEntryScriptGitMv(unittest.TestCase):
             check = True
         )
 
+
     def _invoke(self, command):
 
         return tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
@@ -51,12 +51,14 @@ class TestPreToolUseBashSafetyEntryScriptGitMv(unittest.TestCase):
             )
         )
 
+
     def test_mv_of_tracked_file_is_denied(self):
 
         exit_code, parsed_stdout = self._invoke("mv tracked-example.txt renamed.txt")
         tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_deny_decision(
             self, exit_code, parsed_stdout, "tracked"
         )
+
 
     def test_non_mv_command_passes_through(self):
 

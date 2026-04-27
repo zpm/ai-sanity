@@ -23,6 +23,7 @@ class RedirectTokenClassifier:
     """Classifies shell redirect tokens as descriptor merges (safe) or file redirects. Provides a shared
     strip method that removes descriptor merges from a token list."""
 
+
     @staticmethod
     def strip_descriptor_merge_tokens_from_clause(clause_tokens):
 
@@ -31,6 +32,7 @@ class RedirectTokenClassifier:
             token for token in clause_tokens
             if not DESCRIPTOR_MERGE_PATTERN.match(token)
         ]
+
 
     @staticmethod
     def clause_contains_file_redirect(clause_tokens):
@@ -56,6 +58,7 @@ class BashCommandParser:
         ";": True,
     }
 
+
     @staticmethod
     def extract_command_clauses(bash_command_string):
 
@@ -79,6 +82,7 @@ class BashCommandParser:
         if current_clause:
             clauses.append(current_clause)
         return clauses
+
 
     @staticmethod
     def extract_command_clauses_and_separators(bash_command_string):

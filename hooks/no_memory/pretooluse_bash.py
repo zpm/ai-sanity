@@ -1,3 +1,10 @@
+########################################################################################################################
+# hooks/no_memory/pretooluse_bash.py
+#
+# no-memory bash pre-tool hook
+########################################################################################################################
+
+
 import os
 import shlex
 import sys
@@ -12,6 +19,7 @@ class PreToolUseBashMemoryRuleChecks:
 
     """Memory-access rule checks for the Bash matcher. Each method takes the full PreToolUse payload dict and returns
     either a string deny-reason on violation or None to pass."""
+
 
     @staticmethod
     def check_no_memory_access_for_bash(pretooluse_payload):
@@ -36,6 +44,7 @@ class PreToolUseBashMemoryHookEntry:
     _rule_check_methods_to_run_in_order = (
         PreToolUseBashMemoryRuleChecks.check_no_memory_access_for_bash,
     )
+
 
     @staticmethod
     def main():

@@ -10,6 +10,7 @@ class PreToolUsePayloadFixtureBuilder:
     """Constructs synthetic PreToolUse payloads matching the contract documented at
     https://code.claude.com/docs/en/hooks. Keeps test bodies focused on the assertion rather than on JSON shape."""
 
+
     @staticmethod
     def build_base_payload(tool_name, tool_input, working_directory = "/tmp"):
 
@@ -25,6 +26,7 @@ class PreToolUsePayloadFixtureBuilder:
             "tool_use_id": "test-tool-use-id"
         }
 
+
     @staticmethod
     def build_write_payload(file_content, file_path = "/tmp/example.txt"):
 
@@ -37,6 +39,7 @@ class PreToolUsePayloadFixtureBuilder:
                 "content": file_content
             }
         )
+
 
     @staticmethod
     def build_edit_payload(new_string_content, file_path = "/tmp/example.txt"):
@@ -52,6 +55,7 @@ class PreToolUsePayloadFixtureBuilder:
             }
         )
 
+
     @staticmethod
     def build_bash_payload(bash_command_string, working_directory = "/tmp"):
 
@@ -65,6 +69,7 @@ class PreToolUsePayloadFixtureBuilder:
             working_directory = working_directory
         )
 
+
     @staticmethod
     def build_read_payload(file_path):
 
@@ -76,6 +81,7 @@ class PreToolUsePayloadFixtureBuilder:
                 "file_path": file_path
             }
         )
+
 
     @staticmethod
     def build_glob_payload(glob_pattern_string, glob_path = None):
@@ -90,6 +96,7 @@ class PreToolUsePayloadFixtureBuilder:
             tool_input = glob_tool_input
         )
 
+
     @staticmethod
     def build_grep_payload(grep_pattern, grep_path = None):
 
@@ -102,6 +109,7 @@ class PreToolUsePayloadFixtureBuilder:
             tool_name = "Grep",
             tool_input = grep_tool_input
         )
+
 
     @staticmethod
     def build_posttooluse_read_payload(file_path, working_directory = "/tmp", session_id = "test-session"):
@@ -120,6 +128,7 @@ class PreToolUsePayloadFixtureBuilder:
             "tool_response": {"success": True},
             "tool_use_id": "test-tool-use-id"
         }
+
 
     @staticmethod
     def build_precompact_payload(session_id = "test-session"):

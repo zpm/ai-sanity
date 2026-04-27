@@ -19,9 +19,10 @@ import tests._common.fixtures
 
 class RequiredReadsManifestFixtureBuilder:
 
-    """Writes `.ai-sanity/required-reading.json` manifests into tempdirs for loader and discovery tests. Keeps test bodies
-    focused on the assertion rather than on filesystem plumbing. Every write creates parent directories as needed and
-    returns the absolute path of the written manifest so tests can read it back or register it as the home override."""
+    """Writes `.ai-sanity/required-reading.json` manifests into tempdirs for loader and discovery tests. Keeps test
+    bodies focused on the assertion. Every write creates parent directories as needed.
+    Returns the absolute path of the written manifest so tests can read it back or register it as the home override."""
+
 
     @staticmethod
     def write_manifest_file(manifest_directory_abs_path, rule_dicts):
@@ -35,6 +36,7 @@ class RequiredReadsManifestFixtureBuilder:
         with open(manifest_abs_path, "w", encoding = "utf-8") as open_manifest_file_handle:
             json.dump({"rules": rule_dicts}, open_manifest_file_handle)
         return manifest_abs_path
+
 
     @staticmethod
     def write_raw_manifest_body(manifest_directory_abs_path, raw_manifest_body_string):
@@ -57,11 +59,13 @@ class HomeOverrideEnvVarTestCaseMixin:
     Used by both the unit tests (direct method calls) and the subprocess tests (where the child Python process
     inherits the parent's env). Subclasses read `self.sandboxed_home_abs_path` to place fixture files."""
 
+
     def setUp(self):
 
         self._previous_home_override_value = os.environ.get("HOOK_TEST_HOME_OVERRIDE")
         self.sandboxed_home_abs_path = tempfile.mkdtemp()
         os.environ["HOOK_TEST_HOME_OVERRIDE"] = self.sandboxed_home_abs_path
+
 
     def satisfy_hooks_repo_global_rules_for_extension(self, extension_suffix):
 
@@ -79,6 +83,7 @@ class HomeOverrideEnvVarTestCaseMixin:
             if rule_record.match_extension_suffix == extension_suffix:
                 self._satisfy_read_via_observer(rule_record.read_abs_path)
 
+
     def _satisfy_read_via_observer(self, file_abs_path):
 
         read_payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_posttooluse_read_payload(
@@ -89,6 +94,7 @@ class HomeOverrideEnvVarTestCaseMixin:
             entry_script_relative_path = "required_reading/posttooluse_observer.py",
             pretooluse_payload = read_payload
         )
+
 
     def tearDown(self):
 

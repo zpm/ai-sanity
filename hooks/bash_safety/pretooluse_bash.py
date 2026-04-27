@@ -88,6 +88,7 @@ class GitCommandsCheck:
         " (diff, status, log, ls-files, show) and `git mv` are allowed."
     )
 
+
     @staticmethod
     def check(clauses):
 
@@ -120,6 +121,7 @@ class RequireGitMvForTrackedMovesCheck:
         "Refused: `{source_path}` is tracked by git (or contains tracked files). Requires `git mv`"
         " instead of `mv` for tracked paths. Re-run with `git mv` for any tracked source."
     )
+
 
     @staticmethod
     def check(pretooluse_payload):
@@ -171,6 +173,7 @@ class DeniedCommandMatcher:
 
     """Shared matching engine for command/subcommand deny dicts. Keys are command prefixes (single or multi-word),
     values are lists of denied subcommands or ["*"] to deny all uses of the command."""
+
 
     @staticmethod
     def any_clause_matches_denied_commands(clauses, denied_commands):
@@ -267,6 +270,7 @@ class DeferToUserCommandsCheck:
 
     _DENY_MESSAGE = "This command is prohibited. Suggest it to the user instead of running it."
 
+
     @staticmethod
     def check(clauses):
 
@@ -298,6 +302,7 @@ class ProhibitedCommandsCheck:
 
     _DENY_MESSAGE = "This command is prohibited. Use the appropriate Claude Code tool instead."
 
+
     @staticmethod
     def check(clauses):
 
@@ -323,6 +328,7 @@ class NoShellSubstitutionCheck:
         "Shell substitution syntax ($(), backticks, <(), >()) is prohibited."
         " Run each command separately instead."
     )
+
 
     @staticmethod
     def check(pretooluse_payload):
@@ -353,6 +359,7 @@ class PreToolUseBashSafetyHookEntry:
         ProhibitedCommandsCheck.check,
     )
 
+
     @staticmethod
     def _strip_safe_pipe_tail_from_payload(pretooluse_payload):
 
@@ -381,14 +388,17 @@ class PreToolUseBashSafetyHookEntry:
                 return pretooluse_payload
             if cleaned_downstream_clause[0] not in _common._command_parser.SAFE_PIPE_TARGET_COMMANDS:
                 return pretooluse_payload
-        first_clause_cleaned = _common._command_parser.RedirectTokenClassifier.strip_descriptor_merge_tokens_from_clause(
-            clause_tokens = clauses[0]
+        first_clause_cleaned = (
+            _common._command_parser.RedirectTokenClassifier.strip_descriptor_merge_tokens_from_clause(
+                clause_tokens = clauses[0]
+            )
         )
         first_clause_command_string = " ".join(first_clause_cleaned)
         stripped_payload = dict(pretooluse_payload)
         stripped_payload["tool_input"] = dict(pretooluse_payload["tool_input"])
         stripped_payload["tool_input"]["command"] = first_clause_command_string
         return stripped_payload
+
 
     @staticmethod
     def main():

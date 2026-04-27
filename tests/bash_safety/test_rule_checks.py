@@ -47,6 +47,7 @@ class TestRequireGitMvForTrackedMovesCheck(unittest.TestCase):
         untracked_file_path = os.path.join(self.git_repo_temp_directory, "untracked-example.txt")
         open(untracked_file_path, "w").close()
 
+
     def test_blocks_mv_of_tracked_file(self):
 
         payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
@@ -56,6 +57,7 @@ class TestRequireGitMvForTrackedMovesCheck(unittest.TestCase):
         result = bash_safety.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
         self.assertIsNotNone(result)
         self.assertIn("tracked-example.txt", result)
+
 
     def test_blocks_mv_of_tracked_directory(self):
 
@@ -67,6 +69,7 @@ class TestRequireGitMvForTrackedMovesCheck(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertIn("tracked-dir", result)
 
+
     def test_passes_mv_of_untracked_source(self):
 
         payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
@@ -75,6 +78,7 @@ class TestRequireGitMvForTrackedMovesCheck(unittest.TestCase):
         )
         result = bash_safety.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
         self.assertIsNone(result)
+
 
     def test_passes_non_mv_command(self):
 
@@ -85,6 +89,7 @@ class TestRequireGitMvForTrackedMovesCheck(unittest.TestCase):
         result = bash_safety.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
         self.assertIsNone(result)
 
+
     def test_skips_flag_arguments_when_locating_sources(self):
 
         payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
@@ -94,6 +99,7 @@ class TestRequireGitMvForTrackedMovesCheck(unittest.TestCase):
         result = bash_safety.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
         self.assertIsNotNone(result)
 
+
     def test_passes_on_malformed_quoting(self):
 
         payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
@@ -101,6 +107,7 @@ class TestRequireGitMvForTrackedMovesCheck(unittest.TestCase):
         )
         result = bash_safety.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
         self.assertIsNone(result)
+
 
     def test_blocks_mv_dash_t_of_tracked_file(self):
 
@@ -111,6 +118,7 @@ class TestRequireGitMvForTrackedMovesCheck(unittest.TestCase):
         result = bash_safety.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
         self.assertIsNotNone(result)
         self.assertIn("tracked-example.txt", result)
+
 
     def test_blocks_mv_target_directory_equals_of_tracked_file(self):
 
@@ -134,6 +142,7 @@ class TestMalformedInputPassthrough(unittest.TestCase):
         "mv \"broken",
         "pip install \"broken",
     )
+
 
     def test_malformed_commands_pass_through(self):
 
@@ -162,6 +171,7 @@ class TestBashCommandParserClausesAndSeparators(unittest.TestCase):
         self.assertEqual(clauses, [["python", "-m", "unittest"]])
         self.assertEqual(separators, [])
 
+
     def test_pipe_returns_pipe_separator(self):
 
         clauses, separators = (
@@ -171,6 +181,7 @@ class TestBashCommandParserClausesAndSeparators(unittest.TestCase):
         )
         self.assertEqual(clauses, [["python", "-m", "unittest"], ["tail"]])
         self.assertEqual(separators, ["|"])
+
 
     def test_and_then_returns_and_separator(self):
 
@@ -182,6 +193,7 @@ class TestBashCommandParserClausesAndSeparators(unittest.TestCase):
         self.assertEqual(clauses, [["python", "-m", "unittest"], ["echo", "done"]])
         self.assertEqual(separators, ["&&"])
 
+
     def test_mixed_operators_returns_all_separators(self):
 
         clauses, separators = (
@@ -192,6 +204,7 @@ class TestBashCommandParserClausesAndSeparators(unittest.TestCase):
         self.assertEqual(clauses, [["python", "-m", "unittest"], ["tail"], ["echo"]])
         self.assertEqual(separators, ["|", "&&"])
 
+
     def test_semicolon_returns_semicolon_separator(self):
 
         clauses, separators = (
@@ -199,6 +212,7 @@ class TestBashCommandParserClausesAndSeparators(unittest.TestCase):
         )
         self.assertEqual(clauses, [["a"], ["b"]])
         self.assertEqual(separators, [";"])
+
 
     def test_or_else_returns_or_separator(self):
 
@@ -208,6 +222,7 @@ class TestBashCommandParserClausesAndSeparators(unittest.TestCase):
         self.assertEqual(clauses, [["a"], ["b"]])
         self.assertEqual(separators, ["||"])
 
+
     def test_empty_command_returns_empty(self):
 
         clauses, separators = (
@@ -215,6 +230,7 @@ class TestBashCommandParserClausesAndSeparators(unittest.TestCase):
         )
         self.assertEqual(clauses, [])
         self.assertEqual(separators, [])
+
 
     def test_malformed_quoting_returns_empty(self):
 

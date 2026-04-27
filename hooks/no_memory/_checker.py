@@ -1,3 +1,10 @@
+########################################################################################################################
+# hooks/no_memory/_checker.py
+#
+# no-memory path checking helpers
+########################################################################################################################
+
+
 import re
 
 
@@ -16,6 +23,7 @@ class MemoryPathChecker:
         r"(?:^|[/\\])MEMORY\.md\b",
         re.IGNORECASE
     )
+
 
     @staticmethod
     def assert_paths_are_not_memory_locations(*candidate_path_strings):

@@ -1,3 +1,10 @@
+########################################################################################################################
+# hooks/required_reading/pretooluse.py
+#
+# required-reading pre-tool hook
+########################################################################################################################
+
+
 import os
 import sys
 
@@ -19,6 +26,7 @@ class PreToolUseRequiredReadsRuleChecks:
         "Read": "file_path"
     }
 
+
     @staticmethod
     def extract_edited_file_abs_path_or_none(pretooluse_payload):
 
@@ -34,6 +42,7 @@ class PreToolUseRequiredReadsRuleChecks:
             return None
         return required_reading._manifest.RequiredReadsPathNormalizer.normalize_path(raw_file_path_string)
 
+
     @staticmethod
     def is_file_inside_config_directory(edited_file_abs_path):
 
@@ -41,6 +50,7 @@ class PreToolUseRequiredReadsRuleChecks:
         return "/.claude/" in edited_file_abs_path or "/.ai-sanity/" in edited_file_abs_path
 
     _claude_configuration_doc_basenames = frozenset(("claude.md", "agents.md"))
+
 
     @staticmethod
     def is_read_of_claude_configuration_doc(tool_name_string, edited_file_abs_path):
@@ -50,6 +60,7 @@ class PreToolUseRequiredReadsRuleChecks:
             return False
         basename_string = os.path.basename(edited_file_abs_path)
         return basename_string in PreToolUseRequiredReadsRuleChecks._claude_configuration_doc_basenames
+
 
     @staticmethod
     def collect_applicable_rule_records(edited_file_abs_path):
@@ -62,10 +73,11 @@ class PreToolUseRequiredReadsRuleChecks:
         flattened_rule_records = []
         for discovered_manifest in discovered_manifests:
             is_global_manifest_bool = not discovered_manifest.is_project_walkup_manifest
-            flattened_rule_records.extend(required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
+            manifest_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
                 manifest_abs_path = discovered_manifest.manifest_abs_path,
                 is_global_manifest = is_global_manifest_bool
-            ))
+            )
+            flattened_rule_records.extend(manifest_rule_records)
         override_applied_rule_records = rule_checks_class.apply_project_overrides_against_global_rules(
             rule_records = flattened_rule_records
         )
@@ -73,6 +85,7 @@ class PreToolUseRequiredReadsRuleChecks:
             rule_records = override_applied_rule_records,
             candidate_file_abs_path = edited_file_abs_path
         )
+
 
     @staticmethod
     def apply_project_overrides_against_global_rules(rule_records):
@@ -95,13 +108,18 @@ class PreToolUseRequiredReadsRuleChecks:
             surviving_rule_records.append(candidate_rule_record)
         return surviving_rule_records
 
+
     @staticmethod
     def filter_rules_by_match_criterion(rule_records, candidate_file_abs_path):
 
         """Returns rules matching the file by extension suffix, filepath substring, or wildcard (neither set)."""
         match_passed_rule_records = []
         for candidate_rule_record in rule_records:
-            if candidate_rule_record.match_extension_suffix is None and candidate_rule_record.match_filepath_substring is None:
+            matches_all_files = (
+                candidate_rule_record.match_extension_suffix is None
+                and candidate_rule_record.match_filepath_substring is None
+            )
+            if matches_all_files:
                 match_passed_rule_records.append(candidate_rule_record)
                 continue
             if candidate_rule_record.match_extension_suffix is not None:
@@ -111,6 +129,7 @@ class PreToolUseRequiredReadsRuleChecks:
             if candidate_rule_record.match_filepath_substring in candidate_file_abs_path:
                 match_passed_rule_records.append(candidate_rule_record)
         return match_passed_rule_records
+
 
     @staticmethod
     def is_read_of_a_manifest_listed_doc(tool_name_string, candidate_file_abs_path, edited_file_abs_path):
@@ -131,6 +150,7 @@ class PreToolUseRequiredReadsRuleChecks:
                     return True
         return False
 
+
     @staticmethod
     def partition_rules_into_unsatisfied_fire_and_already_satisfied(rule_records, claude_session_id_string):
 
@@ -148,6 +168,7 @@ class PreToolUseRequiredReadsRuleChecks:
                 rules_to_fire_list.append(candidate_rule_record)
         return rules_to_fire_list, rules_already_satisfied_list
 
+
     @staticmethod
     def partition_rules_by_missing_read_targets(rule_records):
 
@@ -160,6 +181,7 @@ class PreToolUseRequiredReadsRuleChecks:
             else:
                 required_missing_rule_records.append(candidate_rule_record)
         return present_rule_records, required_missing_rule_records
+
 
     @staticmethod
     def build_missing_target_deny_reason_string(rules_with_missing_targets, edited_file_abs_path):
@@ -177,6 +199,7 @@ class PreToolUseRequiredReadsRuleChecks:
             f"Fix the setup (clone the missing repo, correct the manifest path, or remove the offending rule) before"
             f" retrying. Do not proceed without the required context."
         )
+
 
     @staticmethod
     def build_deny_reason_string(unsatisfied_rule_records, edited_file_abs_path):
@@ -199,6 +222,7 @@ class PreToolUseRequiredReadsRuleChecks:
 class PreToolUseRequiredReadsHookEntry:
 
     """Entry point. Errors fall through to passthrough so a bug in this hook cannot crash an edit."""
+
 
     @staticmethod
     def main():

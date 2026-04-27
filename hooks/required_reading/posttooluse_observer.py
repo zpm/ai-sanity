@@ -1,3 +1,10 @@
+########################################################################################################################
+# hooks/required_reading/posttooluse_observer.py
+#
+# required-reading post-read observer hook
+########################################################################################################################
+
+
 import os
 import sys
 
@@ -12,6 +19,7 @@ class PostToolUseReadObserverRuleChecks:
 
     """Rule checks for the PostToolUse Read observer. Translates completed Reads into satisfaction flags."""
 
+
     @staticmethod
     def extract_read_file_abs_path_or_none(posttooluse_payload):
 
@@ -23,6 +31,7 @@ class PostToolUseReadObserverRuleChecks:
         if not isinstance(raw_file_path_string, str) or not raw_file_path_string:
             return None
         return required_reading._manifest.RequiredReadsPathNormalizer.normalize_path(raw_file_path_string)
+
 
     @staticmethod
     def collect_dedupe_keys_whose_read_target_matches(read_file_abs_path, cwd_abs_path):
@@ -60,6 +69,7 @@ class PostToolUseReadObserverEntry:
 
     """Entry point. Errors fall through to passthrough so a bug cannot affect the completed Read."""
 
+
     @staticmethod
     def main():
 
@@ -72,9 +82,11 @@ class PostToolUseReadObserverEntry:
                 _common._hook_io.PostToolUseHookIo.emit_passthrough_and_exit()
                 return
             cwd_abs_path_from_payload = posttooluse_payload.get("cwd") or ""
-            matching_dedupe_key_strings = PostToolUseReadObserverRuleChecks.collect_dedupe_keys_whose_read_target_matches(
-                read_file_abs_path = read_file_abs_path,
-                cwd_abs_path = cwd_abs_path_from_payload
+            matching_dedupe_key_strings = (
+                PostToolUseReadObserverRuleChecks.collect_dedupe_keys_whose_read_target_matches(
+                    read_file_abs_path = read_file_abs_path,
+                    cwd_abs_path = cwd_abs_path_from_payload
+                )
             )
             claude_session_id_string = posttooluse_payload.get("session_id") or "unknown-session"
             for dedupe_key_string in matching_dedupe_key_strings:

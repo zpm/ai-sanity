@@ -1,12 +1,20 @@
+########################################################################################################################
+# hooks/_common/_hook_io.py
+#
+# hook stdin and stdout helpers
+########################################################################################################################
+
+
 import json
 import sys
 
 
 class PreToolUseHookIo:
 
-    """Stdin and stdout helpers shared by every PreToolUse entry script. The PreToolUse hook contract is documented
-    at https://code.claude.com/docs/en/hooks: read a JSON payload from stdin, then either exit 0 with a hookSpecificOutput
+    """Stdin and stdout helpers shared by every PreToolUse entry script. The PreToolUse hook contract is documented at
+    https://code.claude.com/docs/en/hooks: read a JSON payload from stdin, then either exit 0 with a hookSpecificOutput
     JSON object on stdout to deny/allow/ask, or exit 0 with no stdout to pass through to normal permission rules."""
+
 
     @staticmethod
     def read_pretooluse_payload_from_stdin():
@@ -15,6 +23,7 @@ class PreToolUseHookIo:
         from the raw byte buffer to bypass Windows text-mode stdin (which defaults to cp1252 and silently corrupts
         multi-byte characters). The bytes are passed directly to json.loads, which auto-detects encoding."""
         return json.loads(sys.stdin.buffer.read())
+
 
     @staticmethod
     def emit_deny_decision_and_exit(deny_reason_shown_to_claude):
@@ -34,6 +43,7 @@ class PreToolUseHookIo:
         )
         sys.exit(0)
 
+
     @staticmethod
     def emit_allow_decision_and_exit():
 
@@ -50,12 +60,14 @@ class PreToolUseHookIo:
         )
         sys.exit(0)
 
+
     @staticmethod
     def emit_passthrough_and_exit():
 
         """Writes nothing to stdout and exits cleanly, which lets the tool call proceed to the normal settings.json
         permission rule evaluation pipeline."""
         sys.exit(0)
+
 
 class PostToolUseHookIo:
 
@@ -64,12 +76,14 @@ class PostToolUseHookIo:
     usefulness comes from writing to external state (e.g. the required-reads satisfaction flags) based on what the
     tool did. The passthrough emit here is identical to PreToolUse passthrough: no stdout, exit 0."""
 
+
     @staticmethod
     def read_posttooluse_payload_from_stdin():
 
         """Reads and parses the PostToolUse JSON payload Claude Code pipes to stdin. Reads from the raw byte buffer
         and passes bytes directly to json.loads for encoding auto-detection."""
         return json.loads(sys.stdin.buffer.read())
+
 
     @staticmethod
     def emit_passthrough_and_exit():
@@ -85,12 +99,14 @@ class PreCompactHookIo:
     compress the conversation context. The hook has no decision envelope; any cleanup it performs (e.g. clearing
     required-reads satisfaction flags so docs are re-demanded after compaction) happens via external state writes."""
 
+
     @staticmethod
     def read_precompact_payload_from_stdin():
 
         """Reads and parses the PreCompact JSON payload Claude Code pipes to stdin. Reads from the raw byte buffer
         and passes bytes directly to json.loads for encoding auto-detection."""
         return json.loads(sys.stdin.buffer.read())
+
 
     @staticmethod
     def emit_passthrough_and_exit():

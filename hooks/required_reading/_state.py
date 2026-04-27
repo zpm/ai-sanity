@@ -1,3 +1,10 @@
+########################################################################################################################
+# hooks/required_reading/_state.py
+#
+# required-reading satisfaction state
+########################################################################################################################
+
+
 import hashlib
 import os
 import shutil
@@ -17,6 +24,7 @@ class RequiredReadsState:
 
     _state_directory_relative_path_from_home = ".ai-sanity/hooks-state/required-reads"
 
+
     @staticmethod
     def get_state_base_directory_abs_path():
 
@@ -32,6 +40,7 @@ class RequiredReadsState:
             os.path.join(effective_home_abs_path, state_class._state_directory_relative_path_from_home)
         )
 
+
     @staticmethod
     def get_session_directory_abs_path(claude_session_id_string):
 
@@ -42,6 +51,7 @@ class RequiredReadsState:
             state_class.get_state_base_directory_abs_path(),
             claude_session_id_string
         ).replace("\\", "/")
+
 
     @staticmethod
     def is_dedupe_key_satisfied(claude_session_id_string, dedupe_key_string):
@@ -58,6 +68,7 @@ class RequiredReadsState:
             return os.path.isfile(flag_file_abs_path)
         except OSError:
             return False
+
 
     @staticmethod
     def mark_dedupe_key_satisfied(claude_session_id_string, dedupe_key_string):
@@ -81,6 +92,7 @@ class RequiredReadsState:
         except OSError:
             return
 
+
     @staticmethod
     def clear_session(claude_session_id_string):
 
@@ -95,6 +107,7 @@ class RequiredReadsState:
                 shutil.rmtree(session_directory_abs_path, ignore_errors = True)
         except OSError:
             return
+
 
     @staticmethod
     def sweep_stale_session_directories(stale_age_seconds_threshold = 7 * 24 * 60 * 60):
@@ -123,6 +136,7 @@ class RequiredReadsState:
                     shutil.rmtree(candidate_session_directory_abs_path, ignore_errors = True)
         except OSError:
             return
+
 
     @staticmethod
     def _get_flag_file_abs_path(claude_session_id_string, dedupe_key_string):
