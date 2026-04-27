@@ -1,5 +1,5 @@
 ########################################################################################################################
-# tests/bash_safety/test_entry_subprocesses.py
+# tests/bash_playbook/test_entry_subprocesses.py
 #
 # bash safety entry-script filesystem fixture tests
 ########################################################################################################################
@@ -45,7 +45,7 @@ class TestPreToolUseBashSafetyEntryScriptGitMv(unittest.TestCase):
     def _invoke(self, command):
 
         return tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
-            entry_script_relative_path = "bash_safety/pretooluse_bash.py",
+            entry_script_relative_path = "bash_playbook/pretooluse_bash.py",
             pretooluse_payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
                 bash_command_string = command,
                 working_directory = self.git_repo_temp_directory
@@ -103,7 +103,7 @@ class TestPreToolUseBashSafetyEntryScriptPlaybook(unittest.TestCase):
         if working_directory is None:
             working_directory = self.temp_project_directory
         return tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
-            entry_script_relative_path = "bash_safety/pretooluse_bash.py",
+            entry_script_relative_path = "bash_playbook/pretooluse_bash.py",
             pretooluse_payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
                 bash_command_string = command,
                 working_directory = working_directory

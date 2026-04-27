@@ -1,7 +1,7 @@
 ########################################################################################################################
-# tests/bash_safety/test_json_driven.py
+# tests/bash_playbook/test_json_driven.py
 #
-# JSON-driven integration tests for the bash_safety entry script
+# JSON-driven integration tests for the bash_playbook entry script
 ########################################################################################################################
 
 
@@ -33,7 +33,7 @@ class TestBashSafetyJsonDriven(unittest.TestCase):
     def _invoke_and_assert(self, bash_command_string, assert_method):
 
         exit_code, parsed_stdout = tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
-            entry_script_relative_path = "bash_safety/pretooluse_bash.py",
+            entry_script_relative_path = "bash_playbook/pretooluse_bash.py",
             pretooluse_payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
                 bash_command_string = bash_command_string
             )

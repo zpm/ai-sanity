@@ -1,5 +1,5 @@
 ########################################################################################################################
-# tests/bash_safety/test_rule_checks.py
+# tests/bash_playbook/test_rule_checks.py
 #
 # tests requiring filesystem fixtures or testing non-command logic that cannot be expressed in command_tests.json
 ########################################################################################################################
@@ -15,7 +15,7 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "hooks"))
 
 import tests._common.fixtures
-import bash_safety.pretooluse_bash
+import bash_playbook.pretooluse_bash
 import _common._command_parser
 
 
@@ -55,7 +55,7 @@ class TestRequireGitMvForTrackedMovesCheck(unittest.TestCase):
             bash_command_string = "mv tracked-example.txt renamed.txt",
             working_directory = self.git_repo_temp_directory
         )
-        result = bash_safety.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
+        result = bash_playbook.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
         self.assertIsNotNone(result)
         self.assertIn("tracked-example.txt", result)
 
@@ -66,7 +66,7 @@ class TestRequireGitMvForTrackedMovesCheck(unittest.TestCase):
             bash_command_string = "mv tracked-dir new-dir",
             working_directory = self.git_repo_temp_directory
         )
-        result = bash_safety.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
+        result = bash_playbook.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
         self.assertIsNotNone(result)
         self.assertIn("tracked-dir", result)
 
@@ -77,7 +77,7 @@ class TestRequireGitMvForTrackedMovesCheck(unittest.TestCase):
             bash_command_string = "mv untracked-example.txt renamed.txt",
             working_directory = self.git_repo_temp_directory
         )
-        result = bash_safety.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
+        result = bash_playbook.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
         self.assertIsNone(result)
 
 
@@ -87,7 +87,7 @@ class TestRequireGitMvForTrackedMovesCheck(unittest.TestCase):
             bash_command_string = "echo tracked-example.txt",
             working_directory = self.git_repo_temp_directory
         )
-        result = bash_safety.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
+        result = bash_playbook.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
         self.assertIsNone(result)
 
 
@@ -97,7 +97,7 @@ class TestRequireGitMvForTrackedMovesCheck(unittest.TestCase):
             bash_command_string = "mv -v tracked-example.txt renamed.txt",
             working_directory = self.git_repo_temp_directory
         )
-        result = bash_safety.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
+        result = bash_playbook.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
         self.assertIsNotNone(result)
 
 
@@ -106,7 +106,7 @@ class TestRequireGitMvForTrackedMovesCheck(unittest.TestCase):
         payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
             bash_command_string = "mv \"broken"
         )
-        result = bash_safety.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
+        result = bash_playbook.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
         self.assertIsNone(result)
 
 
@@ -116,7 +116,7 @@ class TestRequireGitMvForTrackedMovesCheck(unittest.TestCase):
             bash_command_string = "mv -t /tmp/dest tracked-example.txt",
             working_directory = self.git_repo_temp_directory
         )
-        result = bash_safety.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
+        result = bash_playbook.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
         self.assertIsNotNone(result)
         self.assertIn("tracked-example.txt", result)
 
@@ -127,7 +127,7 @@ class TestRequireGitMvForTrackedMovesCheck(unittest.TestCase):
             bash_command_string = "mv --target-directory=/tmp/dest tracked-example.txt",
             working_directory = self.git_repo_temp_directory
         )
-        result = bash_safety.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
+        result = bash_playbook.pretooluse_bash.RequireGitMvForTrackedMovesCheck.check(payload)
         self.assertIsNotNone(result)
         self.assertIn("tracked-example.txt", result)
 
@@ -151,7 +151,7 @@ class TestMalformedInputPassthrough(unittest.TestCase):
             with self.subTest(command = bash_command_string):
                 exit_code, parsed_stdout = (
                     tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
-                        entry_script_relative_path = "bash_safety/pretooluse_bash.py",
+                        entry_script_relative_path = "bash_playbook/pretooluse_bash.py",
                         pretooluse_payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
                             bash_command_string = bash_command_string
                         )
@@ -283,7 +283,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
 
     def test_exact_match_returns_entry(self):
 
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.check(
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest discover -s tests -t . -v")
         )
         self.assertIsNotNone(result)
@@ -292,7 +292,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
 
     def test_non_matching_command_returns_none(self):
 
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.check(
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("ls -la")
         )
         self.assertIsNone(result)
@@ -303,7 +303,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         self._write_playbook([
             {"bash": "python -m unittest discover -s tests -t . -v", "what": "exact only", "when": "test"}
         ])
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.check(
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest discover -s tests -t . -v --extra")
         )
         self.assertIsNone(result)
@@ -311,7 +311,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
 
     def test_extra_whitespace_still_matches(self):
 
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.check(
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("  python -m unittest discover -s tests -t . -v  ")
         )
         self.assertIsNotNone(result)
@@ -319,7 +319,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
 
     def test_empty_command_returns_none(self):
 
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.check(
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("")
         )
         self.assertIsNone(result)
@@ -327,7 +327,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
 
     def test_malformed_quoting_returns_none(self):
 
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.check(
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest \"broken")
         )
         self.assertIsNone(result)
@@ -338,7 +338,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
 
     def test_prefix_match_targeted_test(self):
 
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.check(
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest tests.playbook.test_rule_checks -v")
         )
         self.assertIsNotNone(result)
@@ -347,7 +347,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
 
     def test_prefix_match_bare_command(self):
 
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.check(
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest")
         )
         self.assertIsNotNone(result)
@@ -356,7 +356,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
 
     def test_prefix_no_partial_token_match(self):
 
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.check(
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittesting")
         )
         self.assertIsNone(result)
@@ -364,7 +364,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
 
     def test_exact_match_preferred_over_prefix_when_both_match(self):
 
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.check(
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest discover -s tests -t . -v")
         )
         self.assertIsNotNone(result)
@@ -379,7 +379,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         self._write_playbook([
             {"bash": "cd server && pwsh ../local/server/scripts/tests/all.ps1", "what": "test", "when": "test"}
         ])
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.check(
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("cd server && pwsh ../local/server/scripts/tests/all.ps1")
         )
         self.assertIsNotNone(result)
@@ -390,7 +390,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         self._write_playbook([
             {"bash": "cd server && pwsh ../local/server/scripts/tests/pytest.ps1 *", "what": "test", "when": "test"}
         ])
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.check(
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("cd server && pwsh ../local/server/scripts/tests/pytest.ps1 tests/test_sub.py")
         )
         self.assertIsNotNone(result)
@@ -401,7 +401,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         self._write_playbook([
             {"bash": "cd server && pwsh ../local/server/scripts/tests/all.ps1", "what": "test", "when": "test"}
         ])
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.check(
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("cd server && rm -rf /")
         )
         self.assertIsNone(result)
@@ -412,7 +412,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
 
     def test_prefix_with_pipe_tail_matches(self):
 
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.check(
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest tests.foo -v 2>&1 | tail -80")
         )
         self.assertIsNotNone(result)
@@ -420,7 +420,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
 
     def test_prefix_with_redirect_matches(self):
 
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.check(
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest tests.foo > output.txt")
         )
         self.assertIsNotNone(result)
@@ -436,7 +436,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
             bash_command_string = "python -m unittest discover -s tests -t . -v",
             working_directory = empty_temp_directory
         )
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.check(payload)
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(payload)
         self.assertIsNone(result)
 
 
@@ -444,7 +444,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
 
         with open(self.playbook_abs_path, "w", encoding = "utf-8") as open_playbook_file_handle:
             open_playbook_file_handle.write("{not valid json")
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.check(
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest discover -s tests -t . -v")
         )
         self.assertIsNone(result)
@@ -454,7 +454,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
 
         with open(self.playbook_abs_path, "w", encoding = "utf-8") as open_playbook_file_handle:
             json.dump({"not": "a list"}, open_playbook_file_handle)
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.check(
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest discover -s tests -t . -v")
         )
         self.assertIsNone(result)
@@ -465,7 +465,7 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         self._write_playbook([
             {"what": "no bash field", "when": "never"}
         ])
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.check(
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest discover -s tests -t . -v")
         )
         self.assertIsNone(result)
@@ -481,7 +481,7 @@ class TestFindPlaybookAbsPath(unittest.TestCase):
         playbook_abs_path = os.path.join(dot_ai_sanity_directory, "playbook.json")
         with open(playbook_abs_path, "w") as open_file_handle:
             open_file_handle.write("[]")
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.find_playbook_abs_path(temp_project_directory)
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.find_playbook_abs_path(temp_project_directory)
         self.assertEqual(result, playbook_abs_path)
 
 
@@ -495,14 +495,14 @@ class TestFindPlaybookAbsPath(unittest.TestCase):
             open_file_handle.write("[]")
         child_directory = os.path.join(temp_project_directory, "src", "hooks")
         os.makedirs(child_directory)
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.find_playbook_abs_path(child_directory)
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.find_playbook_abs_path(child_directory)
         self.assertEqual(result, playbook_abs_path)
 
 
     def test_returns_none_when_no_playbook_exists(self):
 
         temp_directory = tempfile.mkdtemp()
-        result = bash_safety.pretooluse_bash.PlaybookMatchCheck.find_playbook_abs_path(temp_directory)
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.find_playbook_abs_path(temp_directory)
         self.assertIsNone(result)
 
 

@@ -29,7 +29,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python $HOME/Dev/ai-sanity/hooks/bash_safety/pretooluse_bash.py"
+            "command": "python $HOME/Dev/ai-sanity/hooks/bash_playbook/pretooluse_bash.py"
           }
         ]
       },

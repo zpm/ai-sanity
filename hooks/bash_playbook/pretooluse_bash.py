@@ -1,5 +1,5 @@
 ########################################################################################################################
-# hooks/bash_safety/pretooluse_bash.py
+# hooks/bash_playbook/pretooluse_bash.py
 #
 # single entry point for all bash safety deny checks
 #

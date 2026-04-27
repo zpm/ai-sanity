@@ -14,25 +14,29 @@ Copy [./settings.example.json](settings.example.json) to `~/.claude/settings.jso
 
 The `permissions.allow` list should include the path to this repo (e.g., `Read(~/Dev/ai-sanity/**)`) so the required-reading hook can load styleguides from this repo without prompting.
 
-## 1. Bash Safety
+## 1. Bash Playbook
 
 Keeps claude from invoking dangerous shell commands, auto-allows the safe ones it commonly uses, and auto-allows commands listed in a project's playbook.
 
 Works by implementing a deny-list for dangerous shell commands (git writes, package managers, system ops, shell spawning, text manipulation). Commands matching a project's `./.ai-sanity/playbook.json` bypass all deny checks. Unknown commands pass through to Claude Code's normal permission UI.
 
-### Security Rules
+### Security Model
 
 The threat model is "keep claude from doing stupid shit," not "protect against nation-state actors." These hooks catch the mistakes claude commonly makes, not crafted bypass attempts. The command parser handles well-formed, whitespace-separated commands because that is what claude produces. Commands outside that shape are not part of the safety guarantee.
 
+The rough goals of the rules are:
+
 1. All changes must show up in git. claude can freely use the Edit tool because those changes appear in the diff. Destructive commands (`git push`, `git reset`, `rm`) and environment-mutating commands (`pip install`, `npm install`, `brew install`) leave no trace in the diff, so they are denied or deferred to the user.
+
 2. No third-party code execution without the user in the loop. Package installs, shell spawning, and running downloaded scripts all require explicit user approval. claude should never silently pull in or execute code the user hasn't reviewed.
-3. File edits are not the concern, as claude already has elevated Edit permissions. The hooks protect against unintentional catastrophes and invisible side effects.
+
+3. File edits are not a concern, as claude already has general edit permissions.
 
 ### Playbook
 
-Commands matching a project's `./.ai-sanity/playbook.json` bypass all deny checks. The full command is tokenized and matched against playbook entries (exact or prefix). If it's in the playbook, it's allowed, including commands with `&&`, pipes, redirects, or any other shell syntax.
+Commands matching a project's `./.ai-sanity/playbook.json` bypass the checks. The command is tokenized and matched against playbook entries (exact or prefix). If claude submits a compound command, the compounded part is evaluated independently against the bash rules.
 
-Each project that wants playbook support creates `./.ai-sanity/playbook.json`:
+Each project that wants playbook support creates `./.ai-sanity/playbook.json`. It includes metadata to help Claude understand when to run the commands:
 
 ```json
 [
