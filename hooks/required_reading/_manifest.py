@@ -79,7 +79,7 @@ class RequiredReadsManifestLoader:
     empty lists or skip the offending rule so hook execution never crashes an edit."""
 
     _project_manifest_relative_path = ".ai-sanity/required-reading.json"
-    _global_manifest_relative_path_from_repo_root = ".ai-sanity/required-reading.global.json"
+    _global_manifest_relative_path_from_repo_root = ".ai-sanity/required-styleguides.json"
 
 
     @staticmethod
@@ -99,7 +99,7 @@ class RequiredReadsManifestLoader:
         discovered_manifests = []
         seen_abs_paths = set()
 
-        # hooks-repo global (.ai-sanity/required-reading.global.json resolved via __file__)
+        # hooks-repo global (.ai-sanity/required-styleguides.json resolved via __file__)
         global_manifest_abs_path = RequiredReadsPathNormalizer.normalize_path(
             os.path.join(
                 loader_class.get_hooks_repo_root_abs_path(),

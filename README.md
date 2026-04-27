@@ -14,7 +14,7 @@ Copy [./settings.example.json](settings.example.json) to `~/.claude/settings.jso
 
 The `permissions.allow` list should include the path to this repo (e.g., `Read(~/Dev/ai-sanity/**)`) so the required-reading hook can load styleguides from this repo without prompting.
 
-## 1. bash_safety
+## 1. Bash Safety
 
 Keeps claude from invoking dangerous shell commands, auto-allows the safe ones it commonly uses, and auto-allows commands listed in a project's playbook.
 
@@ -51,13 +51,13 @@ Each project that wants playbook support creates `./.ai-sanity/playbook.json`:
 
 A trailing ` *` in the `bash` field enables prefix matching (token-level, not string). Without it, the match is exact.
 
-## 2. no_memory
+## 2. No Memory
 
 Prevents claude from using its built-in auto-memory system, as it sits outside version control.
 
 Works by blocking reads and writes to the auto-memory directory and any `MEMORY.md` file.
 
-## 3a. required_reading
+## 3a. Required Reading
 
 Makes claude read project documentation and style guides before it can edit matching files.
 
@@ -68,15 +68,15 @@ Works by forcing claude to Read specified documents before it can touch matching
 | `./.ai-sanity/required-reading.json` | No | If present, its rules are loaded via directory walk-up from the edited file. If absent, silently skipped. |
 | Any doc listed in that manifest | Yes | If the manifest exists and lists a doc, that doc must exist on disk. A missing target is a configuration error and blocks the edit. |
 
-## 3b. required_reading styleguides
+## 3b. Required Styleguides
 
 Make claude read global styleguides contained in this repo before it can edit matching files.
 
-Ships a global set of style guides that claude must read before editing files of a given type. The global manifest (`./.ai-sanity/required-reading.global.json`) maps file extensions to styleguides in `./styleguides/`. Any project that uses ai-sanity gets these enforced automatically.
+Ships a global set of style guides that claude must read before editing files of a given type. The global manifest (`./.ai-sanity/required-styleguides.json`) maps file extensions to styleguides in `./styleguides/`. Any project that uses ai-sanity gets these enforced automatically.
 
 | File | Required | Notes |
 |---|---|---|
-| `./.ai-sanity/required-reading.global.json` | Yes | Always loaded. Contains extension-to-styleguide mappings. |
+| `./.ai-sanity/required-styleguides.json` | Yes | Always loaded. Contains extension-to-styleguide mappings. |
 
 The global manifest is always present because it ships with this repo. Its styleguide targets are required.
 

@@ -341,7 +341,7 @@ class TestRequiredReadsManifestLoaderDiscovery(HOME_OVERRIDE_ENV_VAR_TEST_CASE_M
         ]
         self.assertTrue(len(non_project_manifests) >= 1)
         self.assertTrue(any(
-            dm.manifest_abs_path.endswith("/.ai-sanity/required-reading.global.json")
+            dm.manifest_abs_path.endswith("/.ai-sanity/required-styleguides.json")
             for dm in non_project_manifests
         ))
 
@@ -359,7 +359,7 @@ class TestRequiredReadsManifestLoaderDiscovery(HOME_OVERRIDE_ENV_VAR_TEST_CASE_M
             edited_file_abs_path = edited_file_abs_path
         )
         manifest_paths = [dm.manifest_abs_path for dm in discovered_manifests]
-        global_index = next(i for i, p in enumerate(manifest_paths) if "required-reading.global.json" in p)
+        global_index = next(i for i, p in enumerate(manifest_paths) if "required-styleguides.json" in p)
         project_index = next(i for i, dm in enumerate(discovered_manifests) if dm.is_project_walkup_manifest)
         self.assertLess(global_index, project_index)
 
