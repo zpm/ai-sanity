@@ -190,7 +190,7 @@ class TestUnicodePayloadHandling(unittest.TestCase):
         exit_code, parsed_stdout = HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.invoke_entry_script(
             entry_script_relative_path = "bash_safety/pretooluse_bash.py",
             pretooluse_payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
-                bash_command_string = "echo 'café \U0001f680'"
+                bash_command_string = "python 'café \U0001f680'"
             )
         )
         HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_passthrough(self, exit_code, parsed_stdout)

@@ -2,6 +2,9 @@
 # hooks/bash_safety/pretooluse_bash.py
 #
 # single entry point for all bash safety deny checks
+#
+# all command lists (deny, allow, safe) use the same dict format: {"command": ["*"]} to match all uses, or
+# {"command": ["sub1", "sub2"]} to match specific subcommands. all lists are matched via CommandMatcher.
 ########################################################################################################################
 
 
@@ -172,24 +175,26 @@ class GitCommandsCheck:
         ],
     }
 
-    _ALLOWED_GIT_READONLY_SUBCOMMANDS = {
-        "blame",
-        "cat-file",
-        "describe",
-        "diff",
-        "for-each-ref",
-        "grep",
-        "log",
-        "ls-files",
-        "ls-remote",
-        "ls-tree",
-        "mv",
-        "name-rev",
-        "rev-list",
-        "rev-parse",
-        "shortlog",
-        "show",
-        "status",
+    _ALLOWED_GIT_READONLY_COMMANDS = {
+        "git": [
+            "blame",
+            "cat-file",
+            "describe",
+            "diff",
+            "for-each-ref",
+            "grep",
+            "log",
+            "ls-files",
+            "ls-remote",
+            "ls-tree",
+            "mv",
+            "name-rev",
+            "rev-list",
+            "rev-parse",
+            "shortlog",
+            "show",
+            "status",
+        ],
     }
 
     _DENY_MESSAGE = (
@@ -208,7 +213,7 @@ class GitCommandsCheck:
                 continue
             if clause[1].startswith("-"):
                 return GitCommandsCheck._DENY_MESSAGE
-        if DeniedCommandMatcher.any_clause_matches_denied_commands(
+        if CommandMatcher.any_clause_matches(
             clauses,
             GitCommandsCheck._DENIED_GIT_SUBCOMMANDS
         ):
@@ -216,7 +221,7 @@ class GitCommandsCheck:
         if len(clauses) == 1 and clauses[0][0] == "git":
             if len(clauses[0]) == 1:
                 return True
-            if clauses[0][1] in GitCommandsCheck._ALLOWED_GIT_READONLY_SUBCOMMANDS:
+            if CommandMatcher.any_clause_matches(clauses, GitCommandsCheck._ALLOWED_GIT_READONLY_COMMANDS):
                 return True
         return None
 
@@ -278,27 +283,37 @@ class RequireGitMvForTrackedMovesCheck:
         return None
 
 
-class DeniedCommandMatcher:
+class CommandMatcher:
 
-    """Shared matching engine for command/subcommand deny dicts. Keys are command prefixes (single or multi-word),
-    values are lists of denied subcommands or ["*"] to deny all uses of the command."""
+    """Shared matching engine for command/subcommand dicts. Keys are command prefixes (single or multi-word), values
+    are lists of subcommands or ["*"] to match all uses of the command. Used by deny, allow, and safe checks."""
 
 
     @staticmethod
-    def any_clause_matches_denied_commands(clauses, denied_commands):
+    def any_clause_matches(clauses, command_dict):
 
-        """Returns True if any clause matches an entry in the denied commands dict."""
+        """Returns True if any clause matches an entry in the command dict."""
         for clause in clauses:
             for prefix_length in range(1, len(clause) + 1):
                 prefix_key = " ".join(clause[:prefix_length])
-                if prefix_key not in denied_commands:
+                if prefix_key not in command_dict:
                     continue
-                denied_subcommands = denied_commands[prefix_key]
-                if denied_subcommands == ["*"]:
+                matched_subcommands = command_dict[prefix_key]
+                if matched_subcommands == ["*"]:
                     return True
-                if prefix_length < len(clause) and clause[prefix_length] in denied_subcommands:
+                if prefix_length < len(clause) and clause[prefix_length] in matched_subcommands:
                     return True
         return False
+
+
+    @staticmethod
+    def all_clauses_match(clauses, command_dict):
+
+        """Returns True if every clause matches an entry in the command dict."""
+        for clause in clauses:
+            if not CommandMatcher.any_clause_matches([clause], command_dict):
+                return False
+        return True
 
 
 class DeferToUserCommandsCheck:
@@ -384,7 +399,7 @@ class DeferToUserCommandsCheck:
     def check(clauses):
 
         """Returns a deny reason string if any clause matches a denied command, or None."""
-        if DeniedCommandMatcher.any_clause_matches_denied_commands(
+        if CommandMatcher.any_clause_matches(
             clauses,
             DeferToUserCommandsCheck._DENIED_COMMANDS
         ):
@@ -416,7 +431,7 @@ class ProhibitedCommandsCheck:
     def check(clauses):
 
         """Returns a deny reason string if any clause matches a denied command, or None."""
-        if DeniedCommandMatcher.any_clause_matches_denied_commands(
+        if CommandMatcher.any_clause_matches(
             clauses,
             ProhibitedCommandsCheck._DENIED_COMMANDS
         ):
@@ -447,6 +462,37 @@ class NoShellSubstitutionCheck:
         for marker in NoShellSubstitutionCheck._SUBSTITUTION_MARKERS:
             if marker in bash_command_string:
                 return NoShellSubstitutionCheck._DENY_MESSAGE
+        return None
+
+
+class SafeCommandsCheck:
+
+    """Auto-allows commands that are safe to run without user confirmation. Mirrors Claude Code's own auto-approve
+    list. Returns True if every clause starts with a safe command, None otherwise."""
+
+    _SAFE_COMMANDS = {
+        "cat": ["*"],
+        "cd": ["*"],
+        "echo": ["*"],
+        "find": ["*"],
+        "grep": ["*"],
+        "head": ["*"],
+        "ls": ["*"],
+        "printf": ["*"],
+        "pwd": ["*"],
+        "tail": ["*"],
+        "wc": ["*"],
+    }
+
+
+    @staticmethod
+    def check(clauses):
+
+        """Returns True if every clause matches a safe command, or None for passthrough."""
+        if not clauses:
+            return None
+        if CommandMatcher.all_clauses_match(clauses, SafeCommandsCheck._SAFE_COMMANDS):
+            return True
         return None
 
 
@@ -510,28 +556,73 @@ class PreToolUseBashSafetyHookEntry:
 
 
     @staticmethod
+    def _build_payload_for_command_segment(segment_clause_groups, original_cwd):
+
+        """Reconstructs a pretooluse payload for a single command segment from its clause token-lists and the
+        original working directory."""
+        segment_command_string = " | ".join(shlex.join(clause) for clause in segment_clause_groups)
+        return {
+            "tool_input": {"command": segment_command_string},
+            "cwd": original_cwd,
+        }
+
+
+    @staticmethod
+    def _evaluate_single_command_segment(segment_payload):
+
+        """Evaluates one command segment through the full check pipeline. Returns the string 'allow', a deny reason
+        string, or None for passthrough."""
+        if PlaybookMatchCheck.check(segment_payload) is not None:
+            return "allow"
+        segment_payload = PreToolUseBashSafetyHookEntry._strip_safe_pipe_tail_from_payload(segment_payload)
+        bash_command_string = (segment_payload.get("tool_input") or {}).get("command", "")
+        clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
+        git_check_result = GitCommandsCheck.check(clauses)
+        if isinstance(git_check_result, str):
+            return git_check_result
+        for payload_based_deny_check_method in PreToolUseBashSafetyHookEntry._payload_based_deny_check_methods:
+            deny_reason_or_none = payload_based_deny_check_method(segment_payload)
+            if deny_reason_or_none is not None:
+                return deny_reason_or_none
+        for clause_based_deny_check_method in PreToolUseBashSafetyHookEntry._clause_based_deny_check_methods:
+            deny_reason_or_none = clause_based_deny_check_method(clauses)
+            if deny_reason_or_none is not None:
+                return deny_reason_or_none
+        if git_check_result is True:
+            return "allow"
+        if SafeCommandsCheck.check(clauses) is True:
+            return "allow"
+        return None
+
+
+    @staticmethod
     def main():
 
-        """Reads the payload, runs all checks, and emits a deny, allow, or passthrough decision."""
+        """Splits the command into compound segments, evaluates each independently, and aggregates: any deny blocks
+        the entire command, all-allow auto-approves, mixed allow/passthrough falls through to Claude Code's
+        normal permission UI."""
         try:
             pretooluse_payload = _common._hook_io.PreToolUseHookIo.read_pretooluse_payload_from_stdin()
-            if PlaybookMatchCheck.check(pretooluse_payload) is not None:
-                _common._hook_io.PreToolUseHookIo.emit_allow_decision_and_exit()
-            pretooluse_payload = PreToolUseBashSafetyHookEntry._strip_safe_pipe_tail_from_payload(pretooluse_payload)
             bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
-            clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
-            git_check_result = GitCommandsCheck.check(clauses)
-            if isinstance(git_check_result, str):
-                _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(git_check_result)
-            for payload_deny_check_method in PreToolUseBashSafetyHookEntry._payload_based_deny_check_methods:
-                deny_reason_or_none = payload_deny_check_method(pretooluse_payload)
-                if deny_reason_or_none is not None:
-                    _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(deny_reason_or_none)
-            for clause_deny_check_method in PreToolUseBashSafetyHookEntry._clause_based_deny_check_methods:
-                deny_reason_or_none = clause_deny_check_method(clauses)
-                if deny_reason_or_none is not None:
-                    _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(deny_reason_or_none)
-            if git_check_result is True:
+            bash_command_cwd = pretooluse_payload.get("cwd") or "."
+            compound_command_segments = (
+                _common._command_parser.BashCommandParser.extract_compound_command_segments(bash_command_string)
+            )
+            if not compound_command_segments:
+                _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
+            segment_evaluation_results = []
+            for segment_clause_groups in compound_command_segments:
+                segment_payload = PreToolUseBashSafetyHookEntry._build_payload_for_command_segment(
+                    segment_clause_groups = segment_clause_groups,
+                    original_cwd = bash_command_cwd,
+                )
+                segment_result = PreToolUseBashSafetyHookEntry._evaluate_single_command_segment(
+                    segment_payload = segment_payload,
+                )
+                if isinstance(segment_result, str) and segment_result != "allow":
+                    _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(segment_result)
+                segment_evaluation_results.append(segment_result)
+            if all(result == "allow" for result in segment_evaluation_results):
                 _common._hook_io.PreToolUseHookIo.emit_allow_decision_and_exit()
             _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
         except Exception:

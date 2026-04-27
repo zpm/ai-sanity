@@ -109,3 +109,30 @@ class BashCommandParser:
         if current_clause:
             clauses.append(current_clause)
         return clauses, separators
+
+
+    @staticmethod
+    def extract_compound_command_segments(bash_command_string):
+
+        """Splits on &&, ||, and ; but keeps pipe-connected clauses together as one segment. Returns a list of
+        segments where each segment is a list of clause token-lists. Used for per-segment safety evaluation where
+        each segment is checked independently."""
+        clauses, separators = BashCommandParser.extract_command_clauses_and_separators(bash_command_string)
+        if not clauses:
+            return []
+        segments = []
+        current_segment_clause_groups = [clauses[0]]
+        for separator_index, separator in enumerate(separators):
+            next_clause_index = separator_index + 1
+            next_clause = clauses[next_clause_index] if next_clause_index < len(clauses) else None
+            if separator == "|":
+                if next_clause is not None:
+                    current_segment_clause_groups.append(next_clause)
+            else:
+                segments.append(current_segment_clause_groups)
+                current_segment_clause_groups = []
+                if next_clause is not None:
+                    current_segment_clause_groups = [next_clause]
+        if current_segment_clause_groups:
+            segments.append(current_segment_clause_groups)
+        return segments

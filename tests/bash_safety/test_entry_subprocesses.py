@@ -63,7 +63,7 @@ class TestPreToolUseBashSafetyEntryScriptGitMv(unittest.TestCase):
 
     def test_non_mv_command_passes_through(self):
 
-        exit_code, parsed_stdout = self._invoke("echo hello")
+        exit_code, parsed_stdout = self._invoke("python --version")
         tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
             self, exit_code, parsed_stdout
         )
@@ -89,7 +89,7 @@ class TestPreToolUseBashSafetyEntryScriptPlaybook(unittest.TestCase):
                 "when": "After modifying a specific hook"
             },
             {
-                "bash": "cd server && pwsh ../local/server/scripts/tests/all.ps1",
+                "bash": "pwsh ../local/server/scripts/tests/all.ps1",
                 "what": "Run all tests (Windows)",
                 "when": "Final step after all changes have landed"
             }
@@ -155,7 +155,7 @@ class TestPreToolUseBashSafetyEntryScriptPlaybook(unittest.TestCase):
 
         empty_temp_directory = tempfile.mkdtemp()
         exit_code, parsed_stdout = self._invoke(
-            command = "echo hello",
+            command = "python --version",
             working_directory = empty_temp_directory
         )
         tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
