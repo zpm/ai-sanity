@@ -9,6 +9,7 @@ import os
 import shlex
 import sys
 
+# hot patch so that imports work when script is invoked directly (how claude invokes hooks)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import _common._hook_io
