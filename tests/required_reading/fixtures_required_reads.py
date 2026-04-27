@@ -76,8 +76,7 @@ class HomeOverrideEnvVarTestCaseMixin:
             required_reading._manifest.RequiredReadsManifestLoader._global_manifest_relative_path_from_repo_root
         )
         loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
-            manifest_abs_path = global_manifest_abs_path,
-            is_global_manifest = True
+            manifest_abs_path = global_manifest_abs_path
         )
         for rule_record in loaded_rule_records:
             if rule_record.match_extension_suffix == extension_suffix:

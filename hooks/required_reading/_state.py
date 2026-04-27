@@ -16,10 +16,9 @@ import required_reading._manifest
 class RequiredReadsState:
 
     """Per-session satisfaction flags used by the required-reads hook trio. A flag means that, within a single Claude
-    Code session, a given rule's dedupe key has already been satisfied (either by a Read observed on its target doc or
-    by an inline inject-mode injection). Flags live under `~/.ai-sanity/hooks-state/required-reads/<session_id>/` with
-    filenames of `<sha1(dedupe_key)>.flag` containing the normalized key string for human debugging. The state
-    directory base is overridable via the HOOK_TEST_STATE_DIR env var (test-only). Every operation swallows
+    Code session, a given rule's read target has already been satisfied by a Read observed on that doc. Flags live
+    under `~/.ai-sanity/hooks-state/required-reads/<session_id>/` with filenames of `<sha1(read_abs_path)>.flag`.
+    The state directory base is overridable via the HOOK_TEST_STATE_DIR env var (test-only). Every operation swallows
     filesystem errors so that an unwritable state dir cannot crash an edit."""
 
     _state_directory_relative_path_from_home = ".ai-sanity/hooks-state/required-reads"
@@ -54,16 +53,15 @@ class RequiredReadsState:
 
 
     @staticmethod
-    def is_dedupe_key_satisfied(claude_session_id_string, dedupe_key_string):
+    def is_read_satisfied(claude_session_id_string, read_abs_path_string):
 
-        """Returns True if the flag file for the given dedupe key already exists under the session directory.
-        Returns False on any filesystem error (effectively treats the key as not yet satisfied, which is the safe
-        default: it re-fires the rule rather than silently suppressing it)."""
+        """Returns True if the flag file for the given read path already exists under the session directory.
+        Returns False on any filesystem error (re-fires the rule rather than silently suppressing it)."""
         state_class = RequiredReadsState
         try:
             flag_file_abs_path = state_class._get_flag_file_abs_path(
                 claude_session_id_string = claude_session_id_string,
-                dedupe_key_string = dedupe_key_string
+                read_abs_path_string = read_abs_path_string
             )
             return os.path.isfile(flag_file_abs_path)
         except OSError:
@@ -71,10 +69,10 @@ class RequiredReadsState:
 
 
     @staticmethod
-    def mark_dedupe_key_satisfied(claude_session_id_string, dedupe_key_string):
+    def mark_read_satisfied(claude_session_id_string, read_abs_path_string):
 
-        """Writes a flag file for the given dedupe key under the session directory. The flag body is the normalized
-        dedupe key (written only to aid human debugging; `is_dedupe_key_satisfied` checks existence, not contents).
+        """Writes a flag file for the given read path under the session directory. The flag body is the normalized
+        read path (written only to aid human debugging; `is_read_satisfied` checks existence, not contents).
         Creates the session directory if missing. Swallows any filesystem error so an unwritable state dir cannot
         crash an edit."""
         state_class = RequiredReadsState
@@ -85,10 +83,10 @@ class RequiredReadsState:
             os.makedirs(session_directory_abs_path, exist_ok = True)
             flag_file_abs_path = state_class._get_flag_file_abs_path(
                 claude_session_id_string = claude_session_id_string,
-                dedupe_key_string = dedupe_key_string
+                read_abs_path_string = read_abs_path_string
             )
             with open(flag_file_abs_path, "w", encoding = "utf-8") as open_flag_file_handle:
-                open_flag_file_handle.write(dedupe_key_string)
+                open_flag_file_handle.write(read_abs_path_string)
         except OSError:
             return
 
@@ -139,17 +137,16 @@ class RequiredReadsState:
 
 
     @staticmethod
-    def _get_flag_file_abs_path(claude_session_id_string, dedupe_key_string):
+    def _get_flag_file_abs_path(claude_session_id_string, read_abs_path_string):
 
-        """Returns the absolute path of the flag file that represents satisfaction of the given dedupe key within the
-        given session. The filename is `<sha1(dedupe_key)>.flag`; the hash avoids worrying about filesystem-illegal
-        characters that might appear in a dedupe key derived from an arbitrary filesystem path."""
+        """Returns the absolute path of the flag file that represents satisfaction of the given read path within the
+        given session. The filename is `<sha1(read_abs_path)>.flag`; the hash avoids filesystem-illegal characters."""
         state_class = RequiredReadsState
-        dedupe_key_sha1_hex_digest = hashlib.sha1(dedupe_key_string.encode("utf-8")).hexdigest()
+        read_path_sha1_hex_digest = hashlib.sha1(read_abs_path_string.encode("utf-8")).hexdigest()
         session_directory_abs_path = state_class.get_session_directory_abs_path(
             claude_session_id_string = claude_session_id_string
         )
         return os.path.join(
             session_directory_abs_path,
-            dedupe_key_sha1_hex_digest + ".flag"
+            read_path_sha1_hex_digest + ".flag"
         ).replace("\\", "/")

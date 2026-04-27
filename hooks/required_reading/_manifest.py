@@ -15,22 +15,12 @@ RequiredReadsRuleRecord = collections.namedtuple(
     [
         "rule_id",
         "manifest_abs_path",
-        "is_global_manifest",
         "match_extension_suffix",
         "match_filepath_substring",
         "read_abs_path",
-        "override_abs_path",
-        "dedupe_key",
     ]
 )
 
-DiscoveredManifest = collections.namedtuple(
-    "DiscoveredManifest",
-    [
-        "manifest_abs_path",
-        "is_project_walkup_manifest",
-    ]
-)
 
 
 class RequiredReadsPathNormalizer:
@@ -94,10 +84,9 @@ class RequiredReadsManifestLoader:
     @staticmethod
     def discover_manifests(edited_file_abs_path):
 
-        """Returns discovered manifests in order: hooks-repo global, project walk-up."""
+        """Returns discovered manifest absolute paths in order: hooks-repo global, project walk-up."""
         loader_class = RequiredReadsManifestLoader
-        discovered_manifests = []
-        seen_abs_paths = set()
+        discovered_manifest_abs_paths = []
 
         # hooks-repo global (.ai-sanity/required-styleguides.json resolved via __file__)
         global_manifest_abs_path = RequiredReadsPathNormalizer.normalize_path(
@@ -107,11 +96,7 @@ class RequiredReadsManifestLoader:
             )
         )
         if os.path.isfile(global_manifest_abs_path):
-            discovered_manifests.append(DiscoveredManifest(
-                manifest_abs_path = global_manifest_abs_path,
-                is_project_walkup_manifest = False
-            ))
-            seen_abs_paths.add(global_manifest_abs_path)
+            discovered_manifest_abs_paths.append(global_manifest_abs_path)
 
         # project walk-up (stops at $HOME after checking it, visited set guards against symlink loops)
         effective_home_abs_path = RequiredReadsPathNormalizer.get_effective_home_abs_path()
@@ -127,11 +112,7 @@ class RequiredReadsManifestLoader:
                 os.path.join(current_directory_abs_path, loader_class._project_manifest_relative_path)
             )
             if os.path.isfile(candidate_project_manifest_abs_path):
-                discovered_manifests.append(DiscoveredManifest(
-                    manifest_abs_path = candidate_project_manifest_abs_path,
-                    is_project_walkup_manifest = True
-                ))
-                seen_abs_paths.add(candidate_project_manifest_abs_path)
+                discovered_manifest_abs_paths.append(candidate_project_manifest_abs_path)
             if current_directory_abs_path == effective_home_abs_path:
                 break
             parent_directory_abs_path = RequiredReadsPathNormalizer.normalize_path(
@@ -140,11 +121,11 @@ class RequiredReadsManifestLoader:
             if parent_directory_abs_path == current_directory_abs_path:
                 break
             current_directory_abs_path = parent_directory_abs_path
-        return discovered_manifests
+        return discovered_manifest_abs_paths
 
 
     @staticmethod
-    def load_manifest_rule_records(manifest_abs_path, is_global_manifest):
+    def load_manifest_rule_records(manifest_abs_path):
 
         """Parses a manifest file into rule records. Returns [] on any file or JSON error, skips invalid rules."""
         loader_class = RequiredReadsManifestLoader
@@ -173,61 +154,67 @@ class RequiredReadsManifestLoader:
         for raw_rule_object_index, raw_rule_object in enumerate(raw_rule_objects):
             if not isinstance(raw_rule_object, dict):
                 continue
-            rule_record_or_none = loader_class._build_rule_record_or_none(
+            expanded_rule_records = loader_class._build_rule_records(
                 raw_rule_object = raw_rule_object,
                 raw_rule_object_index = raw_rule_object_index,
                 manifest_abs_path = manifest_abs_path,
-                base_directory_abs_path_for_relative_reads = base_directory_abs_path_for_relative_reads,
-                is_global_manifest = is_global_manifest
+                base_directory_abs_path_for_relative_reads = base_directory_abs_path_for_relative_reads
             )
-            if rule_record_or_none is not None:
-                produced_rule_records.append(rule_record_or_none)
+            produced_rule_records.extend(expanded_rule_records)
         return produced_rule_records
 
 
     @staticmethod
-    def _build_rule_record_or_none(raw_rule_object,
+    def _normalize_string_or_list_field(raw_value):
+
+        """Accepts a string or list of strings. Returns a list of non-empty strings, or []."""
+        if isinstance(raw_value, str):
+            return [raw_value] if raw_value else []
+        if isinstance(raw_value, list):
+            return [v for v in raw_value if isinstance(v, str) and v]
+        return []
+
+
+    @staticmethod
+    def _build_rule_records(raw_rule_object,
         raw_rule_object_index,
         manifest_abs_path,
-        base_directory_abs_path_for_relative_reads,
-        is_global_manifest
+        base_directory_abs_path_for_relative_reads
     ):
 
-        """Returns a RequiredReadsRuleRecord or None if the rule is invalid."""
-        read_path_string = raw_rule_object.get("read")
-        if not isinstance(read_path_string, str) or not read_path_string:
-            return None
-        extension_raw_value = raw_rule_object.get("extension")
-        filepath_raw_value = raw_rule_object.get("filepath")
-        match_extension_suffix = None
-        match_filepath_substring = None
-        if isinstance(extension_raw_value, str) and extension_raw_value:
-            match_extension_suffix = extension_raw_value.lower()
-        if isinstance(filepath_raw_value, str) and filepath_raw_value:
-            match_filepath_substring = filepath_raw_value.lower()
-        if match_extension_suffix is not None and match_filepath_substring is not None:
-            return None
-        read_abs_path = RequiredReadsPathNormalizer.normalize_path(
-            read_path_string,
-            base_directory_abs_path = base_directory_abs_path_for_relative_reads
-        )
-        override_raw_value = raw_rule_object.get("override")
-        override_abs_path = None
-        if isinstance(override_raw_value, str) and override_raw_value:
-            override_abs_path = RequiredReadsPathNormalizer.normalize_path(override_raw_value)
-        dedupe_key_raw_value = raw_rule_object.get("dedupe_key")
-        if isinstance(dedupe_key_raw_value, str) and dedupe_key_raw_value:
-            dedupe_key_string = dedupe_key_raw_value
+        """Expands one manifest rule into flat RequiredReadsRuleRecords. Accepts string or list for extension,
+        filepath, and read fields. Returns [] if the rule is invalid."""
+        loader_class = RequiredReadsManifestLoader
+        read_values = loader_class._normalize_string_or_list_field(raw_rule_object.get("read"))
+        if not read_values:
+            return []
+        extension_values = [
+            v.lower() for v in loader_class._normalize_string_or_list_field(raw_rule_object.get("extension"))
+        ]
+        filepath_values = [
+            v.lower() for v in loader_class._normalize_string_or_list_field(raw_rule_object.get("filepath"))
+        ]
+        if extension_values and filepath_values:
+            return []
+        if extension_values:
+            match_criteria_pairs = [(ext, None) for ext in extension_values]
+        elif filepath_values:
+            match_criteria_pairs = [(None, fp) for fp in filepath_values]
         else:
-            dedupe_key_string = read_abs_path
+            match_criteria_pairs = [(None, None)]
         rule_id_string = f"{os.path.basename(manifest_abs_path)}#{raw_rule_object_index}"
-        return RequiredReadsRuleRecord(
-            rule_id = rule_id_string,
-            manifest_abs_path = manifest_abs_path,
-            is_global_manifest = is_global_manifest,
-            match_extension_suffix = match_extension_suffix,
-            match_filepath_substring = match_filepath_substring,
-            read_abs_path = read_abs_path,
-            override_abs_path = override_abs_path,
-            dedupe_key = dedupe_key_string
-        )
+        produced_rule_records = []
+        for match_extension_suffix, match_filepath_substring in match_criteria_pairs:
+            for read_path_string in read_values:
+                read_abs_path = RequiredReadsPathNormalizer.normalize_path(
+                    read_path_string,
+                    base_directory_abs_path = base_directory_abs_path_for_relative_reads
+                )
+                produced_rule_records.append(RequiredReadsRuleRecord(
+                    rule_id = rule_id_string,
+                    manifest_abs_path = manifest_abs_path,
+                    match_extension_suffix = match_extension_suffix,
+                    match_filepath_substring = match_filepath_substring,
+                    read_abs_path = read_abs_path,
+                ))
+        return produced_rule_records

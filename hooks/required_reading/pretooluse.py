@@ -66,48 +66,21 @@ class PreToolUseRequiredReadsRuleChecks:
     @staticmethod
     def collect_applicable_rule_records(edited_file_abs_path):
 
-        """Loads all manifests, applies overrides, and returns rules matching the edited file."""
+        """Loads all manifests and returns rules matching the edited file."""
         rule_checks_class = PreToolUseRequiredReadsRuleChecks
-        discovered_manifests = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
+        discovered_manifest_abs_paths = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
             edited_file_abs_path = edited_file_abs_path
         )
         flattened_rule_records = []
-        for discovered_manifest in discovered_manifests:
-            is_global_manifest_bool = not discovered_manifest.is_project_walkup_manifest
+        for manifest_abs_path in discovered_manifest_abs_paths:
             manifest_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
-                manifest_abs_path = discovered_manifest.manifest_abs_path,
-                is_global_manifest = is_global_manifest_bool
+                manifest_abs_path = manifest_abs_path
             )
             flattened_rule_records.extend(manifest_rule_records)
-        override_applied_rule_records = rule_checks_class.apply_project_overrides_against_global_rules(
-            rule_records = flattened_rule_records
-        )
         return rule_checks_class.filter_rules_by_match_criterion(
-            rule_records = override_applied_rule_records,
+            rule_records = flattened_rule_records,
             candidate_file_abs_path = edited_file_abs_path
         )
-
-
-    @staticmethod
-    def apply_project_overrides_against_global_rules(rule_records):
-
-        """Drops global rules whose read target is claimed by a project rule's `override` field."""
-        override_abs_paths_from_project_rules = set()
-        for candidate_rule_record in rule_records:
-            if candidate_rule_record.is_global_manifest:
-                continue
-            if candidate_rule_record.override_abs_path is None:
-                continue
-            override_abs_paths_from_project_rules.add(candidate_rule_record.override_abs_path)
-        surviving_rule_records = []
-        for candidate_rule_record in rule_records:
-            if (
-                candidate_rule_record.is_global_manifest
-                and candidate_rule_record.read_abs_path in override_abs_paths_from_project_rules
-            ):
-                continue
-            surviving_rule_records.append(candidate_rule_record)
-        return surviving_rule_records
 
 
     @staticmethod
@@ -138,13 +111,12 @@ class PreToolUseRequiredReadsRuleChecks:
         """Reads of required docs always passthrough to break circular deadlocks."""
         if tool_name_string != "Read":
             return False
-        discovered_manifests = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
+        discovered_manifest_abs_paths = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
             edited_file_abs_path = edited_file_abs_path
         )
-        for discovered_manifest in discovered_manifests:
+        for manifest_abs_path in discovered_manifest_abs_paths:
             loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
-                manifest_abs_path = discovered_manifest.manifest_abs_path,
-                is_global_manifest = False
+                manifest_abs_path = manifest_abs_path
             )
             for candidate_rule_record in loaded_rule_records:
                 if candidate_rule_record.read_abs_path == candidate_file_abs_path:
@@ -159,9 +131,9 @@ class PreToolUseRequiredReadsRuleChecks:
         rules_to_fire_list = []
         rules_already_satisfied_list = []
         for candidate_rule_record in rule_records:
-            is_satisfied_bool = required_reading._state.RequiredReadsState.is_dedupe_key_satisfied(
+            is_satisfied_bool = required_reading._state.RequiredReadsState.is_read_satisfied(
                 claude_session_id_string = claude_session_id_string,
-                dedupe_key_string = candidate_rule_record.dedupe_key
+                read_abs_path_string = candidate_rule_record.read_abs_path
             )
             if is_satisfied_bool:
                 rules_already_satisfied_list.append(candidate_rule_record)

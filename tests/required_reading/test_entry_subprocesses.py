@@ -314,40 +314,6 @@ class PreToolUseRequiredReadsSubprocessTestCase(
         HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_passthrough(self, exit_code, parsed_stdout)
 
 
-    def test_project_override_silences_global_rule_end_to_end(self):
-
-        hooks_repo_root_abs_path = required_reading._manifest.RequiredReadsManifestLoader.get_hooks_repo_root_abs_path()
-        hooks_repo_python_style_abs_path = os.path.join(hooks_repo_root_abs_path, "styleguides", "python.md")
-        project_directory_abs_path = os.path.join(self.sandboxed_home_abs_path, "project")
-        project_python_doc_abs_path = os.path.join(project_directory_abs_path, "project-python.md")
-        os.makedirs(project_directory_abs_path, exist_ok = True)
-        with open(project_python_doc_abs_path, "w", encoding = "utf-8") as open_doc_file_handle:
-            open_doc_file_handle.write("# project python style")
-        REQUIRED_READS_MANIFEST_FIXTURE_BUILDER.write_manifest_file(
-            manifest_directory_abs_path = project_directory_abs_path,
-            rule_dicts = [
-                {
-                    "extension": ".py",
-                    "read": project_python_doc_abs_path,
-                    "override": hooks_repo_python_style_abs_path
-                }
-            ]
-        )
-        edited_file_abs_path = os.path.join(project_directory_abs_path, "src", "main.py")
-        os.makedirs(os.path.dirname(edited_file_abs_path), exist_ok = True)
-        exit_code, parsed_stdout = HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.invoke_entry_script(
-            entry_script_relative_path = "required_reading/pretooluse.py",
-            pretooluse_payload = PRE_TOOL_USE_PAYLOAD_FIXTURE_BUILDER.build_edit_payload(
-                new_string_content = "x",
-                file_path = edited_file_abs_path
-            )
-        )
-        HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_deny_decision(self, exit_code, parsed_stdout)
-        permission_decision_reason_value = parsed_stdout["hookSpecificOutput"]["permissionDecisionReason"]
-        self.assertIn("project-python.md", permission_decision_reason_value)
-        self.assertNotIn("styleguides/python.md", permission_decision_reason_value)
-
-
     def test_read_of_claude_md_passes_through_without_styleguide(self):
 
         markdown_style_doc_abs_path = os.path.join(self.sandboxed_home_abs_path, "markdown.md")

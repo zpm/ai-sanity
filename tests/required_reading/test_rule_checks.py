@@ -99,12 +99,12 @@ class TestRequiredReadsManifestLoaderLoadRecords(HOME_OVERRIDE_ENV_VAR_TEST_CASE
         )
         loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
-            is_global_manifest = True
+
         )
         self.assertEqual(len(loaded_rule_records), 2)
         self.assertEqual(loaded_rule_records[0].match_extension_suffix, ".py")
         self.assertIsNone(loaded_rule_records[0].match_filepath_substring)
-        self.assertTrue(loaded_rule_records[0].is_global_manifest)
+
 
 
     def test_malformed_json_returns_empty_list(self):
@@ -115,7 +115,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(HOME_OVERRIDE_ENV_VAR_TEST_CASE
         )
         loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
-            is_global_manifest = True
+
         )
         self.assertEqual(loaded_rule_records, [])
 
@@ -128,7 +128,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(HOME_OVERRIDE_ENV_VAR_TEST_CASE
         )
         loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
-            is_global_manifest = True
+
         )
         self.assertEqual(loaded_rule_records, [])
 
@@ -141,7 +141,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(HOME_OVERRIDE_ENV_VAR_TEST_CASE
         )
         loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
-            is_global_manifest = True
+
         )
         self.assertEqual(loaded_rule_records, [])
 
@@ -154,7 +154,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(HOME_OVERRIDE_ENV_VAR_TEST_CASE
         )
         loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
-            is_global_manifest = True
+
         )
         self.assertEqual(loaded_rule_records, [])
 
@@ -163,7 +163,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(HOME_OVERRIDE_ENV_VAR_TEST_CASE
 
         loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = os.path.join(self.sandboxed_home_abs_path, "does", "not", "exist.json"),
-            is_global_manifest = True
+
         )
         self.assertEqual(loaded_rule_records, [])
 
@@ -178,7 +178,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(HOME_OVERRIDE_ENV_VAR_TEST_CASE
         )
         loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
-            is_global_manifest = True
+
         )
         self.assertEqual(len(loaded_rule_records), 1)
         self.assertIsNone(loaded_rule_records[0].match_extension_suffix)
@@ -196,7 +196,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(HOME_OVERRIDE_ENV_VAR_TEST_CASE
         )
         loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
-            is_global_manifest = True
+
         )
         self.assertEqual(len(loaded_rule_records), 1)
         self.assertEqual(loaded_rule_records[0].match_extension_suffix, ".md")
@@ -213,7 +213,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(HOME_OVERRIDE_ENV_VAR_TEST_CASE
         )
         loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
-            is_global_manifest = True
+
         )
         self.assertEqual(len(loaded_rule_records), 1)
         self.assertEqual(loaded_rule_records[0].match_extension_suffix, ".md")
@@ -229,7 +229,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(HOME_OVERRIDE_ENV_VAR_TEST_CASE
         )
         loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
-            is_global_manifest = True
+
         )
         self.assertEqual(len(loaded_rule_records), 1)
         self.assertIsNone(loaded_rule_records[0].match_extension_suffix)
@@ -247,7 +247,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(HOME_OVERRIDE_ENV_VAR_TEST_CASE
         )
         loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
-            is_global_manifest = True
+
         )
         self.assertEqual(loaded_rule_records[0].match_extension_suffix, ".py")
         self.assertEqual(loaded_rule_records[1].match_filepath_substring, "/server/")
@@ -270,7 +270,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(HOME_OVERRIDE_ENV_VAR_TEST_CASE
         )
         loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
-            is_global_manifest = True
+
         )
         self.assertEqual(len(loaded_rule_records), 1)
         self.assertEqual(loaded_rule_records[0].match_extension_suffix, ".py")
@@ -288,7 +288,7 @@ class TestRequiredReadsManifestLoaderLoadRecords(HOME_OVERRIDE_ENV_VAR_TEST_CASE
         )
         loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
             manifest_abs_path = manifest_abs_path,
-            is_global_manifest = False
+
         )
         self.assertEqual(len(loaded_rule_records), 1)
         expected_read_abs_path_suffix = "/some-project/docs/python.md"
@@ -296,53 +296,98 @@ class TestRequiredReadsManifestLoaderLoadRecords(HOME_OVERRIDE_ENV_VAR_TEST_CASE
         self.assertNotIn("/.ai-sanity/docs/", loaded_rule_records[0].read_abs_path)
 
 
-    def test_dedupe_key_defaults_to_normalized_read_path(self):
+    def test_extension_list_expands_to_one_record_per_extension(self):
 
         manifest_abs_path = REQUIRED_READS_MANIFEST_FIXTURE_BUILDER.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
-                {"extension": ".py", "read": "~/docs/python.md"}
+                {"extension": [".js", ".html"], "read": "~/docs/frontend.md"}
             ]
         )
         loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
-            manifest_abs_path = manifest_abs_path,
-            is_global_manifest = True
+            manifest_abs_path = manifest_abs_path
         )
-        self.assertEqual(loaded_rule_records[0].dedupe_key, loaded_rule_records[0].read_abs_path)
+        self.assertEqual(len(loaded_rule_records), 2)
+        extensions = {r.match_extension_suffix for r in loaded_rule_records}
+        self.assertEqual(extensions, {".js", ".html"})
 
 
-    def test_explicit_dedupe_key_overrides_default(self):
+    def test_read_list_expands_to_one_record_per_read_path(self):
 
         manifest_abs_path = REQUIRED_READS_MANIFEST_FIXTURE_BUILDER.write_manifest_file(
             manifest_directory_abs_path = self.sandboxed_home_abs_path,
             rule_dicts = [
-                {"extension": ".py", "read": "~/docs/python.md", "dedupe_key": "python-style-guide"}
+                {"extension": ".css", "read": ["~/docs/ux.md", "~/docs/mobile.md"]}
             ]
         )
         loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
-            manifest_abs_path = manifest_abs_path,
-            is_global_manifest = True
+            manifest_abs_path = manifest_abs_path
         )
-        self.assertEqual(loaded_rule_records[0].dedupe_key, "python-style-guide")
+        self.assertEqual(len(loaded_rule_records), 2)
+        self.assertTrue(all(r.match_extension_suffix == ".css" for r in loaded_rule_records))
+        read_paths = {r.read_abs_path for r in loaded_rule_records}
+        self.assertTrue(any("ux.md" in p for p in read_paths))
+        self.assertTrue(any("mobile.md" in p for p in read_paths))
+
+
+    def test_filepath_list_expands_to_one_record_per_filepath(self):
+
+        manifest_abs_path = REQUIRED_READS_MANIFEST_FIXTURE_BUILDER.write_manifest_file(
+            manifest_directory_abs_path = self.sandboxed_home_abs_path,
+            rule_dicts = [
+                {"filepath": ["test", "playwright"], "read": "~/docs/tests.md"}
+            ]
+        )
+        loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
+            manifest_abs_path = manifest_abs_path
+        )
+        self.assertEqual(len(loaded_rule_records), 2)
+        filepaths = {r.match_filepath_substring for r in loaded_rule_records}
+        self.assertEqual(filepaths, {"test", "playwright"})
+
+
+    def test_list_extension_and_list_read_produces_cross_product(self):
+
+        manifest_abs_path = REQUIRED_READS_MANIFEST_FIXTURE_BUILDER.write_manifest_file(
+            manifest_directory_abs_path = self.sandboxed_home_abs_path,
+            rule_dicts = [
+                {"extension": [".js", ".html"], "read": ["~/docs/frontend.md", "~/docs/ux.md"]}
+            ]
+        )
+        loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
+            manifest_abs_path = manifest_abs_path
+        )
+        self.assertEqual(len(loaded_rule_records), 4)
+
+
+    def test_note_field_is_ignored(self):
+
+        manifest_abs_path = REQUIRED_READS_MANIFEST_FIXTURE_BUILDER.write_manifest_file(
+            manifest_directory_abs_path = self.sandboxed_home_abs_path,
+            rule_dicts = [
+                {"extension": ".py", "read": "~/docs/python.md", "note": "this is ignored"}
+            ]
+        )
+        loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
+            manifest_abs_path = manifest_abs_path
+        )
+        self.assertEqual(len(loaded_rule_records), 1)
 
 
 class TestRequiredReadsManifestLoaderDiscovery(HOME_OVERRIDE_ENV_VAR_TEST_CASE_MIXIN, unittest.TestCase):
 
-    def test_hooks_repo_global_manifest_appears_as_non_project(self):
+    def test_hooks_repo_global_manifest_is_discovered(self):
 
         project_directory_abs_path = os.path.join(self.sandboxed_home_abs_path, "some", "project")
         os.makedirs(project_directory_abs_path, exist_ok = True)
         edited_file_abs_path = os.path.join(project_directory_abs_path, "src", "foo.py")
-        discovered_manifests = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
+        discovered_manifest_abs_paths = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
             edited_file_abs_path = edited_file_abs_path
         )
-        non_project_manifests = [
-            dm for dm in discovered_manifests if not dm.is_project_walkup_manifest
-        ]
-        self.assertTrue(len(non_project_manifests) >= 1)
+        self.assertTrue(len(discovered_manifest_abs_paths) >= 1)
         self.assertTrue(any(
-            dm.manifest_abs_path.endswith("/.ai-sanity/required-styleguides.json")
-            for dm in non_project_manifests
+            path.endswith("/.ai-sanity/required-styleguides.json")
+            for path in discovered_manifest_abs_paths
         ))
 
 
@@ -355,12 +400,11 @@ class TestRequiredReadsManifestLoaderDiscovery(HOME_OVERRIDE_ENV_VAR_TEST_CASE_M
             rule_dicts = []
         )
         edited_file_abs_path = os.path.join(project_directory_abs_path, "src", "foo.py")
-        discovered_manifests = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
+        discovered_manifest_abs_paths = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
             edited_file_abs_path = edited_file_abs_path
         )
-        manifest_paths = [dm.manifest_abs_path for dm in discovered_manifests]
-        global_index = next(i for i, p in enumerate(manifest_paths) if "required-styleguides.json" in p)
-        project_index = next(i for i, dm in enumerate(discovered_manifests) if dm.is_project_walkup_manifest)
+        global_index = next(i for i, p in enumerate(discovered_manifest_abs_paths) if "required-styleguides.json" in p)
+        project_index = next(i for i, p in enumerate(discovered_manifest_abs_paths) if "required-reading.json" in p)
         self.assertLess(global_index, project_index)
 
 
@@ -373,12 +417,14 @@ class TestRequiredReadsManifestLoaderDiscovery(HOME_OVERRIDE_ENV_VAR_TEST_CASE_M
             rule_dicts = []
         )
         edited_file_abs_path = os.path.join(deep_directory_abs_path, "foo.py")
-        discovered_manifests = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
+        discovered_manifest_abs_paths = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
             edited_file_abs_path = edited_file_abs_path
         )
-        project_manifests = [dm for dm in discovered_manifests if dm.is_project_walkup_manifest]
-        self.assertEqual(len(project_manifests), 1)
-        self.assertIn("/a/b/.ai-sanity/required-reading.json", project_manifests[0].manifest_abs_path)
+        project_manifest_abs_paths = [
+            p for p in discovered_manifest_abs_paths if "required-reading.json" in p
+        ]
+        self.assertEqual(len(project_manifest_abs_paths), 1)
+        self.assertIn("/a/b/.ai-sanity/required-reading.json", project_manifest_abs_paths[0])
 
 
     def test_walk_stops_at_home_and_does_not_escape_above(self):
@@ -389,91 +435,95 @@ class TestRequiredReadsManifestLoaderDiscovery(HOME_OVERRIDE_ENV_VAR_TEST_CASE_M
             rule_dicts = []
         )
         edited_file_abs_path = os.path.join(self.sandboxed_home_abs_path, "project", "src", "foo.py")
-        discovered_manifests = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
+        discovered_manifest_abs_paths = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
             edited_file_abs_path = edited_file_abs_path
         )
-        project_manifests = [dm for dm in discovered_manifests if dm.is_project_walkup_manifest]
-        self.assertEqual(project_manifests, [])
+        project_manifest_abs_paths = [
+            p for p in discovered_manifest_abs_paths if "required-reading.json" in p
+        ]
+        self.assertEqual(project_manifest_abs_paths, [])
 
 
     def test_no_manifests_anywhere_returns_only_hooks_repo_global(self):
 
         edited_file_abs_path = os.path.join(self.sandboxed_home_abs_path, "a", "b", "foo.py")
-        discovered_manifests = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
+        discovered_manifest_abs_paths = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
             edited_file_abs_path = edited_file_abs_path
         )
-        project_manifests = [dm for dm in discovered_manifests if dm.is_project_walkup_manifest]
-        self.assertEqual(project_manifests, [])
+        project_manifest_abs_paths = [
+            p for p in discovered_manifest_abs_paths if "required-reading.json" in p
+        ]
+        self.assertEqual(project_manifest_abs_paths, [])
 
 
 class TestRequiredReadsState(HOME_OVERRIDE_ENV_VAR_TEST_CASE_MIXIN, unittest.TestCase):
 
-    def test_unmarked_dedupe_key_is_not_satisfied(self):
+    def test_unmarked_read_path_is_not_satisfied(self):
 
-        self.assertFalse(required_reading._state.RequiredReadsState.is_dedupe_key_satisfied(
+        self.assertFalse(required_reading._state.RequiredReadsState.is_read_satisfied(
             claude_session_id_string = "session-unmarked",
-            dedupe_key_string = "some-key"
+            read_abs_path_string = "/fake/docs/unread.md"
         ))
 
 
-    def test_marked_dedupe_key_reads_back_as_satisfied(self):
+    def test_marked_read_path_reads_back_as_satisfied(self):
 
-        required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
+        required_reading._state.RequiredReadsState.mark_read_satisfied(
             claude_session_id_string = "session-alpha",
-            dedupe_key_string = "python-style-guide"
+            read_abs_path_string = "/fake/docs/python.md"
         )
-        self.assertTrue(required_reading._state.RequiredReadsState.is_dedupe_key_satisfied(
+        self.assertTrue(required_reading._state.RequiredReadsState.is_read_satisfied(
             claude_session_id_string = "session-alpha",
-            dedupe_key_string = "python-style-guide"
+            read_abs_path_string = "/fake/docs/python.md"
         ))
 
 
-    def test_second_mark_for_same_key_is_idempotent(self):
+    def test_second_mark_for_same_path_is_idempotent(self):
 
-        required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
+        required_reading._state.RequiredReadsState.mark_read_satisfied(
             claude_session_id_string = "session-beta",
-            dedupe_key_string = "k"
+            read_abs_path_string = "/fake/docs/style.md"
         )
-        required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
+        required_reading._state.RequiredReadsState.mark_read_satisfied(
             claude_session_id_string = "session-beta",
-            dedupe_key_string = "k"
+            read_abs_path_string = "/fake/docs/style.md"
         )
-        self.assertTrue(required_reading._state.RequiredReadsState.is_dedupe_key_satisfied(
+        self.assertTrue(required_reading._state.RequiredReadsState.is_read_satisfied(
             claude_session_id_string = "session-beta",
-            dedupe_key_string = "k"
+            read_abs_path_string = "/fake/docs/style.md"
         ))
 
 
     def test_different_sessions_do_not_share_flags(self):
 
-        required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
+        required_reading._state.RequiredReadsState.mark_read_satisfied(
             claude_session_id_string = "session-one",
-            dedupe_key_string = "shared-key"
+            read_abs_path_string = "/fake/docs/shared.md"
         )
-        self.assertFalse(required_reading._state.RequiredReadsState.is_dedupe_key_satisfied(
+        self.assertFalse(required_reading._state.RequiredReadsState.is_read_satisfied(
             claude_session_id_string = "session-two",
-            dedupe_key_string = "shared-key"
+            read_abs_path_string = "/fake/docs/shared.md"
         ))
 
 
     def test_clear_session_removes_all_flags_for_that_session(self):
 
-        required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
+        required_reading._state.RequiredReadsState.mark_read_satisfied(
             claude_session_id_string = "session-clear",
-            dedupe_key_string = "a"
+            read_abs_path_string = "/fake/docs/alpha.md"
         )
-        required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
+        required_reading._state.RequiredReadsState.mark_read_satisfied(
             claude_session_id_string = "session-clear",
-            dedupe_key_string = "b"
+            read_abs_path_string = "/fake/docs/bravo.md"
         )
         required_reading._state.RequiredReadsState.clear_session(claude_session_id_string = "session-clear")
-        self.assertFalse(required_reading._state.RequiredReadsState.is_dedupe_key_satisfied(
+        self.assertFalse(required_reading._state.RequiredReadsState.is_read_satisfied(
             claude_session_id_string = "session-clear",
-            dedupe_key_string = "a"
+            read_abs_path_string = "/fake/docs/alpha.md"
         ))
-        self.assertFalse(required_reading._state.RequiredReadsState.is_dedupe_key_satisfied(
+        self.assertFalse(required_reading._state.RequiredReadsState.is_read_satisfied(
             claude_session_id_string = "session-clear",
-            dedupe_key_string = "b"
+            read_abs_path_string = "/fake/docs/bravo.md"
         ))
 
 
@@ -484,13 +534,13 @@ class TestRequiredReadsState(HOME_OVERRIDE_ENV_VAR_TEST_CASE_MIXIN, unittest.Tes
 
     def test_sweep_stale_removes_old_session_directories_and_keeps_fresh_ones(self):
 
-        required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
+        required_reading._state.RequiredReadsState.mark_read_satisfied(
             claude_session_id_string = "session-old",
-            dedupe_key_string = "k"
+            read_abs_path_string = "/fake/docs/style.md"
         )
-        required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
+        required_reading._state.RequiredReadsState.mark_read_satisfied(
             claude_session_id_string = "session-new",
-            dedupe_key_string = "k"
+            read_abs_path_string = "/fake/docs/style.md"
         )
         old_session_directory_abs_path = required_reading._state.RequiredReadsState.get_session_directory_abs_path(
             claude_session_id_string = "session-old"
@@ -498,13 +548,13 @@ class TestRequiredReadsState(HOME_OVERRIDE_ENV_VAR_TEST_CASE_MIXIN, unittest.Tes
         ten_days_ago_wall_clock_seconds = time.time() - (10 * 24 * 60 * 60)
         os.utime(old_session_directory_abs_path, (ten_days_ago_wall_clock_seconds, ten_days_ago_wall_clock_seconds))
         required_reading._state.RequiredReadsState.sweep_stale_session_directories()
-        self.assertFalse(required_reading._state.RequiredReadsState.is_dedupe_key_satisfied(
+        self.assertFalse(required_reading._state.RequiredReadsState.is_read_satisfied(
             claude_session_id_string = "session-old",
-            dedupe_key_string = "k"
+            read_abs_path_string = "/fake/docs/style.md"
         ))
-        self.assertTrue(required_reading._state.RequiredReadsState.is_dedupe_key_satisfied(
+        self.assertTrue(required_reading._state.RequiredReadsState.is_read_satisfied(
             claude_session_id_string = "session-new",
-            dedupe_key_string = "k"
+            read_abs_path_string = "/fake/docs/style.md"
         ))
 
 
@@ -518,23 +568,17 @@ class PreToolUseRequiredReadsRuleRecordBuilder:
     @staticmethod
     def build_rule_record(rule_id = "manifest.json#0",
         manifest_abs_path = "/fake/manifest.json",
-        is_global_manifest = True,
         match_extension_suffix = ".py",
         match_filepath_substring = None,
         read_abs_path = "/fake/docs/python.md",
-        override_abs_path = None,
-        dedupe_key = None
     ):
 
         return required_reading._manifest.RequiredReadsRuleRecord(
             rule_id = rule_id,
             manifest_abs_path = manifest_abs_path,
-            is_global_manifest = is_global_manifest,
             match_extension_suffix = match_extension_suffix,
             match_filepath_substring = match_filepath_substring,
             read_abs_path = read_abs_path,
-            override_abs_path = override_abs_path,
-            dedupe_key = dedupe_key if dedupe_key is not None else read_abs_path
         )
 
 
@@ -612,60 +656,6 @@ class TestExtractEditedFilePath(unittest.TestCase):
             pretooluse_payload = empty_edit_payload
         )
         self.assertIsNone(extracted_abs_path)
-
-
-class TestApplyProjectOverridesAgainstGlobalRules(unittest.TestCase):
-
-    def test_project_override_drops_matching_global_rule(self):
-
-        global_python_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
-            is_global_manifest = True,
-            read_abs_path = "/home/zachm/Dev/ai-sanity/styleguides/python.md"
-        )
-        project_override_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
-            is_global_manifest = False,
-            read_abs_path = "/project/docs/project-python-style.md",
-            override_abs_path = "/home/zachm/Dev/ai-sanity/styleguides/python.md"
-        )
-        surviving_rule_records = PRE_TOOL_USE_REQUIRED_READS_RULE_CHECKS.apply_project_overrides_against_global_rules(
-            rule_records = [global_python_rule_record, project_override_rule_record]
-        )
-        self.assertEqual(len(surviving_rule_records), 1)
-        self.assertFalse(surviving_rule_records[0].is_global_manifest)
-
-
-    def test_project_rule_without_override_keeps_global(self):
-
-        global_python_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
-            is_global_manifest = True,
-            read_abs_path = "/home/zachm/Dev/ai-sanity/styleguides/python.md"
-        )
-        project_extra_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
-            is_global_manifest = False,
-            read_abs_path = "/project/docs/product.md",
-            override_abs_path = None
-        )
-        surviving_rule_records = PRE_TOOL_USE_REQUIRED_READS_RULE_CHECKS.apply_project_overrides_against_global_rules(
-            rule_records = [global_python_rule_record, project_extra_rule_record]
-        )
-        self.assertEqual(len(surviving_rule_records), 2)
-
-
-    def test_project_rule_cannot_override_another_project_rule(self):
-
-        project_a_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
-            is_global_manifest = False,
-            read_abs_path = "/project/docs/stack.md"
-        )
-        project_b_override_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
-            is_global_manifest = False,
-            read_abs_path = "/project/docs/alt-stack.md",
-            override_abs_path = "/project/docs/stack.md"
-        )
-        surviving_rule_records = PRE_TOOL_USE_REQUIRED_READS_RULE_CHECKS.apply_project_overrides_against_global_rules(
-            rule_records = [project_a_rule_record, project_b_override_rule_record]
-        )
-        self.assertEqual(len(surviving_rule_records), 2)
 
 
 class TestFilterRulesByMatchCriterion(unittest.TestCase):
@@ -832,10 +822,10 @@ class TestPartitionRulesIntoUnsatisfiedFireAndAlreadySatisfied(
     def test_no_flags_set_means_every_rule_fires(self):
 
         python_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
-            dedupe_key = "python-style-guide"
+            read_abs_path = "/fake/docs/python.md"
         )
         markdown_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
-            dedupe_key = "markdown-style-guide"
+            read_abs_path = "/fake/docs/markdown.md"
         )
         rules_to_fire_list, rules_already_satisfied_list = (
             PRE_TOOL_USE_REQUIRED_READS_RULE_CHECKS.partition_rules_into_unsatisfied_fire_and_already_satisfied(
@@ -847,14 +837,14 @@ class TestPartitionRulesIntoUnsatisfiedFireAndAlreadySatisfied(
         self.assertEqual(rules_already_satisfied_list, [])
 
 
-    def test_flag_already_set_for_dedupe_key_means_rule_is_skipped(self):
+    def test_flag_already_set_for_read_path_means_rule_is_skipped(self):
 
         python_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
-            dedupe_key = "python-style-guide"
+            read_abs_path = "/fake/docs/python.md"
         )
-        required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
+        required_reading._state.RequiredReadsState.mark_read_satisfied(
             claude_session_id_string = "session-partial",
-            dedupe_key_string = "python-style-guide"
+            read_abs_path_string = "/fake/docs/python.md"
         )
         rules_to_fire_list, rules_already_satisfied_list = (
             PRE_TOOL_USE_REQUIRED_READS_RULE_CHECKS.partition_rules_into_unsatisfied_fire_and_already_satisfied(
@@ -864,32 +854,6 @@ class TestPartitionRulesIntoUnsatisfiedFireAndAlreadySatisfied(
         )
         self.assertEqual(rules_to_fire_list, [])
         self.assertEqual(len(rules_already_satisfied_list), 1)
-
-
-    def test_rules_sharing_a_dedupe_key_collapse_to_one_satisfaction(self):
-
-        first_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
-            rule_id = "m#0",
-            match_extension_suffix = ".py",
-            dedupe_key = "shared-key"
-        )
-        second_rule_record = PreToolUseRequiredReadsRuleRecordBuilder.build_rule_record(
-            rule_id = "m#1",
-            match_extension_suffix = ".pyi",
-            dedupe_key = "shared-key"
-        )
-        required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
-            claude_session_id_string = "session-shared",
-            dedupe_key_string = "shared-key"
-        )
-        rules_to_fire_list, rules_already_satisfied_list = (
-            PRE_TOOL_USE_REQUIRED_READS_RULE_CHECKS.partition_rules_into_unsatisfied_fire_and_already_satisfied(
-                rule_records = [first_rule_record, second_rule_record],
-                claude_session_id_string = "session-shared"
-            )
-        )
-        self.assertEqual(rules_to_fire_list, [])
-        self.assertEqual(len(rules_already_satisfied_list), 2)
 
 
 class TestBuildDenyReasonString(unittest.TestCase):

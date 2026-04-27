@@ -5,15 +5,11 @@
       "read": "./styleguides/python.md"
     },
     {
-      "extension": ".js",
-      "read": "./styleguides/javascript.md"
-    },
-    {
-      "extension": ".css",
-      "read": "./styleguides/javascript.md"
-    },
-    {
-      "extension": ".json",
+      "extension": [
+        ".js",
+        ".css",
+        ".json"
+      ],
       "read": "./styleguides/javascript.md"
     },
     {
@@ -21,11 +17,10 @@
       "read": "./styleguides/markdown.md"
     },
     {
-      "extension": ".sh",
-      "read": "./styleguides/scripts.md"
-    },
-    {
-      "extension": ".ps1",
+      "extension": [
+        ".sh",
+        ".ps1"
+      ],
       "read": "./styleguides/scripts.md"
     }
   ]

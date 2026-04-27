@@ -35,35 +35,31 @@ class PostToolUseReadObserverRuleChecks:
 
 
     @staticmethod
-    def collect_dedupe_keys_whose_read_target_matches(read_file_abs_path, cwd_abs_path):
+    def collect_satisfied_read_abs_paths(read_file_abs_path, cwd_abs_path):
 
-        """Returns dedupe keys for rules whose read target matches the file just Read."""
-        discovered_manifests = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
+        """Returns read_abs_path values for rules whose read target matches the file just Read."""
+        discovered_manifest_abs_paths = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
             edited_file_abs_path = read_file_abs_path
         )
         if cwd_abs_path:
-            cwd_discovered_manifests = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
+            cwd_manifest_abs_paths = required_reading._manifest.RequiredReadsManifestLoader.discover_manifests(
                 edited_file_abs_path = os.path.join(cwd_abs_path, "placeholder-filename")
             )
-            seen_abs_paths = set(
-                discovered_manifest.manifest_abs_path for discovered_manifest in discovered_manifests
-            )
-            for cwd_discovered_manifest in cwd_discovered_manifests:
-                if cwd_discovered_manifest.manifest_abs_path not in seen_abs_paths:
-                    discovered_manifests.append(cwd_discovered_manifest)
-        if not discovered_manifests:
+            seen_abs_paths = set(discovered_manifest_abs_paths)
+            for cwd_manifest_abs_path in cwd_manifest_abs_paths:
+                if cwd_manifest_abs_path not in seen_abs_paths:
+                    discovered_manifest_abs_paths.append(cwd_manifest_abs_path)
+        if not discovered_manifest_abs_paths:
             return set()
-        matching_dedupe_key_strings = set()
-        for discovered_manifest in discovered_manifests:
-            is_global_manifest_bool = not discovered_manifest.is_project_walkup_manifest
+        matching_read_abs_paths = set()
+        for manifest_abs_path in discovered_manifest_abs_paths:
             loaded_rule_records = required_reading._manifest.RequiredReadsManifestLoader.load_manifest_rule_records(
-                manifest_abs_path = discovered_manifest.manifest_abs_path,
-                is_global_manifest = is_global_manifest_bool
+                manifest_abs_path = manifest_abs_path
             )
             for candidate_rule_record in loaded_rule_records:
                 if candidate_rule_record.read_abs_path == read_file_abs_path:
-                    matching_dedupe_key_strings.add(candidate_rule_record.dedupe_key)
-        return matching_dedupe_key_strings
+                    matching_read_abs_paths.add(candidate_rule_record.read_abs_path)
+        return matching_read_abs_paths
 
 
 class PostToolUseReadObserverEntry:
@@ -83,17 +79,17 @@ class PostToolUseReadObserverEntry:
                 _common._hook_io.PostToolUseHookIo.emit_passthrough_and_exit()
                 return
             cwd_abs_path_from_payload = posttooluse_payload.get("cwd") or ""
-            matching_dedupe_key_strings = (
-                PostToolUseReadObserverRuleChecks.collect_dedupe_keys_whose_read_target_matches(
+            satisfied_read_abs_paths = (
+                PostToolUseReadObserverRuleChecks.collect_satisfied_read_abs_paths(
                     read_file_abs_path = read_file_abs_path,
                     cwd_abs_path = cwd_abs_path_from_payload
                 )
             )
             claude_session_id_string = posttooluse_payload.get("session_id") or "unknown-session"
-            for dedupe_key_string in matching_dedupe_key_strings:
-                required_reading._state.RequiredReadsState.mark_dedupe_key_satisfied(
+            for read_abs_path in satisfied_read_abs_paths:
+                required_reading._state.RequiredReadsState.mark_read_satisfied(
                     claude_session_id_string = claude_session_id_string,
-                    dedupe_key_string = dedupe_key_string
+                    read_abs_path_string = read_abs_path
                 )
             _common._hook_io.PostToolUseHookIo.emit_passthrough_and_exit()
         except Exception:
