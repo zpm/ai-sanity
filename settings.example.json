@@ -21,12 +21,7 @@
           {
             "type": "command",
             "command": "python $HOME/Dev/ai-sanity/hooks/no_memory/pretooluse_bash.py"
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
+          },
           {
             "type": "command",
             "command": "python $HOME/Dev/ai-sanity/hooks/bash_playbook/pretooluse_bash.py"
