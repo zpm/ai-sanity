@@ -13,8 +13,116 @@ import sys
 # hot patch so that imports work when script is invoked directly (how claude invokes hooks)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import json
+
 import _common._command_parser
 import _common._hook_io
+
+
+class PlaybookMatchCheck:
+
+    """Reads the project's .ai-sanity/playbook.json and matches a bash command against its entries. Supports exact and
+    prefix (trailing ` *`) matching at the token level. If it's in the playbook, it's allowed."""
+
+    _playbook_relative_path_from_project_root = os.path.join(".ai-sanity", "playbook.json")
+
+
+    @staticmethod
+    def find_playbook_abs_path(starting_directory_abs_path):
+
+        """Walks up from starting_directory_abs_path looking for .ai-sanity/playbook.json. Stops at $HOME or filesystem
+        root. Returns the absolute path if found, None otherwise."""
+        effective_home_abs_path = os.path.expanduser("~")
+        current_directory_abs_path = os.path.abspath(starting_directory_abs_path)
+        visited_directory_abs_paths = set()
+        while True:
+            if current_directory_abs_path in visited_directory_abs_paths:
+                break
+            visited_directory_abs_paths.add(current_directory_abs_path)
+            candidate_playbook_abs_path = os.path.join(
+                current_directory_abs_path,
+                PlaybookMatchCheck._playbook_relative_path_from_project_root
+            )
+            if os.path.isfile(candidate_playbook_abs_path):
+                return candidate_playbook_abs_path
+            if current_directory_abs_path == effective_home_abs_path:
+                break
+            parent_directory_abs_path = os.path.dirname(current_directory_abs_path)
+            if parent_directory_abs_path == current_directory_abs_path:
+                break
+            current_directory_abs_path = parent_directory_abs_path
+        return None
+
+
+    @staticmethod
+    def load_playbook_entries(playbook_abs_path):
+
+        """Reads and parses a playbook JSON file. Detects trailing ` *` in the bash field to enable prefix matching.
+        Returns a list of dicts with added `_match_tokens` and `_is_prefix_match` keys, or [] on any error."""
+        try:
+            with open(playbook_abs_path, "r", encoding = "utf-8") as open_playbook_file_handle:
+                parsed_playbook_object = json.load(open_playbook_file_handle)
+        except (OSError, json.JSONDecodeError):
+            return []
+        if not isinstance(parsed_playbook_object, list):
+            return []
+        valid_playbook_entries = []
+        for candidate_entry in parsed_playbook_object:
+            if not isinstance(candidate_entry, dict):
+                continue
+            bash_command_value = candidate_entry.get("bash")
+            if not isinstance(bash_command_value, str) or not bash_command_value.strip():
+                continue
+            stripped_bash_value = bash_command_value.strip()
+            is_prefix_match = stripped_bash_value.endswith(" *")
+            command_to_tokenize = stripped_bash_value[:-2] if is_prefix_match else stripped_bash_value
+            try:
+                match_tokens = shlex.split(command_to_tokenize)
+            except ValueError:
+                continue
+            if not match_tokens:
+                continue
+            enriched_entry = dict(candidate_entry)
+            enriched_entry["_match_tokens"] = match_tokens
+            enriched_entry["_is_prefix_match"] = is_prefix_match
+            valid_playbook_entries.append(enriched_entry)
+        return valid_playbook_entries
+
+
+    @staticmethod
+    def check(pretooluse_payload):
+
+        """Returns a matching playbook entry if the command tokens match (exact or prefix). Returns None on no match."""
+        bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
+        bash_command_cwd = pretooluse_payload.get("cwd") or "."
+        playbook_abs_path = PlaybookMatchCheck.find_playbook_abs_path(
+            starting_directory_abs_path = bash_command_cwd
+        )
+        if playbook_abs_path is None:
+            return None
+        playbook_entries = PlaybookMatchCheck.load_playbook_entries(
+            playbook_abs_path = playbook_abs_path
+        )
+        if not playbook_entries:
+            return None
+        try:
+            command_tokens = shlex.split(bash_command_string)
+        except ValueError:
+            return None
+        if not command_tokens:
+            return None
+        for candidate_playbook_entry in playbook_entries:
+            entry_match_tokens = candidate_playbook_entry["_match_tokens"]
+            if candidate_playbook_entry["_is_prefix_match"]:
+                if (
+                    len(command_tokens) >= len(entry_match_tokens)
+                    and command_tokens[:len(entry_match_tokens)] == entry_match_tokens
+                ):
+                    return candidate_playbook_entry
+            else:
+                if command_tokens == entry_match_tokens:
+                    return candidate_playbook_entry
+        return None
 
 
 class GitCommandsCheck:
@@ -407,6 +515,8 @@ class PreToolUseBashSafetyHookEntry:
         """Reads the payload, runs all checks, and emits a deny, allow, or passthrough decision."""
         try:
             pretooluse_payload = _common._hook_io.PreToolUseHookIo.read_pretooluse_payload_from_stdin()
+            if PlaybookMatchCheck.check(pretooluse_payload) is not None:
+                _common._hook_io.PreToolUseHookIo.emit_allow_decision_and_exit()
             pretooluse_payload = PreToolUseBashSafetyHookEntry._strip_safe_pipe_tail_from_payload(pretooluse_payload)
             bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
             clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)

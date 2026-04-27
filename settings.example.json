@@ -43,15 +43,6 @@
         ]
       },
       {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python $HOME/Dev/ai-sanity/hooks/playbook/pretooluse_bash.py"
-          }
-        ]
-      },
-      {
         "matcher": "Write|Edit|NotebookEdit|Read",
         "hooks": [
           {

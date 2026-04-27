@@ -16,9 +16,9 @@ The `permissions.allow` list should include the path to this repo (e.g., `Read(~
 
 ## 1. bash_safety
 
-Keeps claude from invoking dangerous shell commands, and auto-allows the safe ones it commonly uses.
+Keeps claude from invoking dangerous shell commands, auto-allows the safe ones it commonly uses, and auto-allows commands listed in a project's playbook.
 
-Works by implementing a deny-list for dangerous shell commands (git writes, package managers, system ops, shell spawning, text manipulation). Enforces `git mv` for tracked file moves. Unknown commands pass through to Claude Code's normal permission UI.
+Works by implementing a deny-list for dangerous shell commands (git writes, package managers, system ops, shell spawning, text manipulation). Commands matching a project's `./.ai-sanity/playbook.json` bypass all deny checks. Unknown commands pass through to Claude Code's normal permission UI.
 
 ### Security Rules
 
@@ -28,17 +28,9 @@ The threat model is "keep claude from doing stupid shit," not "protect against n
 2. No third-party code execution without the user in the loop. Package installs, shell spawning, and running downloaded scripts all require explicit user approval. claude should never silently pull in or execute code the user hasn't reviewed.
 3. File edits are not the concern, as claude already has elevated Edit permissions. The hooks protect against unintentional catastrophes and invisible side effects.
 
-## 2. no_memory
+### Playbook
 
-Prevents claude from using its built-in auto-memory system, as it sits outside version control.
-
-Works by blocking reads and writes to the auto-memory directory and any `MEMORY.md` file.
-
-## 3. playbook
-
-Provides a playbook for claude to run common scripts and commands that will be auto-allowed.
-
-Works by auto-whitelisting bash commands listed in a project's `./.ai-sanity/playbook.json`. The first clause of a command is matched against playbook entries (exact or prefix). Pipes to safe output-filtering commands (`tail`, `head`, `grep`, `cat`, `wc`, `sort`, `uniq`, `tr`, `cut`, `column`) and descriptor merges (`2>&1`) are allowed. Sequential operators (`&&`, `||`, `;`) and file redirects (`>`, `<`) cause passthrough to normal permissions.
+Commands matching a project's `./.ai-sanity/playbook.json` bypass all deny checks. The full command is tokenized and matched against playbook entries (exact or prefix). If it's in the playbook, it's allowed, including commands with `&&`, pipes, redirects, or any other shell syntax.
 
 Each project that wants playbook support creates `./.ai-sanity/playbook.json`:
 
@@ -59,7 +51,13 @@ Each project that wants playbook support creates `./.ai-sanity/playbook.json`:
 
 A trailing ` *` in the `bash` field enables prefix matching (token-level, not string). Without it, the match is exact.
 
-## 4a. required_reading
+## 2. no_memory
+
+Prevents claude from using its built-in auto-memory system, as it sits outside version control.
+
+Works by blocking reads and writes to the auto-memory directory and any `MEMORY.md` file.
+
+## 3a. required_reading
 
 Makes claude read project documentation and style guides before it can edit matching files.
 
@@ -70,7 +68,7 @@ Works by forcing claude to Read specified documents before it can touch matching
 | `./.ai-sanity/required-reading.json` | No | If present, its rules are loaded via directory walk-up from the edited file. If absent, silently skipped. |
 | Any doc listed in that manifest | Yes | If the manifest exists and lists a doc, that doc must exist on disk. A missing target is a configuration error and blocks the edit. |
 
-## 4b. required_reading styleguides
+## 3b. required_reading styleguides
 
 Make claude read global styleguides contained in this repo before it can edit matching files.
 

@@ -5,6 +5,7 @@
 ########################################################################################################################
 
 
+import json
 import os
 import subprocess
 import sys
@@ -63,6 +64,100 @@ class TestPreToolUseBashSafetyEntryScriptGitMv(unittest.TestCase):
     def test_non_mv_command_passes_through(self):
 
         exit_code, parsed_stdout = self._invoke("echo hello")
+        tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
+            self, exit_code, parsed_stdout
+        )
+
+
+class TestPreToolUseBashSafetyEntryScriptPlaybook(unittest.TestCase):
+
+    def setUp(self):
+
+        self.temp_project_directory = tempfile.mkdtemp()
+        self.dot_ai_sanity_directory = os.path.join(self.temp_project_directory, ".ai-sanity")
+        os.makedirs(self.dot_ai_sanity_directory)
+        self.playbook_abs_path = os.path.join(self.dot_ai_sanity_directory, "playbook.json")
+        playbook_entries = [
+            {
+                "bash": "python -m unittest discover -s tests -t . -v",
+                "what": "Runs the full test suite",
+                "when": "Run as a final step after all changes have landed"
+            },
+            {
+                "bash": "python -m unittest *",
+                "what": "Run targeted tests",
+                "when": "After modifying a specific hook"
+            },
+            {
+                "bash": "cd server && pwsh ../local/server/scripts/tests/all.ps1",
+                "what": "Run all tests (Windows)",
+                "when": "Final step after all changes have landed"
+            }
+        ]
+        with open(self.playbook_abs_path, "w", encoding = "utf-8") as open_playbook_file_handle:
+            json.dump(playbook_entries, open_playbook_file_handle)
+
+
+    def _invoke(self, command, working_directory = None):
+
+        if working_directory is None:
+            working_directory = self.temp_project_directory
+        return tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.invoke_entry_script(
+            entry_script_relative_path = "bash_safety/pretooluse_bash.py",
+            pretooluse_payload = tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
+                bash_command_string = command,
+                working_directory = working_directory
+            )
+        )
+
+
+    def test_playbook_match_is_allowed(self):
+
+        exit_code, parsed_stdout = self._invoke("python -m unittest discover -s tests -t . -v")
+        tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_allow_decision(
+            self, exit_code, parsed_stdout
+        )
+
+
+    def test_playbook_prefix_match_is_allowed(self):
+
+        exit_code, parsed_stdout = self._invoke("python -m unittest tests.playbook.test_rule_checks -v")
+        tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_allow_decision(
+            self, exit_code, parsed_stdout
+        )
+
+
+    def test_playbook_match_with_sequential_operator_is_allowed(self):
+
+        exit_code, parsed_stdout = self._invoke("cd server && pwsh ../local/server/scripts/tests/all.ps1")
+        tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_allow_decision(
+            self, exit_code, parsed_stdout
+        )
+
+
+    def test_playbook_match_overrides_prohibited_command_deny(self):
+
+        exit_code, parsed_stdout = self._invoke("cd server && pwsh ../local/server/scripts/tests/all.ps1")
+        tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_allow_decision(
+            self, exit_code, parsed_stdout
+        )
+
+
+    def test_non_matching_command_still_denied_by_safety(self):
+
+        exit_code, parsed_stdout = self._invoke("pwsh some-random-script.ps1")
+        tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_deny_decision(
+            self, exit_code, parsed_stdout, "prohibited"
+        )
+
+
+    def test_no_playbook_passes_through(self):
+
+        empty_temp_directory = tempfile.mkdtemp()
+        exit_code, parsed_stdout = self._invoke(
+            command = "echo hello",
+            working_directory = empty_temp_directory
+        )
         tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_passthrough(
             self, exit_code, parsed_stdout
         )
