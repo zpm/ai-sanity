@@ -291,6 +291,28 @@ Inside Python this does not apply. Enum comparisons (`if status == MyEnum.ACTIVE
   except Exception as e:
       logger.warning(f"failed: {e}")
   ```
+- Narrow try/except scope. The `try` block must wrap only the statement(s) that can actually raise the caught exception. Context building, validation, early returns, and pure logic stay outside the `try`. A broad `try` hides bugs in setup logic by silently catching errors that should fail loudly.
+  ```python
+  # wrong: guard, context, and render buried inside try
+  try:
+      if not user_email:
+          return
+      context = build_context(user)
+      html = render_template(context)
+      await send_email(html)
+  except Exception as e:
+      log_warning(e)
+
+  # right: only the fallible I/O inside try
+  if not user_email:
+      return
+  context = build_context(user)
+  html = render_template(context)
+  try:
+      await send_email(html)
+  except Exception as e:
+      log_warning(e)
+  ```
 
 ## File Headers
 

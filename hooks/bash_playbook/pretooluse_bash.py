@@ -414,13 +414,19 @@ class ProhibitedCommandsCheck:
     _DENIED_COMMANDS = {
         "awk": ["*"],
         "bash": ["*"],
+        "case": ["*"],
         "cmd": ["*"],
         "cmd.exe": ["*"],
+        "for": ["*"],
+        "if": ["*"],
         "powershell": ["*"],
         "pwsh": ["*"],
         "sed": ["*"],
+        "select": ["*"],
         "sh": ["*"],
         "tee": ["*"],
+        "until": ["*"],
+        "while": ["*"],
         "zsh": ["*"],
     }
 
@@ -558,9 +564,17 @@ class PreToolUseBashSafetyHookEntry:
     @staticmethod
     def _build_payload_for_command_segment(segment_clause_groups, original_cwd):
 
-        """Reconstructs a pretooluse payload for a single command segment from its clause token-lists and the
-        original working directory."""
-        segment_command_string = " | ".join(shlex.join(clause) for clause in segment_clause_groups)
+        """Reconstructs a pretooluse payload for a single command segment. Strips descriptor merge tokens (2>&1 etc.)
+        from each clause since they are never relevant to safety checks."""
+        cleaned_segment_clause_groups = [
+            _common._command_parser.RedirectTokenClassifier.strip_descriptor_merge_tokens_from_clause(
+                clause_tokens = clause
+            )
+            for clause in segment_clause_groups
+        ]
+        segment_command_string = " | ".join(
+            shlex.join(clause) for clause in cleaned_segment_clause_groups if clause
+        )
         return {
             "tool_input": {"command": segment_command_string},
             "cwd": original_cwd,
@@ -572,9 +586,9 @@ class PreToolUseBashSafetyHookEntry:
 
         """Evaluates one command segment through the full check pipeline. Returns the string 'allow', a deny reason
         string, or None for passthrough."""
+        segment_payload = PreToolUseBashSafetyHookEntry._strip_safe_pipe_tail_from_payload(segment_payload)
         if PlaybookMatchCheck.check(segment_payload) is not None:
             return "allow"
-        segment_payload = PreToolUseBashSafetyHookEntry._strip_safe_pipe_tail_from_payload(segment_payload)
         bash_command_string = (segment_payload.get("tool_input") or {}).get("command", "")
         clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
         git_check_result = GitCommandsCheck.check(clauses)

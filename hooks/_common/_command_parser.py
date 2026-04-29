@@ -10,7 +10,7 @@ import shlex
 
 
 SAFE_PIPE_TARGET_COMMANDS = {
-    "tail", "head", "grep", "cat", "wc", "sort", "uniq", "tr", "cut", "column"
+    "tail", "head", "grep", "cat", "wc", "sort", "uniq", "tr", "cut", "column", "xargs"
 }
 
 DESCRIPTOR_MERGE_PATTERN = re.compile(r"^\d*>&\d+$")
