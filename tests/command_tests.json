@@ -65,6 +65,7 @@
         "grep -r pattern src/",
         "head -20 file.txt",
         "ls -la",
+        "ls -la c:\\Users\\zachm\\Dev\\project\\local\\hygiene\\",
         "pwd",
         "tail -f server.log",
         "wc -l file.txt"

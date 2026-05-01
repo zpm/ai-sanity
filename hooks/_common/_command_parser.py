@@ -60,14 +60,23 @@ class BashCommandParser:
 
 
     @staticmethod
+    def _tokenize(bash_command_string):
+
+        """Strips trailing backslashes (Windows path artifacts and dangling line continuations) then tokenizes via
+        shlex. Returns an empty list on empty input or parse failure."""
+        sanitized_command_string = bash_command_string.rstrip("\\")
+        try:
+            return shlex.split(sanitized_command_string)
+        except ValueError:
+            return []
+
+
+    @staticmethod
     def extract_command_clauses(bash_command_string):
 
         """Returns a list of token-lists, one per command clause. Splits on |, &&, ||, and ; separators that appear as
         standalone shlex tokens. Returns an empty list when the command string is empty or cannot be tokenised."""
-        try:
-            tokens = shlex.split(bash_command_string)
-        except ValueError:
-            return []
+        tokens = BashCommandParser._tokenize(bash_command_string)
         if not tokens:
             return []
         clauses = []
@@ -89,10 +98,7 @@ class BashCommandParser:
 
         """Returns (clauses, separators) where clauses is a list of token-lists and separators is a list of operator
         strings found between them. An empty command or unbalanced quotes returns ([], [])."""
-        try:
-            tokens = shlex.split(bash_command_string)
-        except ValueError:
-            return [], []
+        tokens = BashCommandParser._tokenize(bash_command_string)
         if not tokens:
             return [], []
         clauses = []

@@ -14,11 +14,13 @@ The rule applies to the primary (outer) quotes. Single quotes inside a double-qu
 
 ## Fully Descriptive Names
 
-Brevity is the enemy of clarity. Every name (variable, function, method, constant, class, CSS class, HTML id) must fully describe what it is, what it does, or what it's for. Never drop concept words for brevity. Universally understood abbreviations are fine: `config_file` not `file` or `f`, `normalized_value` not `value`. If a name has multiple concepts, every concept must be present. A reader should understand the name's full meaning without looking at the implementation.
+Brevity is the enemy of clarity.
+
+Every name (variable, function, method, constant, class, CSS class, HTML id) must describe what it is, what it does, or what it's for. Avoid dropping concept words for brevity.
 
 - Encode all concepts. If something is "safe user data," the name must say ALL of that. Not just "safe data" (safe what?) or "user info" (what makes it special?):
   - `apiGetSafeUserData()` (safe, user, data, all present)
-- Variables must read like helpful commentary. The reader should understand what a variable holds and where it came from without checking the right side of the assignment:
+- Variables and functions must read like helpful commentary:
   - `const currentAuthedUser = requireAuthedUserOrRedirect(request);`
   - `const sessionAuthedUserId = request.session.get("user_id");`
 - Constants must describe their purpose and scope:
@@ -26,10 +28,12 @@ Brevity is the enemy of clarity. Every name (variable, function, method, constan
 - Methods must describe the full action and context:
   - `apiGetStorySections(uid)` (API method, gets story sections, client-safe output)
   - `requireAuthedUserOrRedirect(request)` (requires auth, returns user, or redirects)
-- Never sacrifice clarity for aesthetics. A long, clear name is always better than a short, ambiguous one. If a name feels "too long," that's a sign it's doing its job.
+- Never sacrifice clarity for aesthetics. A clear name is always better than a short, ambiguous one.
 - Concept-first naming. Lead with the concept so that related names sort together alphabetically in objects, JSON, and autocomplete. Put qualifiers like `total`, `count`, `max`, `min` at the end:
   - `wordCount`, `wordCountTotal`, `llmCostUsd`, `llmCostUsdTicks`
   - This applies equally to object/registry keys: `costPerMilTokensInput`, `costPerMilTokensOutput`, `costProvided`. All `cost*` keys group together when sorted.
+
+Clarity does not mean expanding abbreviations. Common or technical abbreviations are encouraged as part of a broader descriptive name: `env`, `var`/`vars`, `config`, `db`, `api`, `url`, `id`, `uuid`, `llm`, `sdk`, etc.
 
 ## JSON Formatting
 
