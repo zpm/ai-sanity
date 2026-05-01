@@ -4,7 +4,7 @@
 
 ## `__init__.py` Files
 
-`__init__.py` files must be empty (zero bytes).
+`__init__.py` files must be empty (zero bytes) by default. The one exception is a small, focused package whose entire public API is a handful of thin facade functions delegating to internal modules (e.g. `zenv.load()`, `zenv.get()`). In that case, `__init__.py` is the right place for those top-level functions. This does not apply to large codebases or subpackages within a larger project.
 
 ## Double Quotes Everywhere
 
