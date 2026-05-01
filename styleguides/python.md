@@ -16,30 +16,33 @@ The rule applies to the primary (outer) quotes. Single quotes inside a double-qu
 
 ## Fully Descriptive Names
 
-Brevity is the enemy of clarity. Every name (variable, function, method, constant, class) must fully describe what it is, what it does, or what it's for. Never drop concept words for brevity. Universally understood abbreviations are fine: `config_file` not `file` or `f`, `normalized_value` not `value`. If a name has multiple concepts, every concept must be present. A reader should understand the name's full meaning without looking at the implementation.
+Brevity is the enemy of clarity.
+
+Every name (variable, function, method, constant, class) must describe what it is, what it does, or what it's for. Avoid dropping concept words for brevity.
 
 - Encode all concepts. If something is "safe user data," the name must say ALL of that. Not just "safe data" (safe what?) or "user info" (what makes it special?):
-  - `api_get_safe_user_data()` (safe, user, data, all present)
-- Variables must read like helpful commentary. The reader should understand what a variable holds and where it came from without checking the right side of the assignment:
+  - `get_safe_user_data()` (safe, user, data, all present)
+- Variables and functions must read like helpful commentary:
   - `current_authed_user = require_authed_user_or_redirect(request)`
   - `session_authed_user_id = request.session.get("user_id")`
 - Constants must describe their purpose and scope:
   - `UUID_PARAMS_STORY` (what format, what entity, what it validates)
 - Methods must describe the full action and context:
-  - `api_get_story_sections(uid)` (API method, gets story sections, client-safe output)
+  - `api_get_user_details(uid)` (API method, gets user details)
   - `require_authed_user_or_redirect(request)` (requires auth, returns user, or redirects)
-- Never sacrifice clarity for aesthetics. A long, clear name is always better than a short, ambiguous one. If a name feels "too long," that's a sign it's doing its job.
+- Never sacrifice clarity for aesthetics. A clear name is always better than a short, ambiguous one.
 - Concept-first naming. Lead with the concept so that related names sort together alphabetically in dicts, JSON, and autocomplete. Put qualifiers like `total`, `count`, `max`, `min` at the end:
   - `word_count`, `word_count_total`, `llm_cost_usd`, `llm_cost_usd_ticks`
   - This applies equally to dict/registry keys: `cost_per_mil_tokens_input`, `cost_per_mil_tokens_output`, `cost_provided`. All `cost_*` keys group together when sorted.
 
-Explicit exception: caught exceptions are always bound as `e` (see Exception Handling). This is the single deliberate deviation from the naming rule, chosen for ubiquity and muscle memory, not because the name is descriptive.
+Clarity does not mean expanding abbreviations. Common or technical abbreviations are encouraged as part of a broader descriptive name: `env`, `var`/`vars`, `config`, `db`, `api`, `url`, `id`, `uuid`, `llm`, `sdk`, etc.
+
+One python idiomatic exception is to always bind errors as `e` (see Exception Handling). This is the a deliberate deviation from the fully descriptive names rule, chosen due to ubiquity.
 
 ## Imports
 
 Use `import x` instead of `from x import y`. Reference with full module path for clarity:
 - `import fastapi` then `app = fastapi.FastAPI()`
-- Exception: Standard library modules with very long paths can use `from` imports if it improves readability
 
 All imports must be at the top of the file. Never use `__import__()` or place `import` statements inside functions, methods, or conditional blocks. If a top-level import would create a circular dependency, that is a structural problem. Fix the dependency graph instead of hiding the cycle with a late import.
 
@@ -146,7 +149,7 @@ class InkTrialService:
     }
     ```
   - Note: the space-around-`=` rule explicitly overrides PEP 8 (which says no spaces around `=` in keyword arguments) and will fight auto-formatters like black and ruff's default profile. Configure the formatter to respect this rule, or disable formatting on conflicting regions. PEP 8 does not win here.
-- Never use columnar alignment. Do not pad spaces to line up `=`, `:`, values, comments, or related syntax across consecutive lines.
+- Do not use columnar alignment for executable code syntax. Do not pad spaces to line up `=`, `:`, values, or related syntax across consecutive lines. Inline comments may be aligned when a consecutive block uses them as a compact explanatory table and the alignment improves scanning.
 - For function calls with multiple arguments, use JSON-style indenting with each argument on its own line. This applies even when arguments are trivial (a single-key dict, a one-element list, a short literal). Blow them up anyway. Consistency with larger calls and scannability matter more than compactness; do not collapse for elegance. Exception: Decorators (`@app.get`, `@app.post`, etc.) stay on one line:
   ```python
   return templates.TemplateResponse(
@@ -350,11 +353,13 @@ import os
      - `# API: Methods`, `# DEBUG: Model dumps`, `# Internal: Linking`
   3. Normal inline comments: all lowercase.
      - `return uid  # hex format without dashes`
-- Docstrings use sentence case (leading capital). Keep docstrings to 1-2 sentences, wrap close to the 120-column max instead of wrapping early, and never exceed 5 physical lines under any circumstances.
+- Docstrings use sentence case (leading capital). Keep docstrings to 1-2 sentences, wrap close to the 120-column max instead of wrapping early, and never exceed 5 physical lines under any circumstances. Always include an empty newline after the docstring before the code body, mirroring the empty newline before it:
   ```python
   class LiveMemoryBufferManager:
       def _init_live_memory_buffers(self):
 
           """Live memory buffers remain instantiated on the class and allow for keeping state on long-running background
           tasks, in this case LLM streaming requests. This is to avoid clobbering this status to the database."""
+
+          self._buffers = {}
   ```

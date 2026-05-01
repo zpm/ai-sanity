@@ -4,11 +4,13 @@
 
 ## Fully Descriptive Names
 
-Brevity is the enemy of clarity. Every name (variable, function, constant) must fully describe what it is, what it does, or what it's for. Never drop concept words for brevity. Universally understood abbreviations are fine: `config_file` not `file` or `f`, `normalized_value` not `value`. If a name has multiple concepts, every concept must be present. A reader should understand the name's full meaning without looking at the implementation.
+Brevity is the enemy of clarity.
+
+Every name (variable, function, constant) must describe what it is, what it does, or what it's for. Avoid dropping concept words for brevity.
 
 - Encode all concepts. If something is "safe user data," the name must say ALL of that. Not just "safe data" (safe what?) or "user info" (what makes it special?):
   - `get_safe_user_data_file_path()` (safe, user, data, all present)
-- Variables must read like helpful commentary. The reader should understand what a variable holds and where it came from without checking the right side of the assignment:
+- Variables and functions must read like helpful commentary:
   - `current_branch_name="$(git rev-parse --abbrev-ref HEAD)"`
   - `requirements_lock_file="$ROOT_DIR/requirements.lock"`
 - Constants (SCREAMING_SNAKE_CASE) must describe their purpose and scope:
@@ -16,10 +18,12 @@ Brevity is the enemy of clarity. Every name (variable, function, constant) must 
 - Functions must describe the full action and context:
   - `ensure_venv_activated()` (ensures venv is active, idempotent)
   - `require_git_clean_working_tree()` (requires clean tree, errors if dirty)
-- Never sacrifice clarity for aesthetics. A long, clear name is always better than a short, ambiguous one. If a name feels "too long," that's a sign it's doing its job.
+- Never sacrifice clarity for aesthetics. A clear name is always better than a short, ambiguous one.
 - Concept-first naming. Lead with the concept so that related names sort together alphabetically in env vars, config files, and autocomplete. Put qualifiers like `total`, `count`, `max`, `min` at the end:
   - `PYTHON_VERSION_MIN`, `PYTHON_VERSION_MAX`, `PYTHON_VERSION_REQUIRED`
   - This applies equally to environment variable groups: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`. All `DB_*` vars group together when sorted.
+
+Clarity does not mean expanding abbreviations. Common or technical abbreviations are encouraged as part of a broader descriptive name: `env`, `var`/`vars`, `config`, `db`, `api`, `url`, `id`, `uuid`, `llm`, `sdk`, etc.
 
 Note: the double-quote rule that applies in Python and JavaScript does not apply to shell, which has semantic differences between `'` and `"` (variable expansion, command substitution).
 
