@@ -10,11 +10,11 @@ ALWAYS use double quotes for strings. This is a strict, non-negotiable rule.
 - CSS: `font-family: "Roboto Slab"`
 - HTML attributes: `class="btn"`
 
-No exceptions. Single quotes are never acceptable for strings.
+The rule applies to the primary (outer) quotes. Single quotes inside a double-quoted string are fine: `"it's ready"`, `"key='value'"`.
 
 ## Fully Descriptive Names
 
-Brevity is the enemy of clarity. Every name (variable, function, method, constant, class, CSS class, HTML id) must fully describe what it is, what it does, or what it's for. Never shorten, abbreviate, or drop words for brevity. If a name has multiple concepts, every concept must be present. A reader should understand the name's full meaning without looking at the implementation.
+Brevity is the enemy of clarity. Every name (variable, function, method, constant, class, CSS class, HTML id) must fully describe what it is, what it does, or what it's for. Never drop concept words for brevity. Universally understood abbreviations are fine: `config_file` not `file` or `f`, `normalized_value` not `value`. If a name has multiple concepts, every concept must be present. A reader should understand the name's full meaning without looking at the implementation.
 
 - Encode all concepts. If something is "safe user data," the name must say ALL of that. Not just "safe data" (safe what?) or "user info" (what makes it special?):
   - `apiGetSafeUserData()` (safe, user, data, all present)

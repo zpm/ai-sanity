@@ -2,17 +2,21 @@
 
 > Covers Python code style: imports, spacing, naming, quotes, file headers, and comments.
 
+## `__init__.py` Files
+
+`__init__.py` files must be empty (zero bytes).
+
 ## Double Quotes Everywhere
 
 ALWAYS use double quotes for strings. This is a strict, non-negotiable rule.
 
 - `mode = "json"`, `role = "system"`
 
-No exceptions. Single quotes are never acceptable for strings.
+The rule applies to the primary (outer) quotes. Single quotes inside a double-quoted string are fine: `"it's ready"`, `"key='value'"`.
 
 ## Fully Descriptive Names
 
-Brevity is the enemy of clarity. Every name (variable, function, method, constant, class) must fully describe what it is, what it does, or what it's for. Never shorten, abbreviate, or drop words for brevity. If a name has multiple concepts, every concept must be present. A reader should understand the name's full meaning without looking at the implementation.
+Brevity is the enemy of clarity. Every name (variable, function, method, constant, class) must fully describe what it is, what it does, or what it's for. Never drop concept words for brevity. Universally understood abbreviations are fine: `config_file` not `file` or `f`, `normalized_value` not `value`. If a name has multiple concepts, every concept must be present. A reader should understand the name's full meaning without looking at the implementation.
 
 - Encode all concepts. If something is "safe user data," the name must say ALL of that. Not just "safe data" (safe what?) or "user info" (what makes it special?):
   - `api_get_safe_user_data()` (safe, user, data, all present)
@@ -199,6 +203,14 @@ All functions must live inside a class. No bare `def` at module level. If a func
 
 Note: this explicitly overrides typical Python convention. Top-level functions are idiomatic in most Python code and no linter or formatter enforces this rule out of the box. Rationale: in complex projects, scattered module-level helpers are error-prone, hard to discover, and drift without a clear home. This convention mirrors Java/C#-style organization where every callable has a class home. Third-party libraries will not follow this rule; it applies only to code you own.
 
+Exception: one-off scripts, CLI tools, and other short, self-contained files are exempt. Normal idiomatic Python with bare top-level functions is correct in those contexts. Do not wrap functions in a class just to satisfy this rule when the file is a simple script.
+
+Exception: module-level utility files are exempt when the module's primary purpose is to expose small, stateless helper functions, validators, factories, parsers, or formatters. Do not create a class only to namespace functions in these files. If the module name already provides the domain context, top-level utility functions are clearer and preferred. Allowed examples include shared model helpers such as `models/shared.py`, validation helper modules, ID helpers, timestamp helpers, string parsing helpers, one-off scripts, CLI tools, and short self-contained files.
+
+This exception does not apply to services, storage classes, route business logic, or domain objects with state. In those files, functions should still live on the relevant class
+
+Module-level utility functions still follow the normal naming rules: names must be descriptive, call sites must be updated when renamed, and persisted or serialized contracts must not be changed for naming hygiene.
+
 ```python
 class CostCalculator:
     @staticmethod
@@ -267,7 +279,7 @@ Inside Python this does not apply. Enum comparisons (`if status == MyEnum.ACTIVE
           # load config here
           pass
   ```
-- No nested functions. Never define a function inside another function. Extract it as a private method on the class instead. If you need a callable for `asyncio.to_thread`, pass a method reference and its arguments.
+- No nested functions. Never define a function inside another function. In a codebase with classes, extract it as a private method on the class instead. In one-off scripts without classes, extract to a top-level function. If you need a callable for `asyncio.to_thread`, pass a method reference and its arguments.
 - No trivial wrapper helpers. Don't create helper functions that just wrap a single expression like dict construction or simple transforms. Inline the expression directly at the call site; it's easier to read and grep for:
   ```python
   class TemplateContextBuilder:
