@@ -37,7 +37,11 @@ Every name (variable, function, method, constant, class) must describe what it i
 
 Clarity does not mean expanding abbreviations. Common or technical abbreviations are encouraged as part of a broader descriptive name: `env`, `var`/`vars`, `config`, `db`, `api`, `url`, `id`, `uuid`, `llm`, `sdk`, etc.
 
-One python idiomatic exception is to always bind errors as `e` (see Exception Handling). This is the a deliberate deviation from the fully descriptive names rule, chosen due to ubiquity.
+When wrapping or passing through a parameter from an underlying library, keep the library's naming. Do not rename `poolclass` to `pool_class` for project consistency when the underlying API uses `poolclass`.
+
+One python idiomatic exception is to always bind errors as `e` (see Exception Handling). This is a deliberate deviation from the fully descriptive names rule, chosen due to ubiquity.
+
+Methods may use short canonical names like `.get()`, `.create()`, `.close()`, `.delete()` when the class or module name already provides the domain context and the meaning is unambiguous. The guard rail is that no competing method exists on the same class: if a class has both `create_user` and `create_session`, neither can shorten to `.create()`. A method that is the only one of its kind on the class can use the short form (e.g. `LLMModelRegistry.get(model_id)`, `DatabaseEngine.create()`, `EmailTemplateRegistry.get_all()`).
 
 ## Imports
 
@@ -46,7 +50,9 @@ Use `import x` instead of `from x import y`. Reference with full module path for
 
 All imports must be at the top of the file. Never use `__import__()` or place `import` statements inside functions, methods, or conditional blocks. If a top-level import would create a circular dependency, that is a structural problem. Fix the dependency graph instead of hiding the cycle with a late import.
 
-Never use quoted/string type annotations (e.g. `"MyClass"`, `"module.MyClass | None"`). Always import the module and use the real type. Never use `TYPE_CHECKING` or `from __future__ import annotations`.
+`import typing` is only for types that have no built-in syntax (e.g. `typing.AsyncGenerator`). All other type syntax uses Python built-ins: `list[str]`, `dict[str, int]`, `str | None`, `X | Y`. Do not introduce `import typing` for `typing.Self`, `typing.Any`, or other utility types that have a simpler alternative (quoted class name, `dict`, `object`). For self-references inside a class body (e.g. a `@staticmethod` return type), use the quoted class name as the one permitted exception to the no-quoted-annotations rule below.
+
+Never use quoted/string type annotations except for self-references inside a class body where the class name is not yet defined. Always import the module and use the real type. Never use `TYPE_CHECKING` or `from __future__ import annotations`.
 
 Import spacing: Separate third-party imports from project imports with one empty line:
 ```python
@@ -60,7 +66,9 @@ import myapp.services.config
 
 ## Line Length
 
-All lines must wrap at 120 characters. When a string literal (including f-strings, log messages, error messages) exceeds 120 characters, split it using implicit string concatenation:
+All lines must wrap at 120 characters. When a parameter is already on its own line, it may exceed 120 characters if the value is a single item such as a dependency reference or a long default. Wrapping the value onto a second line splits a semantic unit without improving readability.
+
+When a string literal (including f-strings, log messages, error messages) exceeds 120 characters, split it using implicit string concatenation:
 
 ```python
 myapp.services.logging.critical(
@@ -213,6 +221,10 @@ Exception: module-level utility files are exempt when the module's primary purpo
 This exception does not apply to services, storage classes, route business logic, or domain objects with state. In those files, functions should still live on the relevant class
 
 Module-level utility functions still follow the normal naming rules: names must be descriptive, call sites must be updated when renamed, and persisted or serialized contracts must not be changed for naming hygiene.
+
+## Prefer Instance Methods
+
+Prefer instance methods. Only use `@staticmethod` for true stateless utilities (pure functions with no plausible future need for polymorphism or dependency injection).
 
 ```python
 class CostCalculator:
