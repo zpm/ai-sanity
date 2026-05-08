@@ -48,6 +48,8 @@ Methods may use short canonical names like `.get()`, `.create()`, `.close()`, `.
 Use `import x` instead of `from x import y`. Reference with full module path for clarity:
 - `import fastapi` then `app = fastapi.FastAPI()`
 
+Exception: `from x import y` is allowed when importing a specific class to explicitly exclude sibling classes in the same module from the dependency surface. The scoped import signals "this module depends only on this class, not on anything else in that module." Use only when the distinction is architecturally meaningful (e.g., importing a stateless class while excluding an instance service class in the same file).
+
 All imports must be at the top of the file. Never use `__import__()` or place `import` statements inside functions, methods, or conditional blocks. If a top-level import would create a circular dependency, that is a structural problem. Fix the dependency graph instead of hiding the cycle with a late import.
 
 `import typing` is only for types that have no built-in syntax (e.g. `typing.AsyncGenerator`). All other type syntax uses Python built-ins: `list[str]`, `dict[str, int]`, `str | None`, `X | Y`. Do not introduce `import typing` for `typing.Self`, `typing.Any`, or other utility types that have a simpler alternative (quoted class name, `dict`, `object`). For self-references inside a class body (e.g. a `@staticmethod` return type), use the quoted class name as the one permitted exception to the no-quoted-annotations rule below.
@@ -210,7 +212,7 @@ class StripeWebhookIngest(WebhookIngest):
 
 ## No Top-Level Functions
 
-All functions must live inside a class. No bare `def` at module level. If a function doesn't need instance state, make it a `@staticmethod` on the most relevant class. This keeps every function discoverable via its class and avoids orphaned helpers drifting around at module scope.
+All functions must live inside a class. No bare `def` at module level. This keeps every function discoverable via its class and avoids orphaned helpers drifting around at module scope.
 
 Note: this explicitly overrides typical Python convention. Top-level functions are idiomatic in most Python code and no linter or formatter enforces this rule out of the box. Rationale: in complex projects, scattered module-level helpers are error-prone, hard to discover, and drift without a clear home. This convention mirrors Java/C#-style organization where every callable has a class home. Third-party libraries will not follow this rule; it applies only to code you own.
 
@@ -222,9 +224,13 @@ This exception does not apply to services, storage classes, route business logic
 
 Module-level utility functions still follow the normal naming rules: names must be descriptive, call sites must be updated when renamed, and persisted or serialized contracts must not be changed for naming hygiene.
 
-## Prefer Instance Methods
+## Static Methods
 
-Prefer instance methods. Only use `@staticmethod` for true stateless utilities (pure functions with no plausible future need for polymorphism or dependency injection).
+Two rules govern `@staticmethod` usage:
+
+Rule 1: no static methods on classes with instance state. Any class that has an `__init__` (holds storage, service references, db connections, or any other state) uses only instance methods. Whether a helper happens to use `self` today is an implementation detail; keeping everything instance maintains uniformity and eliminates a judgment call. If a helper is truly independent of the class, extract it into a dedicated utility class (which may itself be all-static under Rule 2).
+
+Rule 2: static required on stateless organizational classes. When a class has no instance state (no `__init__`, no mutable attributes) and exists purely to namespace related functions, all methods must be `@staticmethod`. The class is a code organization tool, not an object.
 
 ```python
 class CostCalculator:
@@ -233,6 +239,8 @@ class CostCalculator:
 
         return sum(i.price for i in items)
 ```
+
+Exemption: test files are exempt from these rules.
 
 ## Third-Party API Responses
 

@@ -133,6 +133,29 @@ Always use `rem` for font sizes. Never use `em`, which compounds when elements a
 
 - `font-size: 0.875rem;`
 
+## Object and Array Literals
+
+Object literals and array literals with multiple entries must be expanded with one key per line, even when entries are trivial (a single-key object, a short literal, or a one-element array). Blow them up anyway. Consistency with larger literals and scannability matter more than compactness; do not collapse for elegance. This applies to JS source the same way it applies to JSON files.
+
+```javascript
+const ROUTES = [
+    {
+        path: "/users",
+        label: "Users"
+    },
+    {
+        path: "/stories",
+        label: "Stories"
+    }
+];
+```
+
+The exception is an object or array used as an inline config value where the entire literal stays under the line limit and never grows beyond a small fixed shape (e.g. a `{ x, y }` coordinate, an enum-like `{ type: "X" }` discriminator). When in doubt, blow it up.
+
+## Columnar Alignment
+
+Do not use columnar alignment for executable code syntax. Do not pad spaces to line up `:`, `=`, values, or related syntax across consecutive lines. One space after `:` in object literals, one space around `=`, always. Columnar alignment creates noisy diffs when any field is renamed or added (the whole block has to be reformatted) and rewards aesthetics over change-resilience. Inline comments may be aligned when a consecutive block uses them as a compact explanatory table and the alignment improves scanning.
+
 ## Whitespace
 
 Max one blank line between sections. Never use two or more consecutive blank lines (triple newlines).
@@ -147,3 +170,7 @@ someMethod() {
 ```
 
 This applies to function declarations, method definitions, and arrow callbacks at the function level. It does not apply to inner control-flow blocks (`if`, `for`, `try`/`catch`, `else`); those keep their braces tight.
+
+## Ternary Operators
+
+Only use ternary expressions (`condition ? a : b`) when the variable has exactly two possible values and no additional values could ever apply. If the variable can have more than two values anywhere in the program, even if the current branch narrows it to two, use explicit `if`/`else if` chains instead. A ternary that silently falls through to a default for an unexpected value is a bug waiting to happen.
