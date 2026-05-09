@@ -38,6 +38,15 @@
         ]
       },
       {
+        "matcher": "AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $HOME/Dev/ai-sanity/hooks/no_questions/pretooluse.py"
+          }
+        ]
+      },
+      {
         "matcher": "Write|Edit|NotebookEdit|Read",
         "hooks": [
           {

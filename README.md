@@ -8,6 +8,10 @@ Shared Claude Code hooks and style guides.
 
 Every rule that can be a programmatic check lives here instead to force claude into compliance.
 
+## Fail Closed
+
+All hooks fail closed. If a hook crashes for any reason, the tool call is denied with the error message, not silently passed through. A bug in a hook must be loud and visible so it gets fixed.
+
 ## Setup
 
 Copy [./settings.example.json](settings.example.json) to `~/.claude/settings.json` and adjust paths.
@@ -55,13 +59,19 @@ Each project that wants playbook support creates `./.ai-sanity/playbook.json`. I
 
 A trailing ` *` in the `bash` field enables prefix matching (token-level, not string). Without it, the match is exact.
 
-## 2. No Memory
+## 2. No Questions
+
+Blocks the `AskUserQuestion` tool so claude asks questions in plain chat text instead of rendering interactive dialog widgets.
+
+Works by unconditionally denying any `AskUserQuestion` tool call with a message redirecting claude to use plain text.
+
+## 3. No Memory
 
 Prevents claude from using its built-in auto-memory system, as it sits outside version control.
 
 Works by blocking reads and writes to the auto-memory directory and any `MEMORY.md` file.
 
-## 3a. Required Reading
+## 4a. Required Reading
 
 Makes claude read project documentation and style guides before it can edit matching files.
 
@@ -72,7 +82,7 @@ Works by forcing claude to Read specified documents before it can touch matching
 | `./.ai-sanity/required-reading.json` | No | If present, its rules are loaded via directory walk-up from the edited file. If absent, silently skipped. |
 | Any doc listed in that manifest | Yes | If the manifest exists and lists a doc, that doc must exist on disk. A missing target is a configuration error and blocks the edit. |
 
-## 3b. Required Styleguides
+## 4b. Required Styleguides
 
 Make claude read global styleguides contained in this repo before it can edit matching files.
 

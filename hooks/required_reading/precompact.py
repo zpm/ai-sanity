@@ -18,7 +18,7 @@ import required_reading._state
 class PreCompactRequiredReadsEntry:
 
     """Single-purpose entry: read the PreCompact payload, extract the session id, clear the session's required-reads
-    state directory. Any error falls through to a silent exit 0; this hook cannot usefully deny or emit anything."""
+    state directory."""
 
 
     @staticmethod
@@ -34,7 +34,7 @@ class PreCompactRequiredReadsEntry:
             )
             _common._hook_io.PreCompactHookIo.emit_passthrough_and_exit()
         except Exception:
-            _common._hook_io.PreCompactHookIo.emit_passthrough_and_exit()
+            raise
 
 
 if __name__ == "__main__":

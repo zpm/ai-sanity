@@ -64,7 +64,7 @@ class PostToolUseReadObserverRuleChecks:
 
 class PostToolUseReadObserverEntry:
 
-    """Entry point. Errors fall through to passthrough so a bug cannot affect the completed Read."""
+    """Entry point."""
 
 
     @staticmethod
@@ -93,7 +93,7 @@ class PostToolUseReadObserverEntry:
                 )
             _common._hook_io.PostToolUseHookIo.emit_passthrough_and_exit()
         except Exception:
-            _common._hook_io.PostToolUseHookIo.emit_passthrough_and_exit()
+            raise
 
 
 if __name__ == "__main__":

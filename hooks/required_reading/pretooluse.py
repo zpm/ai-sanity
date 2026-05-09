@@ -194,7 +194,7 @@ class PreToolUseRequiredReadsRuleChecks:
 
 class PreToolUseRequiredReadsHookEntry:
 
-    """Entry point. Errors fall through to passthrough so a bug in this hook cannot crash an edit."""
+    """Entry point."""
 
 
     @staticmethod
@@ -262,8 +262,8 @@ class PreToolUseRequiredReadsHookEntry:
                 edited_file_abs_path = edited_file_abs_path
             )
             _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(deny_reason_string)
-        except Exception:
-            _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
+        except Exception as e:
+            _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(f"required_reading/pretooluse hook crashed: {e}")
 
 
 if __name__ == "__main__":

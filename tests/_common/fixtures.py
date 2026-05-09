@@ -112,6 +112,19 @@ class PreToolUsePayloadFixtureBuilder:
 
 
     @staticmethod
+    def build_ask_user_question_payload(questions = None):
+
+        """Returns an AskUserQuestion PreToolUse payload with the given questions list."""
+        builder_class = PreToolUsePayloadFixtureBuilder
+        return builder_class.build_base_payload(
+            tool_name = "AskUserQuestion",
+            tool_input = {
+                "questions": questions or []
+            }
+        )
+
+
+    @staticmethod
     def build_posttooluse_read_payload(file_path, working_directory = "/tmp", session_id = "test-session"):
 
         """Returns a synthetic PostToolUse payload for a completed Read tool call. Matches the PreToolUse shape with

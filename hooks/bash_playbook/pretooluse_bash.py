@@ -642,8 +642,8 @@ class PreToolUseBashSafetyHookEntry:
             if all(result == "allow" for result in segment_evaluation_results):
                 _common._hook_io.PreToolUseHookIo.emit_allow_decision_and_exit()
             _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
-        except Exception:
-            _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
+        except Exception as e:
+            _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(f"bash_playbook/pretooluse_bash hook crashed: {e}")
 
 
 if __name__ == "__main__":
