@@ -341,6 +341,7 @@ class DeferToUserCommandsCheck:
             "install",
             "uninstall",
         ],
+        "gh": ["*"],
         "npm": [
             "ci",
             "install",
