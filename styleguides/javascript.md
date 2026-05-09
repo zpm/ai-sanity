@@ -12,6 +12,17 @@ ALWAYS use double quotes for strings. This is a strict, non-negotiable rule.
 
 The rule applies to the primary (outer) quotes. Single quotes inside a double-quoted string are fine: `"it's ready"`, `"key='value'"`.
 
+## Line Length
+
+All lines wrap at 120 characters. When a string literal exceeds 120 chars, split it across lines using `+` between adjacent template literals. This produces a single runtime string with no embedded newlines, mirroring Python's implicit string concatenation. A single multi-line template literal embeds real `\n` characters into the result, which is almost never the intent for log or error strings.
+
+```javascript
+console.error(
+    `main.js dashboard.load: failed to fetch items,`
+    + ` retryCount=${retryCount}, lastError=${lastError}, timestamp=${timestamp}`
+);
+```
+
 ## Fully Descriptive Names
 
 Brevity is the enemy of clarity.
@@ -174,3 +185,168 @@ This applies to function declarations, method definitions, and arrow callbacks a
 ## Ternary Operators
 
 Only use ternary expressions (`condition ? a : b`) when the variable has exactly two possible values and no additional values could ever apply. If the variable can have more than two values anywhere in the program, even if the current branch narrows it to two, use explicit `if`/`else if` chains instead. A ternary that silently falls through to a default for an unexpected value is a bug waiting to happen.
+
+## No Singletons
+
+No singleton patterns. No IIFE-cached instance, no `getInstance()` with `if (!instance)` guards. The namespace pattern (`window.foo = { ... }`) is already a singleton by construction; reuse it instead.
+
+```javascript
+// bad
+window.config = (function () {
+    let instance = null;
+    return {
+        get() {
+            if (instance === null) {
+                instance = loadConfig();
+            }
+            return instance;
+        }
+    };
+})();
+
+// good
+window.config = {
+    settings: loadConfig(),
+
+    get() {
+        return config.settings;
+    }
+};
+```
+
+## No Trivial Wrapper Helpers
+
+Don't create helpers that wrap a single expression for a single call site. Inline the expression directly. A wrapper earns its place when it is shared across multiple call sites; otherwise it is dead indirection.
+
+```javascript
+// bad: single call site, helper wraps one literal
+function buildUserPayload(user) {
+    return {
+        userId: user.id,
+        role: user.role
+    };
+}
+
+await api.send(buildUserPayload(currentUser));
+
+// good: inlined
+await api.send({
+    userId: currentUser.id,
+    role: currentUser.role
+});
+```
+
+When the same wrapper is called from multiple sites, keep it:
+
+```javascript
+window.users = {
+    buildPayload(user) {
+        return {
+            userId: user.id,
+            role: user.role
+        };
+    }
+};
+
+await api.send(users.buildPayload(currentUser));
+await audit.log(users.buildPayload(actor));
+await queue.enqueue(users.buildPayload(targetUser));
+```
+
+## No Implicit Defaults
+
+In logging, audit, and observability code, no implicit defaults at all. No `= null`, `= 0`, `= false`, `= ""`, `= []` on parameters or destructured arguments. Every caller passes every value explicitly so that no field is silently dropped from the audit trail.
+
+```javascript
+// bad
+window.audit = {
+    logRequest({ userId, storyId = null, costStream = null, latencyMs = 0 }) {
+
+        // ...
+
+    }
+};
+
+audit.logRequest({ userId: user.id });
+
+// good
+window.audit = {
+    logRequest({ userId, storyId, costStream, latencyMs }) {
+
+        // ...
+
+    }
+};
+
+audit.logRequest({
+    userId: user.id,
+    storyId: null,
+    costStream: null,
+    latencyMs: 0
+});
+```
+
+Outside logging and audit code, the same posture applies as a preference. Require explicit values rather than silently defaulting; implicit defaults make it easy to forget a field. When in doubt, require it.
+
+## Third-Party API Responses
+
+Never trust values from third-party APIs. Always coerce to the expected type explicitly, then validate. JS `Number(...)` returns `NaN` silently on bad input; follow numeric coercion with a `Number.isFinite(...)` check that throws on failure. The same posture applies to strings (`String(...)` plus a null/undefined check) and arrays (length check).
+
+```javascript
+// bad: raw access, trusts the shape
+const usage = response.usage;
+const inputTokens = usage.prompt_tokens;
+const costTicks = usage.cost_in_usd_ticks;
+
+// also bad: coerce but let NaN propagate
+const inputTokens = Number(response.usage.prompt_tokens);
+const costTicks = Number(response.usage.cost_in_usd_ticks);
+
+// good: coerce, then validate
+const usage = response.usage ?? {};
+const inputTokens = Number(usage.prompt_tokens);
+const costTicks = Number(usage.cost_in_usd_ticks);
+if (!Number.isFinite(inputTokens) || !Number.isFinite(costTicks)) {
+    throw new Error(`bad usage payload: ${JSON.stringify(usage)}`);
+}
+```
+
+## Exception Handling
+
+Always bind caught exceptions as `err`. No `error`, `e`, `exc`, `caughtErr`.
+
+```javascript
+try {
+    await api.fetchUser(userId);
+} catch (err) {
+    console.error("fetch failed:", err);
+}
+```
+
+The `try` block wraps only the statement(s) that can actually raise the caught exception. Validation, context building, and pure logic stay outside. A broad `try` hides bugs in setup logic that should fail loudly.
+
+```javascript
+// bad: guard, context, render all swallowed by the catch
+try {
+    if (!userEmail) {
+        return;
+    }
+    const context = buildContext(user);
+    const html = renderTemplate(context);
+    await sendEmail(html);
+} catch (err) {
+    console.warn("email failed:", err);
+}
+
+// good: only the fallible I/O inside try
+if (!userEmail) {
+    return;
+}
+const context = buildContext(user);
+const html = renderTemplate(context);
+try {
+    await sendEmail(html);
+} catch (err) {
+    console.warn("email failed:", err);
+}
+```
