@@ -29,15 +29,15 @@ Note: the double-quote rule that applies in Python and JavaScript does not apply
 
 ## Structure
 
-Non-trivial logic lives in a shared `.py` file, or in the wrapped tool call itself (`pytest`, `npm test`, etc.).
+Non-trivial logic lives in a shared `.py` file, or in the wrapped tool call itself (`pytest`, `npm test`, etc.). Shell scripts contain only platform-specific logic (venv activation, process management) before handing off to the `.py` or tool command as early as possible.
 
-`.ps1` and `.sh` are parallel per-platform entry points; each is natively written for its platform and neither delegates to the other. Both `.ps1` and `.sh` always exist, even when the body is a one-liner. Their role is limited to platform-specific setup (venv activation, system locks on test sentinel files, etc.) before handing off to the `.py` or tool command. Any shared logic that can live in the common call must live there. The shell scripts should hand off to Python or the tool command as early as possible.
+`.ps1` and `.sh` are parallel per-platform entry points; each is natively written for its platform and neither delegates to the other. `.ps1` pairs exist only for local scripts (dev machines run macOS or Windows). Prod scripts are `.sh` only (Linux). A `.ps1` whose body invokes `bash.exe` on the sibling `.sh` is not allowed.
+
+When scripts are organized by environment (`local/`, `prod/`), thin wrappers hardcode their environment name and config path, then call shared Python in a sibling `common/` directory. Root discovery lives in the shared Python, not duplicated across wrappers.
 
 Venv paths are the canonical case for per-platform scripts:
 - Windows: `venv\Scripts\Activate.ps1`
 - Unix: `venv/bin/activate`
-
-A `.ps1` whose body invokes `bash.exe` on the sibling `.sh` is not allowed.
 
 ## Finding the Project Root
 
