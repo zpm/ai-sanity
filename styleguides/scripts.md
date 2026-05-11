@@ -1,6 +1,6 @@
-# Shell Scripts Style Guide
+# Scripts Style Guide
 
-> Covers shell script conventions across ALL PROJECTS.
+> Covers script conventions across ALL PROJECTS.
 
 ## Fully Descriptive Names
 
@@ -11,12 +11,12 @@ Every name (variable, function, constant) must describe what it is, what it does
 - Encode all concepts. If something is "safe user data," the name must say ALL of that. Not just "safe data" (safe what?) or "user info" (what makes it special?):
   - `get_safe_user_data_file_path()` (safe, user, data, all present)
 - Variables and functions must read like helpful commentary:
-  - `current_branch_name="$(git rev-parse --abbrev-ref HEAD)"`
-  - `requirements_lock_file="$ROOT_DIR/requirements.lock"`
+  - `current_branch_name = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], ...)`
+  - `requirements_lock_file = root_dir / "requirements.lock"`
 - Constants (SCREAMING_SNAKE_CASE) must describe their purpose and scope:
   - `MAX_RETRY_ATTEMPTS_HTTP` (what it's for, what it limits)
 - Functions must describe the full action and context:
-  - `ensure_venv_activated()` (ensures venv is active, idempotent)
+  - `ensure_docker_running()` (ensures docker is up, errors if not)
   - `require_git_clean_working_tree()` (requires clean tree, errors if dirty)
 - Never sacrifice clarity for aesthetics. A clear name is always better than a short, ambiguous one.
 - Concept-first naming. Lead with the concept so that related names sort together alphabetically in env vars, config files, and autocomplete. Put qualifiers like `total`, `count`, `max`, `min` at the end:
@@ -25,23 +25,46 @@ Every name (variable, function, constant) must describe what it is, what it does
 
 Clarity does not mean expanding abbreviations. Common or technical abbreviations are encouraged as part of a broader descriptive name: `env`, `var`/`vars`, `config`, `db`, `api`, `url`, `id`, `uuid`, `llm`, `sdk`, etc.
 
-Note: the double-quote rule that applies in Python and JavaScript does not apply to shell, which has semantic differences between `'` and `"` (variable expansion, command substitution).
-
 ## Structure
 
-Non-trivial logic lives in a shared `.py` file, or in the wrapped tool call itself (`pytest`, `npm test`, etc.). Shell scripts contain only platform-specific logic (venv activation, process management) before handing off to the `.py` or tool command as early as possible.
+Scripts are Python by default. `.py` is the standard format for all scripts: it matches the codebase language, is platform-independent, and is testable. Dev machines and prod operators have the venv active in their terminal. No shell wrapper is needed to run a Python script.
 
-`.ps1` and `.sh` are parallel per-platform entry points; each is natively written for its platform and neither delegates to the other. `.ps1` pairs exist only for local scripts (dev machines run macOS or Windows). Prod scripts are `.sh` only (Linux). A `.ps1` whose body invokes `bash.exe` on the sibling `.sh` is not allowed.
+`.sh` and `.ps1` files exist only for two cases:
 
-When scripts are organized by environment (`local/`, `prod/`), thin wrappers hardcode their environment name and config path, then call shared Python in a sibling `common/` directory. Root discovery lives in the shared Python, not duplicated across wrappers.
+- Agent entry points. Agents (Claude Code) run in sandboxed environments without venv. `.sh`/`.ps1` thin pairs activate the venv and call `python <script>.py` immediately. No logic beyond venv activation and arg passthrough lives in these files. Each is natively written for its platform (`.sh` for macOS/Linux, `.ps1` for Windows); neither delegates to the other. A `.ps1` whose body invokes `bash.exe` on the sibling `.sh` is not allowed.
+- Bootstrap scripts. Scripts that create the Python environment itself (e.g., `bootstrap-venv.sh` on a prod server). Python/venv does not exist yet, so shell is the only option. `.sh` only because bootstrapping targets Linux.
 
-Venv paths are the canonical case for per-platform scripts:
-- Windows: `venv\Scripts\Activate.ps1`
-- Unix: `venv/bin/activate`
+All `.py` scripts require tests with a goal of 100% coverage. Mock external boundaries (`subprocess.run`, `subprocess.Popen`, file I/O, network calls, `input()` prompts) and test argument parsing, logic flow, and error handling paths.
+
+### Agent wrapper naming convention
+
+When `.sh`/`.ps1` agent entry points call a `.py` script, the `.py` lives in a `run/` (or `common/`) subdirectory and shares the same base name as the wrapper. `all-fast.sh` calls `run/all_fast.py`. `pytest.ps1` calls `run\pytest.py`. The name mapping is: strip the extension, convert hyphens to underscores for the `.py` filename. No prefix differences, no `run_` prefix on the Python file.
+
+### No duplicated functions
+
+Shared logic lives in one place. If multiple scripts need the same helper (SSH wrappers, output teeing, path builders), extract it into a shared module that all callers import. Environment wrappers call shared scripts in a sibling `common/` directory.
+
+### Path resolution
+
+Scripts use `pathlib.Path(__file__).resolve().parents[N]` to hardcode the project root based on their fixed depth in the directory tree. No `find_project_root()` walk-up function. Scripts do not move, so the depth is stable.
 
 ## Finding the Project Root
 
-Scripts must work when invoked from any working directory. All path references use a root directory variable, resolved at startup by walking up the directory tree until a `.git` directory is found.
+Scripts use `pathlib.Path(__file__).resolve().parents[N]` to resolve the project root, where N is the script's fixed depth in the directory tree. Never write a walk-up function; the directory structure is static and the depth is known at authoring time.
+
+```python
+import pathlib
+
+# scripts/setup/install.py -> parents[2] = project root
+PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[2]
+
+# scripts/tests/run/check.py -> parents[3] = project root
+PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[3]
+```
+
+Then use `PROJECT_ROOT` to build all absolute paths: `PROJECT_ROOT / "src"`, `PROJECT_ROOT / "config"`, etc. Never use relative `../../` navigation from the script location.
+
+For agent entry points that remain as `.sh`/`.ps1`, the shell root-finding patterns are:
 
 `.sh`:
 
@@ -69,6 +92,4 @@ while (-not (Test-Path "$RootDir\.git")) {
 }
 ```
 
-Then use `$ROOT_DIR` (`.sh`) or `$RootDir` (`.ps1`) to build all absolute paths: `$ROOT_DIR/server`, `$ROOT_DIR/venv/bin/activate`, etc. Never use relative `../../` navigation from the script location.
-
-Exception: a script that only operates inside its own directory (e.g. a test runner that `cd`s to `$PSScriptRoot` / `$(dirname "$0")` and hands off to `pytest` or `unittest discover` in the same directory) does not need the walk-up. The walk-up exists to resolve paths elsewhere in the repo; a self-contained script has no such paths to resolve.
+Note: the double-quote rule that applies in Python and JavaScript does not apply to shell, which has semantic differences between `'` and `"` (variable expansion, command substitution).
