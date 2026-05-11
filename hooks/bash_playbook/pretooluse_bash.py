@@ -673,10 +673,11 @@ class PreToolUseBashSafetyHookEntry:
             if not compound_command_segments:
                 _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()
             segment_evaluation_results = []
+            effective_segment_cwd = bash_command_cwd
             for segment_clause_groups in compound_command_segments:
                 segment_payload = PreToolUseBashSafetyHookEntry._build_payload_for_command_segment(
                     segment_clause_groups = segment_clause_groups,
-                    original_cwd = bash_command_cwd,
+                    original_cwd = effective_segment_cwd,
                 )
                 segment_result = PreToolUseBashSafetyHookEntry._evaluate_single_command_segment(
                     segment_payload = segment_payload,
@@ -684,6 +685,18 @@ class PreToolUseBashSafetyHookEntry:
                 if isinstance(segment_result, str) and segment_result != "allow":
                     _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(segment_result)
                 segment_evaluation_results.append(segment_result)
+                if (
+                    len(segment_clause_groups) == 1
+                    and len(segment_clause_groups[0]) == 2
+                    and segment_clause_groups[0][0] == "cd"
+                ):
+                    cd_target_path = segment_clause_groups[0][1]
+                    if os.path.isabs(cd_target_path):
+                        effective_segment_cwd = cd_target_path
+                    else:
+                        effective_segment_cwd = os.path.normpath(
+                            os.path.join(effective_segment_cwd, cd_target_path)
+                        )
             if all(result == "allow" for result in segment_evaluation_results):
                 _common._hook_io.PreToolUseHookIo.emit_allow_decision_and_exit()
             _common._hook_io.PreToolUseHookIo.emit_passthrough_and_exit()

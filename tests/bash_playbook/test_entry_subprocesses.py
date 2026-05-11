@@ -151,6 +151,28 @@ class TestPreToolUseBashSafetyEntryScriptPlaybook(unittest.TestCase):
         )
 
 
+    def test_project_root_relative_playbook_match_after_cd_is_allowed(self):
+
+        scripts_directory = os.path.join(self.temp_project_directory, "server", "scripts", "tests")
+        os.makedirs(scripts_directory)
+        script_file_path = os.path.join(scripts_directory, "all-fast.sh")
+        open(script_file_path, mode = "w").close()
+        with open(self.playbook_abs_path, mode = "w", encoding = "utf-8") as open_playbook_file_handle:
+            json.dump(
+                obj = [{"bash": "//server/scripts/tests/all-fast.sh *", "what": "test", "when": "test"}],
+                fp = open_playbook_file_handle
+            )
+        sub_directory = os.path.join(self.temp_project_directory, "server", "app")
+        os.makedirs(sub_directory)
+        exit_code, parsed_stdout = self._invoke(
+            command = "cd " + sub_directory + " && ../../server/scripts/tests/all-fast.sh",
+            working_directory = self.temp_project_directory
+        )
+        tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_allow_decision(
+            self, exit_code, parsed_stdout
+        )
+
+
     def test_project_root_relative_playbook_match_overrides_prohibited_command(self):
 
         scripts_directory = os.path.join(self.temp_project_directory, "server", "scripts", "tests")
