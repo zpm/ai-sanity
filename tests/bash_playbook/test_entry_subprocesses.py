@@ -165,7 +165,7 @@ class TestPreToolUseBashSafetyEntryScriptPlaybook(unittest.TestCase):
         sub_directory = os.path.join(self.temp_project_directory, "server", "app")
         os.makedirs(sub_directory)
         exit_code, parsed_stdout = self._invoke(
-            command = "cd " + sub_directory + " && ../../server/scripts/tests/all-fast.sh",
+            command = "cd " + sub_directory.replace("\\", "/") + " && ../../server/scripts/tests/all-fast.sh",
             working_directory = self.temp_project_directory
         )
         tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_allow_decision(

@@ -533,7 +533,7 @@ class TestPlaybookProjectRootRelativeMatch(unittest.TestCase):
     def test_matches_absolute_command_path(self):
 
         result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
-            self._build_bash_payload(self.script_file_path)
+            self._build_bash_payload(self.script_file_path.replace("\\", "/"))
         )
         self.assertIsNotNone(result)
 

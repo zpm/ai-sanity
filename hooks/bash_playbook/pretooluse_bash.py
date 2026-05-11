@@ -493,6 +493,114 @@ class ProhibitedCommandsCheck:
         return None
 
 
+class PowershellCmdletCheck:
+
+    """Rejects PowerShell cmdlets and aliases inside Bash tool calls. Payload-based because PowerShell is
+    case-insensitive and the clause-based CommandMatcher does exact matching."""
+
+    _DENIED_POWERSHELL_TOKENS = frozenset((
+        "add-content",
+        "add-type",
+        "clear-content",
+        "clear-host",
+        "clear-item",
+        "clear-variable",
+        "cls",
+        "compare-object",
+        "convertfrom-json",
+        "convertto-json",
+        "copy-item",
+        "export-csv",
+        "foreach-object",
+        "format-list",
+        "format-table",
+        "gci",
+        "gcm",
+        "get-acl",
+        "get-childitem",
+        "get-command",
+        "get-content",
+        "get-date",
+        "get-help",
+        "get-item",
+        "get-itemproperty",
+        "get-location",
+        "get-member",
+        "get-module",
+        "get-process",
+        "get-service",
+        "get-variable",
+        "get-wmiobject",
+        "gm",
+        "iex",
+        "import-csv",
+        "import-module",
+        "invoke-command",
+        "invoke-expression",
+        "invoke-restmethod",
+        "invoke-webrequest",
+        "iwr",
+        "measure-object",
+        "move-item",
+        "new-item",
+        "new-object",
+        "new-variable",
+        "ni",
+        "out-file",
+        "out-null",
+        "out-string",
+        "read-host",
+        "remove-item",
+        "remove-variable",
+        "rename-item",
+        "resolve-path",
+        "ri",
+        "select-object",
+        "select-string",
+        "set-content",
+        "set-executionpolicy",
+        "set-item",
+        "set-itemproperty",
+        "set-location",
+        "set-variable",
+        "sls",
+        "sort-object",
+        "split-path",
+        "start-process",
+        "start-sleep",
+        "stop-process",
+        "test-connection",
+        "test-path",
+        "where-object",
+        "write-error",
+        "write-host",
+        "write-output",
+        "write-verbose",
+        "write-warning",
+    ))
+
+    _DENY_MESSAGE = "You are using bash dude, don't use Powershell commands"
+
+
+    @staticmethod
+    def check(pretooluse_payload):
+
+        """Tokenizes the command and checks each token (case-insensitive) against known PowerShell cmdlets and
+        aliases. Returns a deny reason string or None."""
+        bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
+        if not bash_command_string.strip():
+            return None
+        try:
+            command_tokens = shlex.split(bash_command_string)
+        except ValueError:
+            command_tokens = bash_command_string.split()
+        for token in command_tokens:
+            token_lower = token.lower().rstrip(";")
+            if token_lower in PowershellCmdletCheck._DENIED_POWERSHELL_TOKENS:
+                return PowershellCmdletCheck._DENY_MESSAGE
+        return None
+
+
 class NoShellSubstitutionCheck:
 
     """Rejects commands containing shell substitution syntax. These hide commands inside arguments where the clause
@@ -559,6 +667,7 @@ class PreToolUseBashSafetyHookEntry:
     prompting, passthrough (None) falls back to Claude Code's normal permission/prompt UI."""
 
     _payload_based_deny_check_methods = (
+        PowershellCmdletCheck.check,
         NoShellSubstitutionCheck.check,
         RequireGitMvForTrackedMovesCheck.check,
     )
