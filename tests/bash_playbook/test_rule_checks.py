@@ -15,6 +15,7 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "hooks"))
 
 import tests._common.fixtures
+import tests._common.subprocess_helpers
 import bash_playbook.pretooluse_bash
 import _common._command_parser
 
@@ -467,6 +468,151 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         ])
         result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("python -m unittest discover -s tests -t . -v")
+        )
+        self.assertIsNone(result)
+
+
+class TestPlaybookProjectRootRelativeMatch(unittest.TestCase):
+
+    def setUp(self):
+
+        self.temp_project_directory = tempfile.mkdtemp()
+        self.dot_ai_sanity_directory = os.path.join(self.temp_project_directory, ".ai-sanity")
+        os.makedirs(self.dot_ai_sanity_directory)
+        self.playbook_abs_path = os.path.join(self.dot_ai_sanity_directory, "playbook.json")
+        self.scripts_directory = os.path.join(self.temp_project_directory, "server", "scripts", "tests")
+        os.makedirs(self.scripts_directory)
+        self.script_file_path = os.path.join(self.scripts_directory, "all-fast.sh")
+        open(self.script_file_path, mode = "w").close()
+        self._write_playbook([
+            {
+                "bash": "//server/scripts/tests/all-fast.sh *",
+                "what": "Run all tests",
+                "when": "Final step"
+            }
+        ])
+
+
+    def _write_playbook(self, playbook_entries):
+
+        with open(self.playbook_abs_path, mode = "w", encoding = "utf-8") as open_playbook_file_handle:
+            json.dump(
+                obj = playbook_entries,
+                fp = open_playbook_file_handle
+            )
+
+
+    def _build_bash_payload(self, command, working_directory = None):
+
+        return tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
+            bash_command_string = command,
+            working_directory = working_directory or self.temp_project_directory
+        )
+
+
+    def test_matches_relative_path_from_project_root(self):
+
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("./server/scripts/tests/all-fast.sh")
+        )
+        self.assertIsNotNone(result)
+
+
+    def test_matches_from_subdirectory_with_traversal(self):
+
+        sub_directory = os.path.join(self.temp_project_directory, "server")
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload(
+                "../server/scripts/tests/all-fast.sh",
+                working_directory = sub_directory
+            )
+        )
+        self.assertIsNotNone(result)
+
+
+    def test_matches_absolute_command_path(self):
+
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload(self.script_file_path)
+        )
+        self.assertIsNotNone(result)
+
+
+    def test_matches_with_extra_args_via_prefix(self):
+
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("./server/scripts/tests/all-fast.sh --verbose --coverage")
+        )
+        self.assertIsNotNone(result)
+
+
+    def test_no_match_for_different_script(self):
+
+        other_script_path = os.path.join(self.scripts_directory, "other.sh")
+        open(other_script_path, mode = "w").close()
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("./server/scripts/tests/other.sh")
+        )
+        self.assertIsNone(result)
+
+
+    def test_exact_match_rejects_extra_args(self):
+
+        self._write_playbook([
+            {"bash": "//server/scripts/tests/all-fast.sh", "what": "exact only", "when": "test"}
+        ])
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("./server/scripts/tests/all-fast.sh --extra")
+        )
+        self.assertIsNone(result)
+
+
+    def test_matches_from_deeply_nested_subdirectory(self):
+
+        deep_directory = os.path.join(self.temp_project_directory, "server", "src", "components")
+        os.makedirs(deep_directory, exist_ok = True)
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload(
+                "../../../server/scripts/tests/all-fast.sh",
+                working_directory = deep_directory
+            )
+        )
+        self.assertIsNotNone(result)
+
+
+    def test_matches_with_project_root_on_non_first_token(self):
+
+        self._write_playbook([
+            {"bash": "pwsh //server/scripts/tests/all-fast.ps1 *", "what": "pwsh test", "when": "test"}
+        ])
+        sub_directory = os.path.join(self.temp_project_directory, "server")
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload(
+                "pwsh ../server/scripts/tests/all-fast.ps1 --verbose",
+                working_directory = sub_directory
+            )
+        )
+        self.assertIsNotNone(result)
+
+
+    def test_non_first_token_no_match_for_wrong_command_prefix(self):
+
+        self._write_playbook([
+            {"bash": "pwsh //server/scripts/tests/all-fast.ps1 *", "what": "pwsh test", "when": "test"}
+        ])
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("bash ./server/scripts/tests/all-fast.ps1")
+        )
+        self.assertIsNone(result)
+
+
+    def test_bare_double_slash_entry_is_skipped(self):
+
+        self._write_playbook([
+            {"bash": "// *", "what": "empty path", "when": "test"}
+        ])
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("./server/scripts/tests/all-fast.sh")
         )
         self.assertIsNone(result)
 

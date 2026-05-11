@@ -24,8 +24,8 @@ import _common._hook_io
 
 class PlaybookMatchCheck:
 
-    """Reads the project's .ai-sanity/playbook.json and matches a bash command against its entries. Supports exact and
-    prefix (trailing ` *`) matching at the token level. If it's in the playbook, it's allowed."""
+    """Reads the project's .ai-sanity/playbook.json and matches a bash command against its entries. Supports exact,
+    prefix (trailing ` *`), and project-root-relative (`//` prefix) matching at the token level."""
 
     _playbook_relative_path_from_project_root = os.path.join(".ai-sanity", "playbook.json")
 
@@ -60,8 +60,8 @@ class PlaybookMatchCheck:
     @staticmethod
     def load_playbook_entries(playbook_abs_path):
 
-        """Reads and parses a playbook JSON file. Detects trailing ` *` in the bash field to enable prefix matching.
-        Returns a list of dicts with added `_match_tokens` and `_is_prefix_match` keys, or [] on any error."""
+        """Reads and parses a playbook JSON file. Detects trailing ` *` for prefix matching and leading `//` for
+        project-root-relative path resolution. Returns a list of enriched entry dicts, or [] on any error."""
         try:
             with open(playbook_abs_path, "r", encoding = "utf-8") as open_playbook_file_handle:
                 parsed_playbook_object = json.load(open_playbook_file_handle)
@@ -85,9 +85,25 @@ class PlaybookMatchCheck:
                 continue
             if not match_tokens:
                 continue
+            project_root_relative_token_indices = set()
+            resolved_match_tokens = []
+            has_invalid_project_root_token = False
+            for token_index, token_value in enumerate(match_tokens):
+                if token_value.startswith("//"):
+                    stripped_token_value = token_value[2:]
+                    if not stripped_token_value:
+                        has_invalid_project_root_token = True
+                        break
+                    resolved_match_tokens.append(stripped_token_value)
+                    project_root_relative_token_indices.add(token_index)
+                else:
+                    resolved_match_tokens.append(token_value)
+            if has_invalid_project_root_token:
+                continue
             enriched_entry = dict(candidate_entry)
-            enriched_entry["_match_tokens"] = match_tokens
+            enriched_entry["_match_tokens"] = resolved_match_tokens
             enriched_entry["_is_prefix_match"] = is_prefix_match
+            enriched_entry["_project_root_relative_token_indices"] = project_root_relative_token_indices
             valid_playbook_entries.append(enriched_entry)
         return valid_playbook_entries
 
@@ -95,7 +111,8 @@ class PlaybookMatchCheck:
     @staticmethod
     def check(pretooluse_payload):
 
-        """Returns a matching playbook entry if the command tokens match (exact or prefix). Returns None on no match."""
+        """Returns a matching playbook entry if the command tokens match (exact, prefix, or project-root-relative).
+        Returns None on no match."""
         bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
         bash_command_cwd = pretooluse_payload.get("cwd") or "."
         playbook_abs_path = PlaybookMatchCheck.find_playbook_abs_path(
@@ -114,17 +131,45 @@ class PlaybookMatchCheck:
             return None
         if not command_tokens:
             return None
+        project_root_abs_path = os.path.dirname(os.path.dirname(playbook_abs_path))
         for candidate_playbook_entry in playbook_entries:
             entry_match_tokens = candidate_playbook_entry["_match_tokens"]
-            if candidate_playbook_entry["_is_prefix_match"]:
-                if (
-                    len(command_tokens) >= len(entry_match_tokens)
-                    and command_tokens[:len(entry_match_tokens)] == entry_match_tokens
-                ):
+            project_root_relative_token_indices = candidate_playbook_entry["_project_root_relative_token_indices"]
+            if project_root_relative_token_indices:
+                if candidate_playbook_entry["_is_prefix_match"]:
+                    if len(command_tokens) < len(entry_match_tokens):
+                        continue
+                else:
+                    if len(command_tokens) != len(entry_match_tokens):
+                        continue
+                all_entry_tokens_match = True
+                for token_index in range(len(entry_match_tokens)):
+                    if token_index in project_root_relative_token_indices:
+                        entry_token_resolved_abs_path = os.path.realpath(
+                            os.path.join(project_root_abs_path, entry_match_tokens[token_index])
+                        )
+                        command_token_resolved_abs_path = os.path.realpath(
+                            os.path.join(bash_command_cwd, command_tokens[token_index])
+                        )
+                        if entry_token_resolved_abs_path != command_token_resolved_abs_path:
+                            all_entry_tokens_match = False
+                            break
+                    else:
+                        if entry_match_tokens[token_index] != command_tokens[token_index]:
+                            all_entry_tokens_match = False
+                            break
+                if all_entry_tokens_match:
                     return candidate_playbook_entry
             else:
-                if command_tokens == entry_match_tokens:
-                    return candidate_playbook_entry
+                if candidate_playbook_entry["_is_prefix_match"]:
+                    if (
+                        len(command_tokens) >= len(entry_match_tokens)
+                        and command_tokens[:len(entry_match_tokens)] == entry_match_tokens
+                    ):
+                        return candidate_playbook_entry
+                else:
+                    if command_tokens == entry_match_tokens:
+                        return candidate_playbook_entry
         return None
 
 

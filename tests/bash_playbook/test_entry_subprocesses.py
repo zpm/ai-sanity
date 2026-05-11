@@ -151,6 +151,27 @@ class TestPreToolUseBashSafetyEntryScriptPlaybook(unittest.TestCase):
         )
 
 
+    def test_project_root_relative_playbook_match_overrides_prohibited_command(self):
+
+        scripts_directory = os.path.join(self.temp_project_directory, "server", "scripts", "tests")
+        os.makedirs(scripts_directory)
+        script_file_path = os.path.join(scripts_directory, "all-fast.ps1")
+        open(script_file_path, mode = "w").close()
+        with open(self.playbook_abs_path, mode = "w", encoding = "utf-8") as open_playbook_file_handle:
+            json.dump(
+                obj = [{"bash": "pwsh //server/scripts/tests/all-fast.ps1 *", "what": "test", "when": "test"}],
+                fp = open_playbook_file_handle
+            )
+        sub_directory = os.path.join(self.temp_project_directory, "server")
+        exit_code, parsed_stdout = self._invoke(
+            command = "pwsh ../server/scripts/tests/all-fast.ps1 --verbose",
+            working_directory = sub_directory
+        )
+        tests._common.subprocess_helpers.HookEntryScriptInvocationHelper.assert_allow_decision(
+            self, exit_code, parsed_stdout
+        )
+
+
     def test_no_playbook_passes_through(self):
 
         empty_temp_directory = tempfile.mkdtemp()
