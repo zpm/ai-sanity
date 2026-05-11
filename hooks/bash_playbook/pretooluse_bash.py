@@ -9,6 +9,7 @@
 
 
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -601,6 +602,26 @@ class PowershellCmdletCheck:
         return None
 
 
+class WindowsPathCheck:
+
+    """Rejects bash commands containing Windows-style backslash paths. Scans the raw command string (before shlex
+    tokenization, which eats backslashes) for drive-letter paths (C:\...) and dot-relative paths (.\..., ..\...)."""
+
+    _WINDOWS_PATH_PATTERN = re.compile(r"(?:[A-Za-z]:\\|\.\.?\\)")
+
+    _DENY_MESSAGE = "You are using bash dude, use forward slashes for file paths instead of backslashes"
+
+
+    @staticmethod
+    def check(pretooluse_payload):
+
+        """Returns a deny reason string if the raw command contains Windows-style backslash paths, or None."""
+        bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
+        if WindowsPathCheck._WINDOWS_PATH_PATTERN.search(bash_command_string):
+            return WindowsPathCheck._DENY_MESSAGE
+        return None
+
+
 class NoShellSubstitutionCheck:
 
     """Rejects commands containing shell substitution syntax. These hide commands inside arguments where the clause
@@ -776,6 +797,10 @@ class PreToolUseBashSafetyHookEntry:
             pretooluse_payload = _common._hook_io.PreToolUseHookIo.read_pretooluse_payload_from_stdin()
             bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
             bash_command_cwd = pretooluse_payload.get("cwd") or "."
+            # runs on the raw command string before shlex tokenization, which eats backslashes
+            windows_path_deny_reason = WindowsPathCheck.check(pretooluse_payload)
+            if windows_path_deny_reason is not None:
+                _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(windows_path_deny_reason)
             compound_command_segments = (
                 _common._command_parser.BashCommandParser.extract_compound_command_segments(bash_command_string)
             )
