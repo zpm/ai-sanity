@@ -26,7 +26,7 @@ import _common._hook_io
 class PlaybookMatchCheck:
 
     """Reads the project's .ai-sanity/playbook.json and matches a bash command against its entries. Supports exact,
-    prefix (trailing ` *`), and project-root-relative (`//` prefix) matching at the token level."""
+    prefix (trailing ` *`), and project-root-relative (`*/` prefix) matching at the token level."""
 
     _playbook_relative_path_from_project_root = os.path.join(".ai-sanity", "playbook.json")
 
@@ -61,7 +61,7 @@ class PlaybookMatchCheck:
     @staticmethod
     def load_playbook_entries(playbook_abs_path):
 
-        """Reads and parses a playbook JSON file. Detects trailing ` *` for prefix matching and leading `//` for
+        """Reads and parses a playbook JSON file. Detects trailing ` *` for prefix matching and leading `*/` for
         project-root-relative path resolution. Returns a list of enriched entry dicts, or [] on any error."""
         try:
             with open(playbook_abs_path, "r", encoding = "utf-8") as open_playbook_file_handle:
@@ -90,7 +90,7 @@ class PlaybookMatchCheck:
             resolved_match_tokens = []
             has_invalid_project_root_token = False
             for token_index, token_value in enumerate(match_tokens):
-                if token_value.startswith("//"):
+                if token_value.startswith("*/"):
                     stripped_token_value = token_value[2:]
                     if not stripped_token_value:
                         has_invalid_project_root_token = True

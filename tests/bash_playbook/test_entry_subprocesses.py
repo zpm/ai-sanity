@@ -159,7 +159,7 @@ class TestPreToolUseBashSafetyEntryScriptPlaybook(unittest.TestCase):
         open(script_file_path, mode = "w").close()
         with open(self.playbook_abs_path, mode = "w", encoding = "utf-8") as open_playbook_file_handle:
             json.dump(
-                obj = [{"bash": "//server/scripts/tests/all-fast.sh *", "what": "test", "when": "test"}],
+                obj = [{"bash": "*/server/scripts/tests/all-fast.sh *", "what": "test", "when": "test"}],
                 fp = open_playbook_file_handle
             )
         sub_directory = os.path.join(self.temp_project_directory, "server", "app")
@@ -181,7 +181,7 @@ class TestPreToolUseBashSafetyEntryScriptPlaybook(unittest.TestCase):
         open(script_file_path, mode = "w").close()
         with open(self.playbook_abs_path, mode = "w", encoding = "utf-8") as open_playbook_file_handle:
             json.dump(
-                obj = [{"bash": "pwsh //server/scripts/tests/all-fast.ps1 *", "what": "test", "when": "test"}],
+                obj = [{"bash": "pwsh */server/scripts/tests/all-fast.ps1 *", "what": "test", "when": "test"}],
                 fp = open_playbook_file_handle
             )
         sub_directory = os.path.join(self.temp_project_directory, "server")

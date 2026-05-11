@@ -486,7 +486,7 @@ class TestPlaybookProjectRootRelativeMatch(unittest.TestCase):
         open(self.script_file_path, mode = "w").close()
         self._write_playbook([
             {
-                "bash": "//server/scripts/tests/all-fast.sh *",
+                "bash": "*/server/scripts/tests/all-fast.sh *",
                 "what": "Run all tests",
                 "when": "Final step"
             }
@@ -559,7 +559,7 @@ class TestPlaybookProjectRootRelativeMatch(unittest.TestCase):
     def test_exact_match_rejects_extra_args(self):
 
         self._write_playbook([
-            {"bash": "//server/scripts/tests/all-fast.sh", "what": "exact only", "when": "test"}
+            {"bash": "*/server/scripts/tests/all-fast.sh", "what": "exact only", "when": "test"}
         ])
         result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("./server/scripts/tests/all-fast.sh --extra")
@@ -583,7 +583,7 @@ class TestPlaybookProjectRootRelativeMatch(unittest.TestCase):
     def test_matches_with_project_root_on_non_first_token(self):
 
         self._write_playbook([
-            {"bash": "pwsh //server/scripts/tests/all-fast.ps1 *", "what": "pwsh test", "when": "test"}
+            {"bash": "pwsh */server/scripts/tests/all-fast.ps1 *", "what": "pwsh test", "when": "test"}
         ])
         sub_directory = os.path.join(self.temp_project_directory, "server")
         result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
@@ -598,7 +598,7 @@ class TestPlaybookProjectRootRelativeMatch(unittest.TestCase):
     def test_non_first_token_no_match_for_wrong_command_prefix(self):
 
         self._write_playbook([
-            {"bash": "pwsh //server/scripts/tests/all-fast.ps1 *", "what": "pwsh test", "when": "test"}
+            {"bash": "pwsh */server/scripts/tests/all-fast.ps1 *", "what": "pwsh test", "when": "test"}
         ])
         result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("bash ./server/scripts/tests/all-fast.ps1")
@@ -606,10 +606,10 @@ class TestPlaybookProjectRootRelativeMatch(unittest.TestCase):
         self.assertIsNone(result)
 
 
-    def test_bare_double_slash_entry_is_skipped(self):
+    def test_bare_star_slash_entry_is_skipped(self):
 
         self._write_playbook([
-            {"bash": "// *", "what": "empty path", "when": "test"}
+            {"bash": "*/ *", "what": "empty path", "when": "test"}
         ])
         result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
             self._build_bash_payload("./server/scripts/tests/all-fast.sh")
