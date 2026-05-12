@@ -628,6 +628,28 @@ class WindowsPathCheck:
         return None
 
 
+class TildePathCheck:
+
+    """Rejects bash commands containing ~ (tilde) paths on Windows. Python's path functions do not expand tilde, so
+    playbook path resolution and cd tracking produce bogus paths when the agent writes ~/... in a command."""
+
+    _TILDE_PATH_PATTERN = re.compile(r"(?:^|\s)~/")
+
+    _DENY_MESSAGE = "Try using absolute paths, ~ (tilde) is not supported by the hooks running on Windows"
+
+
+    @staticmethod
+    def check(pretooluse_payload):
+
+        """Returns a deny reason string if the raw command contains tilde paths on Windows, or None."""
+        if sys.platform != "win32":
+            return None
+        bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
+        if TildePathCheck._TILDE_PATH_PATTERN.search(bash_command_string):
+            return TildePathCheck._DENY_MESSAGE
+        return None
+
+
 class NoShellSubstitutionCheck:
 
     """Rejects commands containing shell substitution syntax. These hide commands inside arguments where the clause
@@ -807,6 +829,9 @@ class PreToolUseBashSafetyHookEntry:
             windows_path_deny_reason = WindowsPathCheck.check(pretooluse_payload)
             if windows_path_deny_reason is not None:
                 _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(windows_path_deny_reason)
+            tilde_path_deny_reason = TildePathCheck.check(pretooluse_payload)
+            if tilde_path_deny_reason is not None:
+                _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(tilde_path_deny_reason)
             compound_command_segments = (
                 _common._command_parser.BashCommandParser.extract_compound_command_segments(bash_command_string)
             )

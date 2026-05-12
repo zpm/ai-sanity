@@ -617,6 +617,69 @@ class TestPlaybookProjectRootRelativeMatch(unittest.TestCase):
         self.assertIsNone(result)
 
 
+class TestTildePathCheck(unittest.TestCase):
+
+
+    def _build_bash_payload(self, command):
+
+        return tests._common.fixtures.PreToolUsePayloadFixtureBuilder.build_bash_payload(
+            bash_command_string = command
+        )
+
+
+    @unittest.skipUnless(sys.platform == "win32", "tilde check only fires on Windows")
+    def test_denies_tilde_path_on_windows(self):
+
+        result = bash_playbook.pretooluse_bash.TildePathCheck.check(
+            self._build_bash_payload("cd ~/Dev/infinite-art/server/app")
+        )
+        self.assertIsNotNone(result)
+        self.assertIn("tilde", result.lower())
+
+
+    @unittest.skipUnless(sys.platform == "win32", "tilde check only fires on Windows")
+    def test_denies_tilde_in_compound_command_on_windows(self):
+
+        result = bash_playbook.pretooluse_bash.TildePathCheck.check(
+            self._build_bash_payload("cd ~/Dev/project && pwsh ../../scripts/test.ps1")
+        )
+        self.assertIsNotNone(result)
+
+
+    @unittest.skipUnless(sys.platform == "win32", "tilde check only fires on Windows")
+    def test_denies_tilde_as_script_argument_on_windows(self):
+
+        result = bash_playbook.pretooluse_bash.TildePathCheck.check(
+            self._build_bash_payload("pwsh ~/Dev/infinite-art/server/scripts/tests/all-fast.ps1")
+        )
+        self.assertIsNotNone(result)
+
+
+    @unittest.skipUnless(sys.platform != "win32", "tilde is valid on non-Windows platforms")
+    def test_allows_tilde_path_on_non_windows(self):
+
+        result = bash_playbook.pretooluse_bash.TildePathCheck.check(
+            self._build_bash_payload("cd ~/Dev/infinite-art/server/app")
+        )
+        self.assertIsNone(result)
+
+
+    def test_allows_command_without_tilde(self):
+
+        result = bash_playbook.pretooluse_bash.TildePathCheck.check(
+            self._build_bash_payload("cd /home/user/Dev/project")
+        )
+        self.assertIsNone(result)
+
+
+    def test_allows_empty_command(self):
+
+        result = bash_playbook.pretooluse_bash.TildePathCheck.check(
+            self._build_bash_payload("")
+        )
+        self.assertIsNone(result)
+
+
 class TestGitCommandsCheck(unittest.TestCase):
 
     def test_denied_subcommand_returns_deny_message(self):
