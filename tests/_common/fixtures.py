@@ -1,8 +1,35 @@
 ########################################################################################################################
 # tests/_common/fixtures.py
 #
-# Synthetic PreToolUse payload builders used by both unit and integration tests
+# Synthetic payload builders and shared test mixins used by both unit and integration tests
 ########################################################################################################################
+
+
+import os
+import tempfile
+
+
+class HomeOverrideEnvVarTestCaseMixin:
+
+    """Per-test setup/teardown that points HOOK_TEST_HOME_OVERRIDE at a fresh tempdir so hook subsystems that derive
+    paths from the home directory operate inside a sandbox instead of the real home. Subclasses read
+    self.sandboxed_home_abs_path to place fixture files. Used by both unit tests (direct method calls) and subprocess
+    tests (where the child Python process inherits the parent's env)."""
+
+
+    def setUp(self):
+
+        self._previous_home_override_value = os.environ.get("HOOK_TEST_HOME_OVERRIDE")
+        self.sandboxed_home_abs_path = tempfile.mkdtemp()
+        os.environ["HOOK_TEST_HOME_OVERRIDE"] = self.sandboxed_home_abs_path
+
+
+    def tearDown(self):
+
+        if self._previous_home_override_value is None:
+            os.environ.pop("HOOK_TEST_HOME_OVERRIDE", None)
+        else:
+            os.environ["HOOK_TEST_HOME_OVERRIDE"] = self._previous_home_override_value
 
 
 class PreToolUsePayloadFixtureBuilder:
@@ -154,4 +181,18 @@ class PreToolUsePayloadFixtureBuilder:
             "cwd": "/tmp",
             "permission_mode": "default",
             "hook_event_name": "PreCompact"
+        }
+
+
+    @staticmethod
+    def build_userpromptsubmit_payload(session_id = "test-session"):
+
+        """Returns a synthetic UserPromptSubmit payload. Only session_id is load-bearing for the instruction-repeater
+        hook; other fields mirror the standard shape."""
+        return {
+            "session_id": session_id,
+            "transcript_path": "/dev/null",
+            "cwd": "/tmp",
+            "permission_mode": "default",
+            "hook_event_name": "UserPromptSubmit"
         }

@@ -96,6 +96,12 @@ Ships a global set of style guides that claude must read before editing files of
 
 The global manifest is always present because it ships with this repo. Its styleguide targets are required.
 
+## 5. Instruction Repeater
+
+Injects a fixed instruction message into context on the first user message of each conversation, then goes silent until compaction resets it.
+
+Works by handling `UserPromptSubmit` to check a per-session flag file. On first fire (no flag), it writes the instruction text to stdout (which Claude Code injects as visible context) and sets the flag. On subsequent fires (flag exists), it emits nothing. A `PreCompact` handler clears the flag so the instruction is re-injected after context compaction.
+
 ## Tests
 
 Run from the repo root:

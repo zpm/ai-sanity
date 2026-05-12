@@ -8,7 +8,6 @@
 import json
 import os
 import sys
-import tempfile
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "hooks"))
 
@@ -52,19 +51,10 @@ class RequiredReadsManifestFixtureBuilder:
         return manifest_abs_path
 
 
-class HomeOverrideEnvVarTestCaseMixin:
+class HomeOverrideEnvVarTestCaseMixin(tests._common.fixtures.HomeOverrideEnvVarTestCaseMixin):
 
-    """Per-test setup/teardown that points `HOOK_TEST_HOME_OVERRIDE` at a fresh tempdir so the required-reads
-    path-normalizer, manifest-discovery, and state subsystems operate inside a sandbox instead of the real home.
-    Used by both the unit tests (direct method calls) and the subprocess tests (where the child Python process
-    inherits the parent's env). Subclasses read `self.sandboxed_home_abs_path` to place fixture files."""
-
-
-    def setUp(self):
-
-        self._previous_home_override_value = os.environ.get("HOOK_TEST_HOME_OVERRIDE")
-        self.sandboxed_home_abs_path = tempfile.mkdtemp()
-        os.environ["HOOK_TEST_HOME_OVERRIDE"] = self.sandboxed_home_abs_path
+    """Extends the base home-override mixin with required-reading-specific helpers for pre-satisfying global
+    styleguide rules in tests that need to isolate project-level rule behavior."""
 
 
     def satisfy_hooks_repo_global_rules_for_extension(self, extension_suffix):
@@ -93,11 +83,3 @@ class HomeOverrideEnvVarTestCaseMixin:
             entry_script_relative_path = "required_reading/posttooluse_observer.py",
             pretooluse_payload = read_payload
         )
-
-
-    def tearDown(self):
-
-        if self._previous_home_override_value is None:
-            os.environ.pop("HOOK_TEST_HOME_OVERRIDE", None)
-        else:
-            os.environ["HOOK_TEST_HOME_OVERRIDE"] = self._previous_home_override_value

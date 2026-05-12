@@ -73,3 +73,41 @@ class HookEntryScriptInvocationHelper:
         """Asserts that the script emitted a passthrough (exit 0 with no stdout)."""
         testcase.assertEqual(exit_code, 0)
         testcase.assertIsNone(parsed_stdout)
+
+
+    @staticmethod
+    def invoke_entry_script_raw_stdout(entry_script_relative_path, payload):
+
+        """Runs the named entry script with the payload piped to stdin and returns (exit_code, raw_stdout_text).
+        Unlike invoke_entry_script, this does not parse stdout as JSON, returning the raw decoded text instead.
+        Used for hooks whose output contract is plain text (e.g. UserPromptSubmit context injection)."""
+        entry_script_absolute_path = os.path.join(HOOKS_DIRECTORY_ABSOLUTE_PATH, entry_script_relative_path)
+        payload_utf8_bytes = json.dumps(payload, ensure_ascii = False).encode("utf-8")
+        completed_subprocess = subprocess.run(
+            [PYTHON_INTERPRETER_FOR_TESTS, entry_script_absolute_path],
+            input = payload_utf8_bytes,
+            capture_output = True,
+            timeout = 10
+        )
+        raw_stdout_text = completed_subprocess.stdout.decode("utf-8")
+        return completed_subprocess.returncode, raw_stdout_text
+
+
+    @staticmethod
+    def assert_context_injection(testcase, exit_code, raw_stdout, expected_substring = ""):
+
+        """Asserts that the script emitted context injection text (exit 0 with non-empty stdout) and optionally
+        that the output contains the given substring."""
+        testcase.assertEqual(exit_code, 0)
+        testcase.assertTrue(len(raw_stdout.strip()) > 0)
+        if expected_substring:
+            testcase.assertIn(expected_substring, raw_stdout)
+
+
+    @staticmethod
+    def assert_silent_passthrough(testcase, exit_code, raw_stdout):
+
+        """Asserts that the script emitted nothing (exit 0 with empty stdout). Used for UserPromptSubmit hooks
+        that choose not to inject context."""
+        testcase.assertEqual(exit_code, 0)
+        testcase.assertEqual(raw_stdout.strip(), "")

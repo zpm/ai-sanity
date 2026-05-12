@@ -113,3 +113,35 @@ class PreCompactHookIo:
 
         """Writes nothing to stdout and exits 0."""
         sys.exit(0)
+
+
+class UserPromptSubmitHookIo:
+
+    """Stdin and stdout helpers for UserPromptSubmit entry scripts. UserPromptSubmit fires before Claude processes
+    each user message. Unlike PreToolUse hooks, the output contract is plain text, not a JSON decision envelope:
+    text written to stdout (exit 0) is injected into Claude's context as additional instructions visible to the
+    model. No stdout (exit 0) means no injection. Non-zero exit is logged but does not block the prompt."""
+
+
+    @staticmethod
+    def read_userpromptsubmit_payload_from_stdin():
+
+        """Reads and parses the UserPromptSubmit JSON payload Claude Code pipes to stdin. Reads from the raw byte
+        buffer and passes bytes directly to json.loads for encoding auto-detection."""
+        return json.loads(sys.stdin.buffer.read())
+
+
+    @staticmethod
+    def emit_context_injection_and_exit(instruction_text_string):
+
+        """Writes plain text to stdout and exits 0. Claude Code injects this text into the model's context before
+        processing the user message. The text is not wrapped in a JSON envelope."""
+        sys.stdout.write(instruction_text_string)
+        sys.exit(0)
+
+
+    @staticmethod
+    def emit_passthrough_and_exit():
+
+        """Writes nothing to stdout and exits 0. No text is injected into the model's context."""
+        sys.exit(0)

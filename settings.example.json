@@ -5,6 +5,16 @@
     ]
   },
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python $HOME/Dev/ai-sanity/hooks/instruction_repeater/userpromptsubmit.py"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Write|Edit|NotebookEdit",
@@ -73,6 +83,10 @@
           {
             "type": "command",
             "command": "python $HOME/Dev/ai-sanity/hooks/required_reading/precompact.py"
+          },
+          {
+            "type": "command",
+            "command": "python $HOME/Dev/ai-sanity/hooks/instruction_repeater/precompact.py"
           }
         ]
       }
