@@ -617,6 +617,59 @@ class TestPlaybookProjectRootRelativeMatch(unittest.TestCase):
         self.assertIsNone(result)
 
 
+class TestGitCommandsCheck(unittest.TestCase):
+
+    def test_denied_subcommand_returns_deny_message(self):
+
+        clauses = [["git", "push", "origin", "main"]]
+        result = bash_playbook.pretooluse_bash.GitCommandsCheck.check(clauses)
+        self.assertIsInstance(result, str)
+        self.assertIn("write commands", result)
+
+
+    def test_denied_subcommand_message_includes_format_guidance(self):
+
+        clauses = [["git", "commit", "-m", "msg"]]
+        result = bash_playbook.pretooluse_bash.GitCommandsCheck.check(clauses)
+        self.assertIn("git <subcommand>", result)
+
+
+    def test_global_flag_returns_global_flags_message(self):
+
+        clauses = [["git", "-C", "/tmp", "mv", "a.txt", "b.txt"]]
+        result = bash_playbook.pretooluse_bash.GitCommandsCheck.check(clauses)
+        self.assertIsInstance(result, str)
+        self.assertIn("global flags", result.lower())
+
+
+    def test_global_flag_dash_c_returns_global_flags_message(self):
+
+        clauses = [["git", "-c", "user.name=test", "commit", "-m", "msg"]]
+        result = bash_playbook.pretooluse_bash.GitCommandsCheck.check(clauses)
+        self.assertIn("global flags", result.lower())
+
+
+    def test_global_flag_git_dir_returns_global_flags_message(self):
+
+        clauses = [["git", "--git-dir=/tmp/.git", "push", "origin", "main"]]
+        result = bash_playbook.pretooluse_bash.GitCommandsCheck.check(clauses)
+        self.assertIn("global flags", result.lower())
+
+
+    def test_allowed_read_command_returns_true(self):
+
+        clauses = [["git", "status"]]
+        result = bash_playbook.pretooluse_bash.GitCommandsCheck.check(clauses)
+        self.assertTrue(result)
+
+
+    def test_git_mv_is_allowed(self):
+
+        clauses = [["git", "mv", "a.txt", "b.txt"]]
+        result = bash_playbook.pretooluse_bash.GitCommandsCheck.check(clauses)
+        self.assertTrue(result)
+
+
 class TestFindPlaybookAbsPath(unittest.TestCase):
 
     def test_finds_playbook_in_current_directory(self):

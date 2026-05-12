@@ -246,6 +246,12 @@ class GitCommandsCheck:
     _DENY_MESSAGE = (
         "Git write commands are strictly prohibited. Only read commands"
         " (diff, status, log, ls-files, show) and `git mv` are allowed."
+        " Commands must be `git <subcommand>` with no flags before the subcommand."
+    )
+
+    _DENY_GLOBAL_FLAGS_MESSAGE = (
+        "Git global flags (e.g. -C, -c, --git-dir) are not allowed."
+        " Rewrite as `git <subcommand>` with no flags between `git` and the subcommand."
     )
 
 
@@ -258,7 +264,7 @@ class GitCommandsCheck:
             if clause[0] != "git" or len(clause) < 2:
                 continue
             if clause[1].startswith("-"):
-                return GitCommandsCheck._DENY_MESSAGE
+                return GitCommandsCheck._DENY_GLOBAL_FLAGS_MESSAGE
         if CommandMatcher.any_clause_matches(
             clauses,
             GitCommandsCheck._DENIED_GIT_SUBCOMMANDS
