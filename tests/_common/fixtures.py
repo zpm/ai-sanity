@@ -185,13 +185,13 @@ class PreToolUsePayloadFixtureBuilder:
 
 
     @staticmethod
-    def build_userpromptsubmit_payload(session_id = "test-session"):
+    def build_userpromptsubmit_payload(session_id = "test-session", transcript_path = "/dev/null"):
 
-        """Returns a synthetic UserPromptSubmit payload. Only session_id is load-bearing for the instruction-repeater
-        hook; other fields mirror the standard shape."""
+        """Returns a synthetic UserPromptSubmit payload. session_id is load-bearing for the instruction-repeater hook;
+        transcript_path is load-bearing for the context-alarm hook; other fields mirror the standard shape."""
         return {
             "session_id": session_id,
-            "transcript_path": "/dev/null",
+            "transcript_path": transcript_path,
             "cwd": "/tmp",
             "permission_mode": "default",
             "hook_event_name": "UserPromptSubmit"

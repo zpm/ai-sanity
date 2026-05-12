@@ -11,6 +11,10 @@
           {
             "type": "command",
             "command": "python $HOME/Dev/ai-sanity/hooks/instruction_repeater/userpromptsubmit.py"
+          },
+          {
+            "type": "command",
+            "command": "python $HOME/Dev/ai-sanity/hooks/context_alarm/userpromptsubmit.py"
           }
         ]
       }

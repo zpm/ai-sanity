@@ -102,6 +102,12 @@ Injects a fixed instruction message into context on the first user message of ea
 
 Works by handling `UserPromptSubmit` to check a per-session flag file. On first fire (no flag), it writes the instruction text to stdout (which Claude Code injects as visible context) and sets the flag. On subsequent fires (flag exists), it emits nothing. A `PreCompact` handler clears the flag so the instruction is re-injected after context compaction.
 
+## 6. Context Alarm
+
+Warns the user in chat when context exceeds a token threshold so they can manually run `/compact` at a natural stopping point.
+
+Works by handling `UserPromptSubmit` to read the transcript JSONL file and extract the total context token count from the most recent assistant message. If the count exceeds the threshold (200k tokens), it injects a system reminder instructing claude to relay the warning to the user. Fires on every turn the context is over the limit.
+
 ## Tests
 
 Run from the repo root:
