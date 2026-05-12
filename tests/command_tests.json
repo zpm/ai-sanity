@@ -84,7 +84,7 @@
         "case $x in a) echo hi ;; esac",
         "cat .\\src\\main.py",
         "cat <(git log)",
-        "cd c:\\Users\\zachm\\server\\app && python test.py",
+        "cd c:\\Users\\zpm\\server\\app && python test.py",
         "cd server && pip install foo",
         "chmod +x script.sh",
         "chmod 755 script.sh",

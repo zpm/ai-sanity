@@ -4,9 +4,11 @@ Shared Claude Code hooks and style guides.
 
 ## Purpose
 
-`./CLAUDE.md` is guidance claude reads but does not enforce, especially since Opus 4.7.
+`./CLAUDE.md` is guidance claude reads but does not enforce. Especially since Anthropic nerfed Opus 4.6 and then trainwrecked Opus 4.7.
 
-Every rule that can be a programmatic check lives here instead to force claude into compliance.
+So... every rule that can be a programmatic check lives here instead to force claude into compliance.
+
+Built for Claude Code in VS Code on Windows and macOS. Hooks may behave differently in other contexts (terminal CLI, other IDEs, other platforms), wouldn't know, haven't tested.
 
 ## Fail Closed
 
@@ -118,9 +120,7 @@ Run from the repo root:
 python -m unittest discover -s tests -t . -v
 ```
 
-An important test is [./tests/command_tests.json](tests/command_tests.json). It is the e2e black-box test suite for bash_safety. Every entry runs the full hook entry script as a subprocess and asserts the outcome. It does not care about internal implementation; it matches opaque behavior against real commands seen in the wild. Every entry must be a syntactically valid shell command.
-
-If you encounter a new command in the wild that should be allowed, denied, or passed through, add it here to ensure behavior never regresses:
+An important test is [./tests/command_tests.json](tests/command_tests.json). It is the e2e black-box test suite for bash_safety. Every entry runs the full hook entry script as a subprocess and asserts the outcome. It does not care about internal implementation; it matches opaque behavior against real commands seen in the wild. Every entry must be a syntactically valid shell command. If you encounter a new command in the wild that should be allowed, denied, or passed through, add it here to ensure behavior never regresses.
 
 ```json
 {
