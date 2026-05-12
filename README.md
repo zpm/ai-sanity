@@ -90,6 +90,8 @@ Make claude read global styleguides contained in this repo before it can edit ma
 
 Ships a global set of style guides that claude must read before editing files of a given type. The global manifest (`./.ai-sanity/required-styleguides.json`) maps file extensions to styleguides in `./styleguides/`. Any project that uses ai-sanity gets these enforced automatically.
 
+Note that these are my personal styles. They are not idiomatic, and if you're copying this repo, you'll probably want to delete this hook or update the styles to match your own.
+
 | File | Required | Notes |
 |---|---|---|
 | `./.ai-sanity/required-styleguides.json` | Yes | Always loaded. Contains extension-to-styleguide mappings. |
