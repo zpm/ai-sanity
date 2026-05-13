@@ -26,7 +26,8 @@ import _common._hook_io
 class PlaybookMatchCheck:
 
     """Reads the project's .ai-sanity/playbook.json and matches a bash command against its entries. Supports exact,
-    prefix (trailing ` *`), and project-root-relative (`*/` prefix) matching at the token level."""
+    prefix (trailing ` *`), and project-root-relative (`*/` prefix) matching at the token level. Returns a dict
+    (matched entry) for allow, a string (deny reason) for near-miss detection, or None for no match."""
 
     _playbook_relative_path_from_project_root = os.path.join(".ai-sanity", "playbook.json")
 
@@ -110,6 +111,23 @@ class PlaybookMatchCheck:
 
 
     @staticmethod
+    def _command_path_looks_like_same_playbook_path(entry_path_token, command_path_token):
+
+        """Returns True when the command path appears to reference the same script as the playbook entry, just from a
+        different cwd. Compares the normalized path tail (basename plus as many parent components as the shorter path
+        has) so that ../../server/scripts/tests/all-fast.sh matches server/scripts/tests/all-fast.sh but
+        ./server/scripts/tests/unit-fast.sh does not."""
+        normalized_entry_parts = os.path.normpath(entry_path_token).split(os.sep)
+        normalized_command_parts = os.path.normpath(command_path_token).split(os.sep)
+        if not normalized_entry_parts or not normalized_command_parts:
+            return False
+        if normalized_entry_parts[-1] != normalized_command_parts[-1]:
+            return False
+        command_tail_length = min(len(normalized_entry_parts), len(normalized_command_parts))
+        return normalized_entry_parts[-command_tail_length:] == normalized_command_parts[-command_tail_length:]
+
+
+    @staticmethod
     def check(pretooluse_payload):
 
         """Returns a matching playbook entry if the command tokens match (exact, prefix, or project-root-relative).
@@ -133,6 +151,7 @@ class PlaybookMatchCheck:
         if not command_tokens:
             return None
         project_root_abs_path = os.path.dirname(os.path.dirname(playbook_abs_path))
+        near_miss_deny_reason = None
         for candidate_playbook_entry in playbook_entries:
             entry_match_tokens = candidate_playbook_entry["_match_tokens"]
             project_root_relative_token_indices = candidate_playbook_entry["_project_root_relative_token_indices"]
@@ -144,6 +163,8 @@ class PlaybookMatchCheck:
                     if len(command_tokens) != len(entry_match_tokens):
                         continue
                 all_entry_tokens_match = True
+                all_non_path_tokens_matched = True
+                candidate_near_miss_command_path_token = None
                 for token_index in range(len(entry_match_tokens)):
                     if token_index in project_root_relative_token_indices:
                         entry_token_resolved_abs_path = os.path.realpath(
@@ -154,13 +175,29 @@ class PlaybookMatchCheck:
                         )
                         if entry_token_resolved_abs_path != command_token_resolved_abs_path:
                             all_entry_tokens_match = False
-                            break
+                            if (
+                                PlaybookMatchCheck._command_path_looks_like_same_playbook_path(
+                                    entry_path_token = entry_match_tokens[token_index],
+                                    command_path_token = command_tokens[token_index],
+                                )
+                                and not os.path.exists(command_token_resolved_abs_path)
+                            ):
+                                candidate_near_miss_command_path_token = command_tokens[token_index]
                     else:
                         if entry_match_tokens[token_index] != command_tokens[token_index]:
                             all_entry_tokens_match = False
+                            all_non_path_tokens_matched = False
                             break
                 if all_entry_tokens_match:
                     return candidate_playbook_entry
+                nonexistent_command_path_token = (
+                    candidate_near_miss_command_path_token if all_non_path_tokens_matched else None
+                )
+                if nonexistent_command_path_token is not None and near_miss_deny_reason is None:
+                    near_miss_deny_reason = (
+                        f"Playbook script does not exist at the referenced path:"
+                        f" {nonexistent_command_path_token} (check your working directory)"
+                    )
             else:
                 if candidate_playbook_entry["_is_prefix_match"]:
                     if (
@@ -171,6 +208,8 @@ class PlaybookMatchCheck:
                 else:
                     if command_tokens == entry_match_tokens:
                         return candidate_playbook_entry
+        if near_miss_deny_reason is not None:
+            return near_miss_deny_reason
         return None
 
 
@@ -793,8 +832,11 @@ class PreToolUseBashSafetyHookEntry:
         """Evaluates one command segment through the full check pipeline. Returns the string 'allow', a deny reason
         string, or None for passthrough."""
         segment_payload = PreToolUseBashSafetyHookEntry._strip_safe_pipe_tail_from_payload(segment_payload)
-        if PlaybookMatchCheck.check(segment_payload) is not None:
+        playbook_check_result = PlaybookMatchCheck.check(segment_payload)
+        if isinstance(playbook_check_result, dict):
             return "allow"
+        if isinstance(playbook_check_result, str):
+            return playbook_check_result
         bash_command_string = (segment_payload.get("tool_input") or {}).get("command", "")
         clauses = _common._command_parser.BashCommandParser.extract_command_clauses(bash_command_string)
         git_check_result = GitCommandsCheck.check(clauses)

@@ -616,6 +616,135 @@ class TestPlaybookProjectRootRelativeMatch(unittest.TestCase):
         )
         self.assertIsNone(result)
 
+    ####################################################################################################################
+    # NEAR-MISS DETECTION
+
+
+    def test_near_miss_returns_deny_reason_when_path_does_not_exist(self):
+
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload(
+                "../../server/scripts/tests/all-fast.sh",
+                working_directory = self.temp_project_directory
+            )
+        )
+        self.assertIsInstance(result, str)
+        self.assertIn("does not exist", result)
+        self.assertIn("../../server/scripts/tests/all-fast.sh", result)
+
+
+    def test_near_miss_returns_deny_reason_for_prefix_match_with_args(self):
+
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload(
+                "../../server/scripts/tests/all-fast.sh 2>&1",
+                working_directory = self.temp_project_directory
+            )
+        )
+        self.assertIsInstance(result, str)
+        self.assertIn("does not exist", result)
+
+
+    def test_near_miss_with_non_first_path_token(self):
+
+        self._write_playbook([
+            {"bash": "pwsh */server/scripts/tests/all-fast.ps1 *", "what": "pwsh test", "when": "test"}
+        ])
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload(
+                "pwsh ../../server/scripts/tests/all-fast.ps1",
+                working_directory = self.temp_project_directory
+            )
+        )
+        self.assertIsInstance(result, str)
+        self.assertIn("does not exist", result)
+
+
+    def test_no_near_miss_when_path_exists_but_resolves_differently(self):
+
+        other_project_directory = tempfile.mkdtemp()
+        other_scripts_directory = os.path.join(
+            other_project_directory, "server", "scripts", "tests"
+        )
+        os.makedirs(other_scripts_directory)
+        other_script_file_path = os.path.join(other_scripts_directory, "all-fast.sh")
+        open(other_script_file_path, mode = "w").close()
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload(
+                os.path.join(other_scripts_directory, "all-fast.sh"),
+                working_directory = self.temp_project_directory
+            )
+        )
+        self.assertIsNone(result)
+
+
+    def test_no_near_miss_for_cd_command_at_path_token_position(self):
+
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload(
+                "cd /some/nonexistent/directory",
+                working_directory = self.temp_project_directory
+            )
+        )
+        self.assertIsNone(result)
+
+
+    def test_no_near_miss_when_missing_path_is_different_script(self):
+
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload(
+                "./server/scripts/tests/unit-fast.sh",
+                working_directory = self.temp_project_directory
+            )
+        )
+        self.assertIsNone(result)
+
+
+    def test_no_near_miss_when_same_command_uses_different_missing_path(self):
+
+        self._write_playbook([
+            {"bash": "python */server/scripts/tests/all-fast.py *", "what": "test", "when": "test"}
+        ])
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload(
+                "python missing/other.py",
+                working_directory = self.temp_project_directory
+            )
+        )
+        self.assertIsNone(result)
+
+
+    def test_no_near_miss_when_fixed_tokens_after_path_differ(self):
+
+        self._write_playbook([
+            {"bash": "python */manage.py test *", "what": "run tests", "when": "test"}
+        ])
+        manage_py_directory = os.path.join(self.temp_project_directory, "src")
+        os.makedirs(manage_py_directory, exist_ok = True)
+        manage_py_file_path = os.path.join(manage_py_directory, "manage.py")
+        open(manage_py_file_path, mode = "w").close()
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload(
+                "python ../../manage.py shell",
+                working_directory = self.temp_project_directory
+            )
+        )
+        self.assertIsNone(result)
+
+
+    def test_no_near_miss_when_non_path_tokens_differ(self):
+
+        self._write_playbook([
+            {"bash": "pwsh */server/scripts/tests/all-fast.ps1 *", "what": "pwsh test", "when": "test"}
+        ])
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload(
+                "bash ../../server/scripts/tests/all-fast.ps1",
+                working_directory = self.temp_project_directory
+            )
+        )
+        self.assertIsNone(result)
+
 
 class TestTildePathCheck(unittest.TestCase):
 
