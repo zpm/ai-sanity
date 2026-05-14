@@ -62,6 +62,7 @@
         "git show HEAD:src/main.py",
         "git status",
         "git status && echo done",
+        "grep -n \"error:\\|warning:\" file.txt",
         "grep -r pattern src/",
         "head -20 file.txt",
         "ls -la",

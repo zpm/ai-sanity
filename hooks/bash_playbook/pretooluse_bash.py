@@ -652,7 +652,7 @@ class WindowsPathCheck:
     """Rejects bash commands containing Windows-style backslash paths. Scans the raw command string (before shlex
     tokenization, which eats backslashes) for drive-letter paths (C:\...) and dot-relative paths (.\..., ..\...)."""
 
-    _WINDOWS_PATH_PATTERN = re.compile(r"(?:[A-Za-z]:\\|\.\.?\\)")
+    _WINDOWS_PATH_PATTERN = re.compile(r"(?:\b[A-Za-z]:\\|\.\.?\\)(?![|])")
 
     _DENY_MESSAGE = "You are using bash dude, use forward slashes for file paths instead of backslashes"
 
