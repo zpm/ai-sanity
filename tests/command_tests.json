@@ -231,6 +231,8 @@
         "select opt in a b c; do echo $opt; done",
         "sh -c 'echo hi'",
         "sls -Pattern 'error' -Path ./logs",
+        "source venv/bin/activate",
+        "source venv/bin/activate && python -m pytest tests/test_auth.py -x -q 2>&1 | tail -30",
         "sudo apt install git",
         "sudo apt-get update",
         "taskkill /F /PID 1234",

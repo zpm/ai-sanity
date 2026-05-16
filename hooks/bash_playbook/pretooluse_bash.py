@@ -518,6 +518,7 @@ class ProhibitedCommandsCheck:
         "sed": ["*"],
         "select": ["*"],
         "sh": ["*"],
+        "source": ["*"],
         "tee": ["*"],
         "until": ["*"],
         "while": ["*"],
