@@ -19,7 +19,7 @@ _INSTRUCTION_TEXT = (
     "Please read the global claude.md and the project claude.md and follow all instructions."
     " Before proceeding with any task below you must explicitly acknowledge to the user that you"
     " have read the documents (or that they do not exist), and give them a two-sentence summary"
-    " of the important rules you will remember."
+    " of the important rules you will remember. Also state your model name and context window."
 )
 
 
