@@ -35,9 +35,9 @@ Every name (variable, function, method, constant, class, CSS class, HTML id) mus
   - `const currentAuthedUser = requireAuthedUserOrRedirect(request);`
   - `const sessionAuthedUserId = request.session.get("user_id");`
 - Constants must describe their purpose and scope:
-  - `UUID_PARAMS_STORY` (what format, what entity, what it validates)
+  - `UUID_PARAMS_ORDER` (what format, what entity, what it validates)
 - Methods must describe the full action and context:
-  - `apiGetStorySections(uid)` (API method, gets story sections, client-safe output)
+  - `apiGetOrderItems(uid)` (API method, gets order items, client-safe output)
   - `requireAuthedUserOrRedirect(request)` (requires auth, returns user, or redirects)
 - Never sacrifice clarity for aesthetics. A clear name is always better than a short, ambiguous one.
 - Concept-first naming. Lead with the concept so that related names sort together alphabetically in objects, JSON, and autocomplete. Put qualifiers like `total`, `count`, `max`, `min` at the end:
@@ -75,7 +75,7 @@ Sentence case (capital letters) is only used for full sentence/paragraph explana
 ## Console Output
 
 All strings passed to `console.log`, `console.error`, `console.warn`, etc. should be lowercase:
-- `console.log("story.js loaded")`
+- `console.log("dashboard.js loaded")`
 - `console.error("stream subscription failed:", err)`
 
 ## File Headers
@@ -155,8 +155,8 @@ const ROUTES = [
         label: "Users"
     },
     {
-        path: "/stories",
-        label: "Stories"
+        path: "/orders",
+        label: "Orders"
     }
 ];
 ```
@@ -260,7 +260,7 @@ In logging, audit, and observability code, no implicit defaults at all. No `= nu
 ```javascript
 // bad
 window.audit = {
-    logRequest({ userId, storyId = null, costStream = null, latencyMs = 0 }) {
+    logRequest({ userId, orderId = null, costBreakdown = null, latencyMs = 0 }) {
 
         // ...
 
@@ -271,7 +271,7 @@ audit.logRequest({ userId: user.id });
 
 // good
 window.audit = {
-    logRequest({ userId, storyId, costStream, latencyMs }) {
+    logRequest({ userId, orderId, costBreakdown, latencyMs }) {
 
         // ...
 
@@ -280,8 +280,8 @@ window.audit = {
 
 audit.logRequest({
     userId: user.id,
-    storyId: null,
-    costStream: null,
+    orderId: null,
+    costBreakdown: null,
     latencyMs: 0
 });
 ```

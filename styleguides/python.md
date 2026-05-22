@@ -26,7 +26,7 @@ Every name (variable, function, method, constant, class) must describe what it i
   - `current_authed_user = require_authed_user_or_redirect(request)`
   - `session_authed_user_id = request.session.get("user_id")`
 - Constants must describe their purpose and scope:
-  - `UUID_PARAMS_STORY` (what format, what entity, what it validates)
+  - `UUID_PARAMS_ORDER` (what format, what entity, what it validates)
 - Methods must describe the full action and context:
   - `api_get_user_details(uid)` (API method, gets user details)
   - `require_authed_user_or_redirect(request)` (requires auth, returns user, or redirects)
@@ -115,20 +115,20 @@ myapp.services.logging.critical(
 
 When a method definition wraps across multiple lines, keep `self` (or `cls`) on the same line as `def`, not on its own line:
 ```python
-class SampleGenerator:
-    async def generate_sample(self,
-        sections: list[myapp.models.story.Section],
+class ReportGenerator:
+    async def generate_report(self,
+        tasks: list[myapp.models.project.Task],
         user_id: str
     ) -> str:
 ```
 
 Never use the keyword-only separator `*` in a function signature. The separate "Keyword Arguments and Formatting" rule already requires callers to pass by keyword for 2+ args, so `*` is redundant enforcement. It adds visual noise, creates a positional-vs-keyword-only class distinction that has no real semantic, and makes signatures harder to scan. Write every argument as a normal positional-or-keyword parameter and trust the kwargs rule.
 ```python
-class InkTrialService:
-    async def xsvc_add_ink_trial_daily(self,
-        user: infinite.models.user.User,
-        generating_id: str,
-        require_cron_eligibility: bool = False,
+class NotificationService:
+    async def schedule_daily_digest(self,
+        user: myapp.models.user.User,
+        batch_id: str,
+        require_active_subscription: bool = False,
     ) -> bool:
 ```
 
@@ -279,8 +279,8 @@ Inside Python this does not apply. Enum comparisons (`if status == MyEnum.ACTIVE
   class AuditLogger:
       def log_request(self,
           user_id: str,
-          story_id: str | None,
-          cost_stream: dict | None,
+          order_id: str | None,
+          cost_breakdown: dict | None,
       ) -> None:
 
           ...
@@ -290,8 +290,8 @@ Inside Python this does not apply. Enum comparisons (`if status == MyEnum.ACTIVE
 
           await service.log_request(
               user_id = user.user_id,
-              story_id = None,
-              cost_stream = None,
+              order_id = None,
+              cost_breakdown = None,
           )
   ```
 - No singleton patterns: Don't use `__new__` with instance checking (`if cls._instance is None`). Just use normal `__init__` and instantiate when needed:
@@ -368,18 +368,29 @@ import os
 - Comment non-trivial blocks. Before any block of code where the intent isn't immediately obvious from the code itself, write a brief 1-2 line comment explaining what the block does and why. The reader should understand the purpose of the next 10-20 lines without reading every line. Don't comment self-explanatory code; only where the context helps.
 - Three capitalization tiers for comments:
   1. Class-level section breakpoints (full-width `########` separators): ALL CAPS.
-     - `# STORY SUMMARY SERVICE`
+     - `# REPORT EXPORT SERVICE`
   2. Function-level section headings (indented `####` separators inside classes): first word capitalized, sentence case after colon. Acronyms like API and DEBUG stay all caps.
      - `# API: Methods`, `# DEBUG: Model dumps`, `# Internal: Linking`
   3. Normal inline comments: all lowercase.
      - `return uid  # hex format without dashes`
-- Docstrings use sentence case (leading capital). Keep docstrings to 1-2 sentences, wrap close to the 120-column max instead of wrapping early, and never exceed 5 physical lines under any circumstances. Always include an empty newline after the docstring before the code body, mirroring the empty newline before it:
+- Docstrings are for callers and document the product behavior. 1-2 sentences, sentence case (leading capital), wrap close at 120-columns, never exceed 4 lines. Always include an empty newline after the docstring before the code body, mirroring the empty newline before it.
+- Inline comments are for maintainers. Implementation details belong in inline comments next to the relevant code.
   ```python
-  class LiveMemoryBufferManager:
-      def _init_live_memory_buffers(self):
+  # bad: implementation details in docstring
+  class ReportStorage:
+      async def save_export_columns(self, report):
 
-          """Live memory buffers remain instantiated on the class and allow for keeping state on long-running background
-          tasks, in this case LLM streaming requests. This is to avoid clobbering this status to the database."""
+          """Partial save that only updates columns owned by the export job; does not write title or description
+          to avoid clobbering concurrent metadata writes."""
 
-          self._buffers = {}
+          await self._session.execute(...)
+
+  # good: docstring is product-level, implementation detail is inline
+  class ReportStorage:
+      async def save_export_columns(self, report):
+
+          """Save only the columns that change during an export job."""
+
+          # does not write title or description to avoid clobbering concurrent metadata writes
+          await self._session.execute(...)
   ```
