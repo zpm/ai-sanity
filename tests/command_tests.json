@@ -202,6 +202,7 @@
         "npm install lodash | grep success",
         "npm uninstall lodash",
         "npm update",
+        "perl -e 'print 1'",
         "pip install --upgrade pip",
         "pip install -e .",
         "pip install -r requirements.txt",

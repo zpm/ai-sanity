@@ -511,6 +511,7 @@ class ProhibitedCommandsCheck:
         "cmd.exe": ["*"],
         "for": ["*"],
         "if": ["*"],
+        "perl": ["*"],
         "powershell": ["*"],
         "powershell.exe": ["*"],
         "pwsh": ["*"],
