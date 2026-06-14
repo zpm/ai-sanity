@@ -144,6 +144,14 @@ Always use `rem` for font sizes. Never use `em`, which compounds when elements a
 
 - `font-size: 0.875rem;`
 
+## Load & Animation Timing
+
+Sequence animations off `animationend`/`transitionend` events, never chained `setTimeout` delays. Timers drift and break under main-thread load or a cached reload; the event fires when the animation actually finishes, so each step waits for the real end of the previous one.
+
+To run code after the page has painted, gate on the `load` event. `requestAnimationFrame` is not a reliable post-paint signal, and `document.fonts.load` can resolve before first paint on a cached refresh, so a sequence timed from either can run its gaps invisibly in the pre-paint window and land all at once.
+
+For a reveal that must animate on load, prefer a `@keyframes` animation over a CSS transition. A transition needs a previously painted frame to interpolate from, which a cached load may never provide, so the element snaps straight to its end state; a keyframe animation always plays from its start whenever it is applied.
+
 ## Object and Array Literals
 
 Object literals and array literals with multiple entries must be expanded with one key per line, even when entries are trivial (a single-key object, a short literal, or a one-element array). Blow them up anyway. Consistency with larger literals and scannability matter more than compactness; do not collapse for elegance. This applies to JS source the same way it applies to JSON files.
