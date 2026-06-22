@@ -68,7 +68,8 @@
         "ls -la",
         "pwd",
         "tail -f server.log",
-        "wc -l file.txt"
+        "wc -l file.txt",
+        "which pdftotext mutool qpdf"
     ],
     "deny": [
         "awk '{print $1}' file.txt",
@@ -275,6 +276,7 @@
         "git log; echo done",
         "make all",
         "mkdir -p src/utils",
+        "mutool draw -o out.txt file.pdf",
         "node script.js",
         "npm run build",
         "npm run lint",
@@ -289,6 +291,7 @@
         "python -c 'print(1)'",
         "python -m pytest -v",
         "python script.py",
+        "qpdf --decrypt in.pdf out.pdf",
         "rm file.txt",
         "ruby script.rb",
         "touch newfile.txt",

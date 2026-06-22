@@ -730,10 +730,12 @@ class SafeCommandsCheck:
         "grep": ["*"],
         "head": ["*"],
         "ls": ["*"],
+        "pdftotext": ["*"],
         "printf": ["*"],
         "pwd": ["*"],
         "tail": ["*"],
         "wc": ["*"],
+        "which": ["*"],
     }
 
 
