@@ -24,7 +24,7 @@ The `permissions.allow` list should include the path to this repo (e.g., `Read(~
 
 Keeps claude from invoking dangerous shell commands, auto-allows the safe ones it commonly uses, and auto-allows commands listed in a project's playbook.
 
-Works by implementing a deny-list for dangerous shell commands (git writes, package managers, system ops, shell spawning, text manipulation). Commands matching a project's `./.ai-sanity/playbook.json` bypass all deny checks. Unknown commands pass through to Claude Code's normal permission UI.
+Works by implementing a deny-list for dangerous shell commands (git writes, package managers, system ops, shell spawning, text manipulation). Commands matching a project's `./.ai-sanity/playbook.json` are auto-allowed. Unknown commands pass through to Claude Code's normal permission UI.
 
 ### Security Model
 
@@ -38,9 +38,11 @@ The rough goals of the rules are:
 
 3. File edits are not a concern, as claude already has general edit permissions.
 
+Deny checks compose in a fixed order. The raw-path checks (Windows backslash paths, tilde paths) run first on the unparsed command and are absolute: that syntax would corrupt the hook's own tokenizer and path matching, so no playbook entry bypasses them. Every other check runs per-segment after the playbook match, so a playbook entry bypasses it. A check earns absolute status only when the syntax it catches breaks the hook's parsing; otherwise it belongs in the per-segment pipeline.
+
 ### Playbook
 
-Commands matching a project's `./.ai-sanity/playbook.json` bypass the checks. The command is tokenized and matched against playbook entries (exact or prefix). If claude submits a compound command, the compounded part is evaluated independently against the bash rules.
+The playbook is a per-project registry of entrypoint commands (test runners, build scripts, task scripts) that claude runs to do common tasks. A command matching `./.ai-sanity/playbook.json` is auto-allowed, bypassing every deny check except the absolute raw-path checks above. The command is tokenized and matched against playbook entries (exact or prefix). If claude submits a compound command, the compounded part is evaluated independently against the bash rules.
 
 Each project that wants playbook support creates `./.ai-sanity/playbook.json`. It includes metadata to help Claude understand when to run the commands:
 

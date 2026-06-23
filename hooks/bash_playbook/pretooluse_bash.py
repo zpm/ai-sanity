@@ -717,6 +717,44 @@ class NoShellSubstitutionCheck:
         return None
 
 
+class NoShellVariableCheck:
+
+    """Rejects commands that assign or expand shell variables. The literal value a variable stands for is invisible to
+    the user approving the command and to the clause parser, so claude must inline the literal value instead."""
+
+    # TODO: this denies quoted literals too (e.g. grep '$HOME' or echo 'VAR=x').
+    # if that becomes a problem, scan with single-quote awareness so 'literal' content is skipped.
+    # assignment matches a NAME= token at the start of the command or after a separator (e.g. FOO=bar, x | BAR=baz);
+    # it deliberately ignores NAME= that appears as an argument or --flag=value (no separator precedes the name).
+    _ASSIGNMENT_PATTERN = re.compile(r"(?:^|[;&|])\s*[A-Za-z_][A-Za-z0-9_]*=")
+    _EXPANSION_PATTERN = re.compile(r"\$\{?[A-Za-z_]")
+
+    _DENY_MESSAGE = "Shell variables ($VAR, VAR=...) are prohibited. Inline the literal value instead."
+
+
+    @staticmethod
+    def command_contains_shell_variable(bash_command_string):
+
+        """Returns True if the raw command assigns or expands a shell variable."""
+
+        if NoShellVariableCheck._ASSIGNMENT_PATTERN.search(bash_command_string):
+            return True
+        if NoShellVariableCheck._EXPANSION_PATTERN.search(bash_command_string):
+            return True
+        return False
+
+
+    @staticmethod
+    def check(pretooluse_payload):
+
+        """Returns a deny reason string if the raw command assigns or expands a shell variable, or None."""
+
+        bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
+        if NoShellVariableCheck.command_contains_shell_variable(bash_command_string):
+            return NoShellVariableCheck._DENY_MESSAGE
+        return None
+
+
 class SafeCommandsCheck:
 
     """Auto-allows commands that are safe to run without user confirmation. Mirrors Claude Code's own auto-approve
@@ -761,6 +799,7 @@ class PreToolUseBashSafetyHookEntry:
     _payload_based_deny_check_methods = (
         PowershellCmdletCheck.check,
         NoShellSubstitutionCheck.check,
+        NoShellVariableCheck.check,
         RequireGitMvForTrackedMovesCheck.check,
     )
 
@@ -776,11 +815,13 @@ class PreToolUseBashSafetyHookEntry:
         """If the command is a pipe chain where every downstream clause starts with a safe output-filtering command,
         returns a copy of the payload with tool_input.command set to just the first clause (with descriptor merges
         stripped). Otherwise returns the payload unchanged. Bails out if the raw command contains shell substitution
-        syntax, since stripping would hide those from downstream checks."""
+        syntax or a shell variable, since stripping would hide those from downstream checks."""
         bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
         for marker in NoShellSubstitutionCheck._SUBSTITUTION_MARKERS:
             if marker in bash_command_string:
                 return pretooluse_payload
+        if NoShellVariableCheck.command_contains_shell_variable(bash_command_string):
+            return pretooluse_payload
         clauses, separators = (
             _common._command_parser.BashCommandParser.extract_command_clauses_and_separators(bash_command_string)
         )
@@ -871,7 +912,8 @@ class PreToolUseBashSafetyHookEntry:
             pretooluse_payload = _common._hook_io.PreToolUseHookIo.read_pretooluse_payload_from_stdin()
             bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
             bash_command_cwd = pretooluse_payload.get("cwd") or "."
-            # runs on the raw command string before shlex tokenization, which eats backslashes
+            # raw-path checks run first on the raw command string and are absolute: this syntax would corrupt the
+            # tokenizer and path matching (including the playbook matcher), so it is denied before the playbook check
             windows_path_deny_reason = WindowsPathCheck.check(pretooluse_payload)
             if windows_path_deny_reason is not None:
                 _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(windows_path_deny_reason)
