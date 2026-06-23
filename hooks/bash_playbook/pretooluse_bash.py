@@ -541,6 +541,29 @@ class ProhibitedCommandsCheck:
         return None
 
 
+class AbsolutePathCommandCheck:
+
+    """Rejects commands whose command word is an absolute path (e.g. /usr/bin/grep, /opt/homebrew/bin/pdftotext). The
+    deny and safe lists key on the command name, so a path-qualified binary bypasses both. Tools must be invoked by
+    name so PATH resolution applies and the name-based lists govern the command."""
+
+    _DENY_MESSAGE = (
+        "Invoke tools by name so PATH resolution applies (e.g. `pdftotext`, not `/opt/homebrew/bin/pdftotext`)."
+        " Absolute-path tool invocations are prohibited."
+    )
+
+
+    @staticmethod
+    def check(clauses):
+
+        """Returns a deny reason string if any clause's command word is an absolute path, or None."""
+
+        for clause in clauses:
+            if clause and clause[0].startswith("/"):
+                return AbsolutePathCommandCheck._DENY_MESSAGE
+        return None
+
+
 class PowershellCmdletCheck:
 
     """Rejects PowerShell cmdlets and aliases inside Bash tool calls. Payload-based because PowerShell is
@@ -717,6 +740,31 @@ class NoShellSubstitutionCheck:
         return None
 
 
+class NoSubshellGroupingCheck:
+
+    """Rejects subshell and command-grouping parentheses at command position (start of the command or right after a
+    separator). Grouping hides multiple commands behind one approval and breaks the clause parser, which cannot see
+    the commands inside the group. A ( inside an argument (e.g. grep -E "(a|b)") is not at command position, so it is
+    allowed."""
+
+    # TODO: this matches a command-position ( inside a quoted literal too (e.g. grep -E 'a|(b)').
+    # if that becomes a problem, scan with single-quote awareness so 'literal' content is skipped.
+    _SUBSHELL_OPEN_PATTERN = re.compile(r"(?:^|[;&|])\s*\(")
+
+    _DENY_MESSAGE = "Subshells and command grouping with ( ) are prohibited. Run each command separately."
+
+
+    @staticmethod
+    def check(pretooluse_payload):
+
+        """Returns a deny reason string if the raw command opens a subshell or group at command position, or None."""
+
+        bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
+        if NoSubshellGroupingCheck._SUBSHELL_OPEN_PATTERN.search(bash_command_string):
+            return NoSubshellGroupingCheck._DENY_MESSAGE
+        return None
+
+
 class NoShellVariableCheck:
 
     """Rejects commands that assign or expand shell variables. The literal value a variable stands for is invisible to
@@ -763,15 +811,19 @@ class SafeCommandsCheck:
     _SAFE_COMMANDS = {
         "cat": ["*"],
         "cd": ["*"],
+        "cp": ["*"],
         "echo": ["*"],
         "find": ["*"],
         "grep": ["*"],
         "head": ["*"],
         "ls": ["*"],
+        "mdls": ["*"],
         "pdftotext": ["*"],
         "printf": ["*"],
         "pwd": ["*"],
         "tail": ["*"],
+        "textutil": ["*"],
+        "tr": ["*"],
         "wc": ["*"],
         "which": ["*"],
     }
@@ -804,6 +856,7 @@ class PreToolUseBashSafetyHookEntry:
     )
 
     _clause_based_deny_check_methods = (
+        AbsolutePathCommandCheck.check,
         DeferToUserCommandsCheck.check,
         ProhibitedCommandsCheck.check,
     )
@@ -920,6 +973,11 @@ class PreToolUseBashSafetyHookEntry:
             tilde_path_deny_reason = TildePathCheck.check(pretooluse_payload)
             if tilde_path_deny_reason is not None:
                 _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(tilde_path_deny_reason)
+            # subshell/group parens break clause parsing (the inner commands are invisible to the matcher), so they
+            # are denied on the raw command string before segmentation, the same as the raw-path checks above
+            subshell_grouping_deny_reason = NoSubshellGroupingCheck.check(pretooluse_payload)
+            if subshell_grouping_deny_reason is not None:
+                _common._hook_io.PreToolUseHookIo.emit_deny_decision_and_exit(subshell_grouping_deny_reason)
             compound_command_segments = (
                 _common._command_parser.BashCommandParser.extract_compound_command_segments(bash_command_string)
             )

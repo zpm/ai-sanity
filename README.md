@@ -24,7 +24,7 @@ The `permissions.allow` list should include the path to this repo (e.g., `Read(~
 
 Keeps claude from invoking dangerous shell commands, auto-allows the safe ones it commonly uses, and auto-allows commands listed in a project's playbook.
 
-Works by implementing a deny-list for dangerous shell commands (git writes, package managers, system ops, shell spawning, text manipulation). Commands matching a project's `./.ai-sanity/playbook.json` are auto-allowed. Unknown commands pass through to Claude Code's normal permission UI.
+Works by implementing a deny-list for dangerous shell commands (git writes, package managers, system ops, shell spawning, subshell grouping, absolute-path tool invocation, text manipulation). Commands matching a project's `./.ai-sanity/playbook.json` are auto-allowed. Unknown commands pass through to Claude Code's normal permission UI.
 
 ### Security Model
 
@@ -38,7 +38,9 @@ The rough goals of the rules are:
 
 3. File edits are not a concern, as claude already has general edit permissions.
 
-Deny checks compose in a fixed order. The raw-path checks (Windows backslash paths, tilde paths) run first on the unparsed command and are absolute: that syntax would corrupt the hook's own tokenizer and path matching, so no playbook entry bypasses them. Every other check runs per-segment after the playbook match, so a playbook entry bypasses it. A check earns absolute status only when the syntax it catches breaks the hook's parsing; otherwise it belongs in the per-segment pipeline.
+Deny checks compose in a fixed order. The raw checks (Windows backslash paths, tilde paths, subshell grouping) run first on the unparsed command and are absolute: that syntax would corrupt the hook's own tokenizer and clause parsing, so no playbook entry bypasses them. Every other check runs per-segment after the playbook match, so a playbook entry bypasses it. A check earns absolute status only when the syntax it catches breaks the hook's parsing; otherwise it belongs in the per-segment pipeline.
+
+Tools must be invoked by name, not by absolute path. The deny and safe lists key on the command name, so a path-qualified binary would bypass both. This check runs in the per-segment pipeline.
 
 ### Playbook
 
