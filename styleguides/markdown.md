@@ -10,6 +10,8 @@ Do not introduce line breaks within a paragraph. Each paragraph is a single unbr
 
 `#` for the document title, `##` for sections, `###` when needed. No `####` or deeper. Most sub-topics work fine as a new paragraph; don't use a heading when a paragraph break will do.
 
+Every `##` section heading has three blank lines above it. `###` subheadings keep a single blank line above.
+
 ## Formatting
 
 No bold or italic. No `**text**`, `*text*`, `__text__`, or `_text_`.
