@@ -81,10 +81,9 @@ class PlaybookMatchCheck:
             stripped_bash_value = bash_command_value.strip()
             is_prefix_match = stripped_bash_value.endswith(" *")
             command_to_tokenize = stripped_bash_value[:-2] if is_prefix_match else stripped_bash_value
-            try:
-                match_tokens = shlex.split(command_to_tokenize)
-            except ValueError:
-                continue
+            match_tokens = _common._command_parser.BashCommandParser.tokenize(
+                bash_command_string = command_to_tokenize
+            )
             if not match_tokens:
                 continue
             project_root_relative_token_indices = set()
@@ -144,10 +143,9 @@ class PlaybookMatchCheck:
         )
         if not playbook_entries:
             return None
-        try:
-            command_tokens = shlex.split(bash_command_string)
-        except ValueError:
-            return None
+        command_tokens = _common._command_parser.BashCommandParser.tokenize(
+            bash_command_string = bash_command_string
+        )
         if not command_tokens:
             return None
         project_root_abs_path = os.path.dirname(os.path.dirname(playbook_abs_path))
@@ -291,6 +289,7 @@ class GitCommandsCheck:
     _DENY_GLOBAL_FLAGS_MESSAGE = (
         "Git global flags (e.g. -C, -c, --git-dir) are not allowed."
         " Rewrite as `git <subcommand>` with no flags between `git` and the subcommand."
+        " To read another repo, cd into it first: `cd <path> && git <subcommand>`."
     )
 
 
@@ -334,10 +333,9 @@ class RequireGitMvForTrackedMovesCheck:
         """Returns a deny reason string if any mv source is tracked, or None."""
         bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
         bash_command_cwd = pretooluse_payload.get("cwd") or "."
-        try:
-            command_tokens = shlex.split(bash_command_string)
-        except ValueError:
-            return None
+        command_tokens = _common._command_parser.BashCommandParser.tokenize(
+            bash_command_string = bash_command_string
+        )
         if not command_tokens or command_tokens[0] != "mv":
             return None
         target_dir_mode = None
@@ -661,10 +659,9 @@ class PowershellCmdletCheck:
         bash_command_string = (pretooluse_payload.get("tool_input") or {}).get("command", "")
         if not bash_command_string.strip():
             return None
-        try:
-            command_tokens = shlex.split(bash_command_string)
-        except ValueError:
-            command_tokens = bash_command_string.split()
+        command_tokens = _common._command_parser.BashCommandParser.tokenize_with_whitespace_fallback(
+            bash_command_string = bash_command_string
+        )
         for token in command_tokens:
             token_lower = token.lower().rstrip(";")
             if token_lower in PowershellCmdletCheck._DENIED_POWERSHELL_TOKENS:
@@ -749,7 +746,8 @@ class NoSubshellGroupingCheck:
 
     # TODO: this matches a command-position ( inside a quoted literal too (e.g. grep -E 'a|(b)').
     # if that becomes a problem, scan with single-quote awareness so 'literal' content is skipped.
-    _SUBSHELL_OPEN_PATTERN = re.compile(r"(?:^|[;&|])\s*\(")
+    # a newline terminates a command, so a ( on the next line is at command position too
+    _SUBSHELL_OPEN_PATTERN = re.compile(r"(?:^|[;&|\n])\s*\(")
 
     _DENY_MESSAGE = "Subshells and command grouping with ( ) are prohibited. Run each command separately."
 
@@ -772,9 +770,10 @@ class NoShellVariableCheck:
 
     # TODO: this denies quoted literals too (e.g. grep '$HOME' or echo 'VAR=x').
     # if that becomes a problem, scan with single-quote awareness so 'literal' content is skipped.
-    # assignment matches a NAME= token at the start of the command or after a separator (e.g. FOO=bar, x | BAR=baz);
-    # it deliberately ignores NAME= that appears as an argument or --flag=value (no separator precedes the name).
-    _ASSIGNMENT_PATTERN = re.compile(r"(?:^|[;&|])\s*[A-Za-z_][A-Za-z0-9_]*=")
+    # assignment matches a NAME= token at the start of the command, after a separator, or on a new line (e.g. FOO=bar,
+    # x | BAR=baz); it deliberately ignores NAME= that appears as an argument or --flag=value (no separator precedes
+    # the name).
+    _ASSIGNMENT_PATTERN = re.compile(r"(?:^|[;&|\n])\s*[A-Za-z_][A-Za-z0-9_]*=")
     _EXPANSION_PATTERN = re.compile(r"\$\{?[A-Za-z_]")
 
     _DENY_MESSAGE = "Shell variables ($VAR, VAR=...) are prohibited. Inline the literal value instead."

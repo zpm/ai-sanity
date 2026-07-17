@@ -24,11 +24,13 @@ The `permissions.allow` list should include the path to this repo (e.g., `Read(~
 
 Keeps claude from invoking dangerous shell commands, auto-allows the safe ones it commonly uses, and auto-allows commands listed in a project's playbook.
 
-Works by implementing a deny-list for dangerous shell commands (git writes, package managers, system ops, shell spawning, subshell grouping, absolute-path tool invocation, text manipulation). Commands matching a project's `./.ai-sanity/playbook.json` are auto-allowed. Unknown commands pass through to Claude Code's normal permission UI.
+Works by implementing a deny-list for dangerous shell commands (git writes, package managers, system ops, shell spawning, subshell grouping, absolute-path tool invocation, text manipulation). A compound command is split into segments and each segment is evaluated on its own, so any denied segment denies the whole command. Commands matching a project's `./.ai-sanity/playbook.json` are auto-allowed. Unknown commands pass through to Claude Code's normal permission UI.
 
 ### Security Model
 
-The threat model is "keep claude from doing stupid shit," not "protect against nation-state actors." These hooks catch the mistakes claude commonly makes, not crafted bypass attempts. The command parser handles well-formed, whitespace-separated commands because that is what claude produces. Commands outside that shape are not part of the safety guarantee.
+The threat model is "keep claude from doing stupid shit," not "protect against nation-state actors." These hooks catch the mistakes claude commonly makes, not crafted bypass attempts. The command parser handles well-formed shell syntax because that is what claude produces. Commands outside that shape are not part of the safety guarantee.
+
+Every command in a compound must be visible to the parser. A separator is a separator whether or not whitespace surrounds it, and a newline terminates a command the same as `;` does. The parser pads unquoted separators with whitespace before tokenising, because the tokeniser splits on whitespace alone: a glued separator otherwise collapses the whole line into one clause whose command word is the harmless first command, and every deny check then inspects that word instead of the smuggled one. Separators inside quotes stay literal, and the `&` or `|` of a redirect operator stays attached to it.
 
 The rough goals of the rules are:
 

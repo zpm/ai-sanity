@@ -243,6 +243,127 @@ class TestBashCommandParserClausesAndSeparators(unittest.TestCase):
         self.assertEqual(separators, [])
 
 
+class TestBashCommandParserGluedSeparators(unittest.TestCase):
+
+    """A separator that is not surrounded by whitespace, or a newline between two commands, must still split the
+    clause. shlex tokenises on whitespace alone, so before normalization these collapsed into a single clause whose
+    command word was the harmless first command, and every deny check inspected that word instead of the smuggled
+    one."""
+
+
+    def test_semicolon_glued_to_previous_token_splits_clause(self):
+
+        clauses, separators = (
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators(
+                "head -3; git push origin main"
+            )
+        )
+        self.assertEqual(clauses, [["head", "-3"], ["git", "push", "origin", "main"]])
+        self.assertEqual(separators, [";"])
+
+
+    def test_semicolon_glued_on_both_sides_splits_clause(self):
+
+        clauses, separators = (
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators(
+                "ls -1;pip install requests"
+            )
+        )
+        self.assertEqual(clauses, [["ls", "-1"], ["pip", "install", "requests"]])
+        self.assertEqual(separators, [";"])
+
+
+    def test_glued_and_then_splits_clause(self):
+
+        clauses, separators = (
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators("cat a.txt&&rm -rf build")
+        )
+        self.assertEqual(clauses, [["cat", "a.txt"], ["rm", "-rf", "build"]])
+        self.assertEqual(separators, ["&&"])
+
+
+    def test_glued_pipe_splits_clause(self):
+
+        clauses, separators = (
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators("cat a.txt|pip install x")
+        )
+        self.assertEqual(clauses, [["cat", "a.txt"], ["pip", "install", "x"]])
+        self.assertEqual(separators, ["|"])
+
+
+    def test_newline_splits_clause(self):
+
+        clauses, separators = (
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators(
+                "git status\ngit push origin main"
+            )
+        )
+        self.assertEqual(clauses, [["git", "status"], ["git", "push", "origin", "main"]])
+        self.assertEqual(separators, [";"])
+
+
+    def test_leading_and_blank_lines_do_not_misalign_separators(self):
+
+        clauses, separators = (
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators("\nls -1\n\npwd")
+        )
+        self.assertEqual(clauses, [["ls", "-1"], ["pwd"]])
+        self.assertEqual(separators, [";"])
+
+
+    def test_trailing_newline_keeps_single_clause(self):
+
+        segments = _common._command_parser.BashCommandParser.extract_compound_command_segments("ls -1\n")
+        self.assertEqual(segments, [[["ls", "-1"]]])
+
+
+    def test_backgrounding_ampersand_splits_clause(self):
+
+        clauses, separators = (
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators("ls -1 & pwd")
+        )
+        self.assertEqual(clauses, [["ls", "-1"], ["pwd"]])
+        self.assertEqual(separators, ["&"])
+
+
+    def test_line_continuation_joins_clause(self):
+
+        clauses, separators = (
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators("grep -r foo \\\n src/")
+        )
+        self.assertEqual(clauses, [["grep", "-r", "foo", "src/"]])
+        self.assertEqual(separators, [])
+
+
+    def test_quoted_separators_are_left_alone(self):
+
+        clauses, separators = (
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators(
+                "grep -oiE \"(foo|bar);baz\" file.txt"
+            )
+        )
+        self.assertEqual(clauses, [["grep", "-oiE", "(foo|bar);baz", "file.txt"]])
+        self.assertEqual(separators, [])
+
+
+    def test_descriptor_merge_is_not_split(self):
+
+        clauses, separators = (
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators("git diff 2>&1 | head")
+        )
+        self.assertEqual(clauses, [["git", "diff", "2>&1"], ["head"]])
+        self.assertEqual(separators, ["|"])
+
+
+    def test_merged_output_redirect_is_not_split(self):
+
+        clauses, separators = (
+            _common._command_parser.BashCommandParser.extract_command_clauses_and_separators("git diff &>/tmp/out")
+        )
+        self.assertEqual(clauses, [["git", "diff", "&>/tmp/out"]])
+        self.assertEqual(separators, [])
+
+
 class TestPlaybookMatchCheck(unittest.TestCase):
 
     def setUp(self):
