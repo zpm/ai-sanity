@@ -699,7 +699,7 @@ class PowershellCmdletCheck:
 
 class WindowsPathCheck:
 
-    """Rejects bash commands containing Windows-style backslash paths. Scans the raw command string (before shlex
+    r"""Rejects bash commands containing Windows-style backslash paths. Scans the raw command string (before shlex
     tokenization, which eats backslashes) for drive-letter paths (C:\...) and dot-relative paths (.\..., ..\...)."""
 
     _WINDOWS_PATH_PATTERN = re.compile(r"(?:\b[A-Za-z]:\\|\.\.?\\)(?![|])")
