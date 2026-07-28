@@ -26,8 +26,9 @@ import _common._hook_io
 class PlaybookMatchCheck:
 
     """Reads the project's .ai-sanity/playbook.json and matches a bash command against its entries. Supports exact,
-    prefix (trailing ` *`), and project-root-relative (`*/` prefix) matching at the token level. Returns a dict
-    (matched entry) for allow, a string (deny reason) for near-miss detection, or None for no match."""
+    prefix (trailing ` *`), and project-root-relative (`*/` prefix) matching at the token level, with a leading `./`
+    normalized away on both sides. Returns a dict (matched entry) for allow, a string (deny reason) for near-miss
+    detection, or None for no match."""
 
     _playbook_relative_path_from_project_root = os.path.join(".ai-sanity", "playbook.json")
 
@@ -57,6 +58,21 @@ class PlaybookMatchCheck:
                 break
             current_directory_abs_path = parent_directory_abs_path
         return None
+
+
+    @staticmethod
+    def normalize_dot_slash_prefix_from_token(token_value):
+
+        """Strips a leading `./` so a playbook entry written as `app/run.py` also matches `./app/run.py`. Only applies
+        when the remainder still holds a `/`: bare `./run.py` is a file in the working directory while `run.py`
+        resolves through PATH, and collapsing those would let an entry for a real tool authorize a local file."""
+
+        if not token_value.startswith("./"):
+            return token_value
+        token_value_without_dot_slash_prefix = token_value[2:]
+        if "/" not in token_value_without_dot_slash_prefix:
+            return token_value
+        return token_value_without_dot_slash_prefix
 
 
     @staticmethod
@@ -95,10 +111,18 @@ class PlaybookMatchCheck:
                     if not stripped_token_value:
                         has_invalid_project_root_token = True
                         break
-                    resolved_match_tokens.append(stripped_token_value)
+                    resolved_match_tokens.append(
+                        PlaybookMatchCheck.normalize_dot_slash_prefix_from_token(
+                            token_value = stripped_token_value
+                        )
+                    )
                     project_root_relative_token_indices.add(token_index)
                 else:
-                    resolved_match_tokens.append(token_value)
+                    resolved_match_tokens.append(
+                        PlaybookMatchCheck.normalize_dot_slash_prefix_from_token(
+                            token_value = token_value
+                        )
+                    )
             if has_invalid_project_root_token:
                 continue
             enriched_entry = dict(candidate_entry)
@@ -148,6 +172,10 @@ class PlaybookMatchCheck:
         )
         if not command_tokens:
             return None
+        command_tokens = [
+            PlaybookMatchCheck.normalize_dot_slash_prefix_from_token(token_value = command_token)
+            for command_token in command_tokens
+        ]
         project_root_abs_path = os.path.dirname(os.path.dirname(playbook_abs_path))
         near_miss_deny_reason = None
         for candidate_playbook_entry in playbook_entries:

@@ -67,6 +67,8 @@ Each project that wants playbook support creates `./.ai-sanity/playbook.json`. I
 
 A trailing ` *` in the `bash` field enables prefix matching (token-level, not string). Without it, the match is exact.
 
+A leading `./` on a token is normalized away on both sides, so an entry written as `venv/bin/python app/main.py` also matches `./venv/bin/python app/main.py`. This applies only when the rest of the token still contains a `/`, because a bare `./run.sh` is a file in the working directory while `run.sh` resolves through PATH.
+
 A `*/` prefix on any token marks it as a path relative to the project root (the directory containing `.ai-sanity/playbook.json`). At match time, both the entry path and the command path are resolved to absolute paths via `os.path.realpath` and compared. This allows scripts to match regardless of the working directory or relative path used to invoke them. `*/` can appear on any token position (e.g., `*/server/scripts/test.sh *` or `pwsh */server/scripts/test.ps1 *`).
 
 ## 2. No Questions

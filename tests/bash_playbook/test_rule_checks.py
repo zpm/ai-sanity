@@ -493,6 +493,75 @@ class TestPlaybookMatchCheck(unittest.TestCase):
         self.assertEqual(result["bash"], "python -m unittest discover -s tests -t . -v")
 
     ####################################################################################################################
+    # LEADING ./ NORMALIZATION
+
+
+    def test_naked_entry_path_matches_dot_slash_command(self):
+
+        self._write_playbook([
+            {"bash": "venv/Scripts/python.exe app/ubervan.py", "what": "run app", "when": "test"}
+        ])
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("./venv/Scripts/python.exe app/ubervan.py")
+        )
+        self.assertIsNotNone(result)
+
+
+    def test_dot_slash_entry_path_matches_naked_command(self):
+
+        self._write_playbook([
+            {"bash": "./venv/Scripts/python.exe app/ubervan.py", "what": "run app", "when": "test"}
+        ])
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("venv/Scripts/python.exe app/ubervan.py")
+        )
+        self.assertIsNotNone(result)
+
+
+    def test_dot_slash_normalization_applies_to_argument_tokens(self):
+
+        self._write_playbook([
+            {"bash": "python ./app/ubervan.py", "what": "run app", "when": "test"}
+        ])
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("python app/ubervan.py")
+        )
+        self.assertIsNotNone(result)
+
+
+    def test_dot_slash_normalization_applies_to_prefix_entry(self):
+
+        self._write_playbook([
+            {"bash": "venv/Scripts/python.exe app/ubervan.py *", "what": "run app", "when": "test"}
+        ])
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("./venv/Scripts/python.exe app/ubervan.py --debug")
+        )
+        self.assertIsNotNone(result)
+
+
+    def test_path_command_word_does_not_match_bare_entry_command(self):
+
+        self._write_playbook([
+            {"bash": "ubervan.sh", "what": "path resolved tool", "when": "test"}
+        ])
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("./ubervan.sh")
+        )
+        self.assertIsNone(result)
+
+
+    def test_bare_command_does_not_match_path_entry_command_word(self):
+
+        self._write_playbook([
+            {"bash": "./ubervan.sh", "what": "local script", "when": "test"}
+        ])
+        result = bash_playbook.pretooluse_bash.PlaybookMatchCheck.check(
+            self._build_bash_payload("ubervan.sh")
+        )
+        self.assertIsNone(result)
+
+    ####################################################################################################################
     # COMMANDS WITH SEQUENTIAL OPERATORS
 
 
