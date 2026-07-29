@@ -1,5 +1,9 @@
 {
     "allow": [
+        "adb -s emulator-5554 shell pm list packages -3",
+        "adb devices",
+        "adb kill-server",
+        "adb version",
         "cat file.txt",
         "cd /tmp && git log --oneline",
         "cd server && git status",

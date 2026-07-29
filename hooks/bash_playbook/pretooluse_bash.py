@@ -836,6 +836,7 @@ class SafeCommandsCheck:
     list. Returns True if every clause starts with a safe command, None otherwise."""
 
     _SAFE_COMMANDS = {
+        "adb": ["*"],
         "cat": ["*"],
         "cd": ["*"],
         "cp": ["*"],
