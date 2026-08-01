@@ -13,7 +13,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import _common._hook_io
 
 
-_DENY_MESSAGE = "AskUserQuestion is disabled. Ask your questions in plain chat text instead of using interactive dialogs."
+_DENY_MESSAGE = (
+    "AskUserQuestion is disabled. You MUST write your question(s) as plain text in the chat, then STOP and wait for"
+    " the user's reply. Do not proceed, assume an answer, or take any other action until they respond."
+)
 
 
 class PreToolUseNoQuestionsHookEntry:
