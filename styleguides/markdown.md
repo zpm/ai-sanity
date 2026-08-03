@@ -14,7 +14,7 @@ Every `##` section heading has three blank lines above it. `###` subheadings kee
 
 ## Formatting
 
-No bold or italic. No `**text**`, `*text*`, `__text__`, or `_text_`.
+Bold and italic are both available when the user asks for them. Never add bold or italic on your own initiative. The rule exists because you overuse both as headings and for emphasis in running text when left to your own devices.
 
 Inline backticks are only for code - class names, functions, file paths, commands, values. Not for emphasis.
 
