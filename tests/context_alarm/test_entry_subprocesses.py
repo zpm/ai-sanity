@@ -81,28 +81,99 @@ class UserPromptSubmitContextAlarmSubprocessTestCase(
         return temp_file_handle.name
 
 
-    def test_context_over_threshold_injects_warning(self):
+    def _invoke_entry_script_with_token_count(self, session_id, total_token_count):
 
+        """Writes a one-line transcript totaling total_token_count and invokes the entry script against it."""
         transcript_path = self._write_and_track_transcript([
             _build_assistant_entry_jsonl_line(
-                input_tokens = 10,
-                cache_creation_input_tokens = 50000,
-                cache_read_input_tokens = 200000
+                input_tokens = total_token_count,
+                cache_creation_input_tokens = 0,
+                cache_read_input_tokens = 0
             )
         ])
         userpromptsubmit_payload = PAYLOAD_FIXTURE_BUILDER.build_userpromptsubmit_payload(
-            session_id = "session-over-threshold",
+            session_id = session_id,
             transcript_path = transcript_path
         )
-        exit_code, raw_stdout = HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.invoke_entry_script_raw_stdout(
+        return HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.invoke_entry_script_raw_stdout(
             entry_script_relative_path = "context_alarm/userpromptsubmit.py",
             payload = userpromptsubmit_payload
         )
-        HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_context_injection(
-            self, exit_code, raw_stdout, expected_substring = "/compact"
+
+
+    def test_context_in_200k_bracket_injects_gentle_reminder(self):
+
+        exit_code, raw_stdout = self._invoke_entry_script_with_token_count(
+            session_id = "session-200k-bracket",
+            total_token_count = 250010
         )
         HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_context_injection(
             self, exit_code, raw_stdout, expected_substring = "250,010"
+        )
+        HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_context_injection(
+            self, exit_code, raw_stdout, expected_substring = "200,000 mark"
+        )
+        HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_context_injection(
+            self, exit_code, raw_stdout, expected_substring = "/compact soon"
+        )
+
+
+    def test_context_in_300k_bracket_injects_gentle_reminder(self):
+
+        exit_code, raw_stdout = self._invoke_entry_script_with_token_count(
+            session_id = "session-300k-bracket",
+            total_token_count = 310000
+        )
+        HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_context_injection(
+            self, exit_code, raw_stdout, expected_substring = "300,000 mark"
+        )
+        HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_context_injection(
+            self, exit_code, raw_stdout, expected_substring = "/compact soon"
+        )
+
+
+    def test_context_in_400k_bracket_injects_gentle_reminder(self):
+
+        exit_code, raw_stdout = self._invoke_entry_script_with_token_count(
+            session_id = "session-400k-bracket",
+            total_token_count = 410000
+        )
+        HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_context_injection(
+            self, exit_code, raw_stdout, expected_substring = "400,000 mark"
+        )
+        HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_context_injection(
+            self, exit_code, raw_stdout, expected_substring = "/compact soon"
+        )
+
+
+    def test_context_exactly_at_firm_threshold_injects_gentle_reminder(self):
+
+        exit_code, raw_stdout = self._invoke_entry_script_with_token_count(
+            session_id = "session-exactly-at-firm-threshold",
+            total_token_count = 500000
+        )
+        HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_context_injection(
+            self, exit_code, raw_stdout, expected_substring = "400,000 mark"
+        )
+        HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_context_injection(
+            self, exit_code, raw_stdout, expected_substring = "/compact soon"
+        )
+
+
+    def test_context_over_firm_threshold_injects_firm_warning(self):
+
+        exit_code, raw_stdout = self._invoke_entry_script_with_token_count(
+            session_id = "session-over-firm-threshold",
+            total_token_count = 612345
+        )
+        HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_context_injection(
+            self, exit_code, raw_stdout, expected_substring = "612,345"
+        )
+        HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_context_injection(
+            self, exit_code, raw_stdout, expected_substring = "far past the 200,000-token degradation point"
+        )
+        HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_context_injection(
+            self, exit_code, raw_stdout, expected_substring = "/compact now"
         )
 
 

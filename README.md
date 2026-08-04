@@ -116,9 +116,9 @@ Works by handling `UserPromptSubmit` to check a per-session flag file. On first 
 
 ## 6. Context Alarm
 
-Warns the user in chat when context exceeds a token threshold so they can manually run `/compact` at a natural stopping point.
+Reminds the user in chat to run `/compact` as context grows. The context window is 1M tokens but quality degrades past 200k, so the reminders escalate: a gentle nudge once each at 200k, 300k, and 400k, then a firm warning every turn past 500k.
 
-Works by handling `UserPromptSubmit` to read the transcript JSONL file and extract the total context token count from the most recent assistant message. If the count exceeds the threshold (200k tokens), it injects a system reminder instructing claude to relay the warning to the user. Fires on every turn the context is over the limit.
+Works by handling `UserPromptSubmit` to read the transcript JSONL file and extract the total context token count from the most recent assistant message. Above 200k it injects an instruction naming the highest bracket the count has passed; above 500k the instruction demands an immediate warning on every turn. The once-per-bracket behavior is delegated to claude rather than tracked in hook state: the injection tells claude to stay silent if its reminder for that bracket is already visible in the conversation. After a `/compact` the count drops below 200k, so re-crossing a bracket later naturally re-reminds.
 
 ## Tests
 
