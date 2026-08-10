@@ -110,9 +110,11 @@ The global manifest is always present because it ships with this repo. Its style
 
 ## 5. Instruction Repeater
 
-Injects a fixed instruction message into context on the first user message of each conversation, then goes silent until compaction resets it.
+Injects a fixed instruction message into context on the first user message of each conversation, then re-injects a shorter re-read instruction each time the context grows past another 50k-token boundary. Compaction resets the cycle.
 
-Works by handling `UserPromptSubmit` to check a per-session flag file. On first fire (no flag), it writes the instruction text to stdout (which Claude Code injects as visible context) and sets the flag. On subsequent fires (flag exists), it emits nothing. A `PreCompact` handler clears the flag so the instruction is re-injected after context compaction.
+Works by handling `UserPromptSubmit` to check a per-session flag file. On first fire (no flag), it writes the instruction text to stdout (which Claude Code injects as visible context) and sets the flag. A `PreCompact` handler clears the flag so the instruction is re-injected after context compaction.
+
+On subsequent fires, the hook reads the transcript JSONL and compares two context token counts: the current count (last assistant message's usage) and the count as of the previous user prompt. When the two counts fall in different 50k buckets (integer division by the cycle size), the context crossed a boundary during the intervening turn and the hook injects a re-read instruction. This check is stateless; the transcript is the only input. A boundary fires at most once because the next prompt's counts share a bucket, and a large turn that jumps a boundary entirely still fires because the bucket number increased. After compaction the count drops, the bucket comparison goes false, and the check stays quiet until the context grows past the next boundary. The cycle size is the `_REINJECTION_CYCLE_CONTEXT_TOKENS` constant in the hook's `userpromptsubmit.py`.
 
 ## 6. Context Alarm
 

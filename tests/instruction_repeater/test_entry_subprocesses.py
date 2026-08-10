@@ -5,6 +5,7 @@
 ########################################################################################################################
 
 
+import json
 import os
 import sys
 import unittest
@@ -87,6 +88,130 @@ class UserPromptSubmitInstructionRepeaterSubprocessTestCase(
             payload = minimal_payload
         )
         self.assertEqual(exit_code, 0)
+
+
+class ContextBoundaryReinjectionSubprocessTestCase(
+    tests._common.fixtures.HomeOverrideEnvVarTestCaseMixin,
+    unittest.TestCase
+):
+
+
+    def _write_transcript_fixture(self, context_token_counts_by_turn):
+
+        """Writes a transcript with one answered prompt per given (previous, current) count pair shape: an assistant
+        message at the first count, a typed prompt, then an assistant message at the second count. Returns the path."""
+        previous_context_token_count, current_context_token_count = context_token_counts_by_turn
+        transcript_lines = [
+            json.dumps({
+                "type": "assistant",
+                "message": {"usage": {
+                    "input_tokens": previous_context_token_count,
+                    "cache_creation_input_tokens": 0,
+                    "cache_read_input_tokens": 0
+                }}
+            }, ensure_ascii = False),
+            json.dumps({
+                "type": "user",
+                "message": {"role": "user", "content": [{"type": "text", "text": "a typed user prompt"}]}
+            }, ensure_ascii = False),
+            json.dumps({
+                "type": "assistant",
+                "message": {"usage": {
+                    "input_tokens": current_context_token_count,
+                    "cache_creation_input_tokens": 0,
+                    "cache_read_input_tokens": 0
+                }}
+            }, ensure_ascii = False)
+        ]
+        transcript_fixture_abs_path = os.path.join(self.sandboxed_home_abs_path, "transcript-fixture.jsonl")
+        with open(transcript_fixture_abs_path, "w", encoding = "utf-8") as open_transcript_file:
+            open_transcript_file.write("\n".join(transcript_lines) + "\n")
+        return transcript_fixture_abs_path
+
+
+    def _set_session_flag_via_first_prompt(self, session_id):
+
+        """Invokes the entry script once with a null transcript so the session flag is set."""
+        first_prompt_payload = PAYLOAD_FIXTURE_BUILDER.build_userpromptsubmit_payload(session_id = session_id)
+        HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.invoke_entry_script_raw_stdout(
+            entry_script_relative_path = "instruction_repeater/userpromptsubmit.py",
+            payload = first_prompt_payload
+        )
+
+
+    def test_boundary_crossing_injects_reread_instruction(self):
+
+        session_id = "session-boundary-crossed"
+        self._set_session_flag_via_first_prompt(session_id = session_id)
+        transcript_fixture_abs_path = self._write_transcript_fixture(
+            context_token_counts_by_turn = (48_000, 52_000)
+        )
+        crossing_payload = PAYLOAD_FIXTURE_BUILDER.build_userpromptsubmit_payload(
+            session_id = session_id,
+            transcript_path = transcript_fixture_abs_path
+        )
+        exit_code, raw_stdout = HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.invoke_entry_script_raw_stdout(
+            entry_script_relative_path = "instruction_repeater/userpromptsubmit.py",
+            payload = crossing_payload
+        )
+        HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_context_injection(
+            self, exit_code, raw_stdout, expected_substring = "Re-read the global claude.md"
+        )
+        self.assertIn("50,000-token mark", raw_stdout)
+
+
+    def test_same_bucket_is_silent(self):
+
+        session_id = "session-same-bucket"
+        self._set_session_flag_via_first_prompt(session_id = session_id)
+        transcript_fixture_abs_path = self._write_transcript_fixture(
+            context_token_counts_by_turn = (52_000, 54_000)
+        )
+        same_bucket_payload = PAYLOAD_FIXTURE_BUILDER.build_userpromptsubmit_payload(
+            session_id = session_id,
+            transcript_path = transcript_fixture_abs_path
+        )
+        exit_code, raw_stdout = HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.invoke_entry_script_raw_stdout(
+            entry_script_relative_path = "instruction_repeater/userpromptsubmit.py",
+            payload = same_bucket_payload
+        )
+        HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_silent_passthrough(self, exit_code, raw_stdout)
+
+
+    def test_count_drop_after_compaction_is_silent(self):
+
+        session_id = "session-count-dropped"
+        self._set_session_flag_via_first_prompt(session_id = session_id)
+        transcript_fixture_abs_path = self._write_transcript_fixture(
+            context_token_counts_by_turn = (180_000, 40_000)
+        )
+        dropped_count_payload = PAYLOAD_FIXTURE_BUILDER.build_userpromptsubmit_payload(
+            session_id = session_id,
+            transcript_path = transcript_fixture_abs_path
+        )
+        exit_code, raw_stdout = HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.invoke_entry_script_raw_stdout(
+            entry_script_relative_path = "instruction_repeater/userpromptsubmit.py",
+            payload = dropped_count_payload
+        )
+        HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_silent_passthrough(self, exit_code, raw_stdout)
+
+
+    def test_first_prompt_injects_full_instruction_even_when_boundary_crossed(self):
+
+        transcript_fixture_abs_path = self._write_transcript_fixture(
+            context_token_counts_by_turn = (48_000, 52_000)
+        )
+        first_prompt_payload = PAYLOAD_FIXTURE_BUILDER.build_userpromptsubmit_payload(
+            session_id = "session-first-prompt-crossing",
+            transcript_path = transcript_fixture_abs_path
+        )
+        exit_code, raw_stdout = HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.invoke_entry_script_raw_stdout(
+            entry_script_relative_path = "instruction_repeater/userpromptsubmit.py",
+            payload = first_prompt_payload
+        )
+        HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_context_injection(
+            self, exit_code, raw_stdout, expected_substring = "Please read the global claude.md"
+        )
 
 
 class PreCompactInstructionRepeaterSubprocessTestCase(
