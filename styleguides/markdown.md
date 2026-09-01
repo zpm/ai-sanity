@@ -20,7 +20,7 @@ Inline backticks are only for code - class names, functions, file paths, command
 
 ## Blockquotes
 
-`>` only at the very top of the file to describe scope. Never used elsewhere.
+`>` optionally at the very top of the file to describe scope, only when the body does not make it apparent. Never used elsewhere.
 
 ## Horizontal Rules
 
