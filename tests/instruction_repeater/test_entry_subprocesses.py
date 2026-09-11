@@ -144,7 +144,7 @@ class ContextBoundaryReinjectionSubprocessTestCase(
         session_id = "session-boundary-crossed"
         self._set_session_flag_via_first_prompt(session_id = session_id)
         transcript_fixture_abs_path = self._write_transcript_fixture(
-            context_token_counts_by_turn = (48_000, 52_000)
+            context_token_counts_by_turn = (95_000, 105_000)
         )
         crossing_payload = PAYLOAD_FIXTURE_BUILDER.build_userpromptsubmit_payload(
             session_id = session_id,
@@ -155,9 +155,10 @@ class ContextBoundaryReinjectionSubprocessTestCase(
             payload = crossing_payload
         )
         HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_context_injection(
-            self, exit_code, raw_stdout, expected_substring = "Re-read the global claude.md"
+            self, exit_code, raw_stdout, expected_substring = "re-read the global claude.md"
         )
-        self.assertIn("50,000-token mark", raw_stdout)
+        self.assertIn("100,000-token mark", raw_stdout)
+        self.assertIn("using the Read tool, not from memory", raw_stdout)
 
 
     def test_same_bucket_is_silent(self):
@@ -199,7 +200,7 @@ class ContextBoundaryReinjectionSubprocessTestCase(
     def test_first_prompt_injects_full_instruction_even_when_boundary_crossed(self):
 
         transcript_fixture_abs_path = self._write_transcript_fixture(
-            context_token_counts_by_turn = (48_000, 52_000)
+            context_token_counts_by_turn = (95_000, 105_000)
         )
         first_prompt_payload = PAYLOAD_FIXTURE_BUILDER.build_userpromptsubmit_payload(
             session_id = "session-first-prompt-crossing",

@@ -23,7 +23,7 @@ _INSTRUCTION_TEXT = (
     " of the important rules you will remember. Also state your model name and context window."
 )
 
-_REINJECTION_CYCLE_CONTEXT_TOKENS = 50_000
+_REINJECTION_CYCLE_CONTEXT_TOKENS = 100_000
 
 
 class UserPromptSubmitInstructionRepeaterEntry:
@@ -31,8 +31,9 @@ class UserPromptSubmitInstructionRepeaterEntry:
     """Single-purpose entry: read the UserPromptSubmit payload, check the session flag, and inject the instruction
     text on first fire. After that, re-inject a re-read instruction each time the context grows past another
     _REINJECTION_CYCLE_CONTEXT_TOKENS boundary, detected statelessly by comparing the transcript's current context
-    token count against the count at the previous prompt. The PreCompact hook clears the session flag so the full
-    instruction is re-injected after context compaction."""
+    token count against the count at the previous prompt. The re-read instruction requires the Read tool so the
+    documents are loaded visibly into context, not recalled from memory. The PreCompact hook clears the session flag
+    so the full instruction is re-injected after context compaction."""
 
 
     @staticmethod
@@ -90,9 +91,9 @@ class UserPromptSubmitInstructionRepeaterEntry:
         crossed_boundary_context_tokens = current_cycle_bucket * _REINJECTION_CYCLE_CONTEXT_TOKENS
         reread_instruction_text = (
             f"Context has crossed the {crossed_boundary_context_tokens:,}-token mark"
-            f" (now at {current_context_token_count:,} tokens). Re-read the global claude.md and the"
-            " project claude.md now and follow all instructions. Briefly confirm to the user that you"
-            " have re-read them."
+            f" (now at {current_context_token_count:,} tokens). You must re-read the global claude.md"
+            " and the project claude.md now using the Read tool, not from memory. Follow all"
+            " instructions. Briefly confirm to the user that you have re-read them."
         )
         _common._hook_io.UserPromptSubmitHookIo.emit_context_injection_and_exit(reread_instruction_text)
 

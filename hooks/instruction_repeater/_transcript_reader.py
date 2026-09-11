@@ -11,9 +11,9 @@ import os
 
 class TranscriptPromptContextTokenReader:
 
-    """Reads the context token counts needed for the 50k-boundary re-injection check from a Claude Code transcript
+    """Reads the context token counts needed for the 100k-boundary re-injection check from a Claude Code transcript
     JSONL file. Returns two counts: the current context size (last assistant message's usage) and the context size
-    as of the previous user prompt. The caller compares which 50k bucket each count falls in; a bucket increase means
+    as of the previous user prompt. The caller compares which 100k bucket each count falls in; a bucket increase means
     the context crossed a boundary since the previous prompt. Stateless by design: the transcript is the only input."""
 
 
