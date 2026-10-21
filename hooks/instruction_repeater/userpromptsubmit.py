@@ -24,22 +24,21 @@ _INSTRUCTION_TEXT = (
 )
 
 _REINJECTION_CYCLE_CONTEXT_TOKENS = 100_000
+_REINJECTION_CYCLE_ENABLED = False
 
 
 class UserPromptSubmitInstructionRepeaterEntry:
 
-    """Single-purpose entry: read the UserPromptSubmit payload, check the session flag, and inject the instruction
-    text on first fire. After that, re-inject a re-read instruction each time the context grows past another
-    _REINJECTION_CYCLE_CONTEXT_TOKENS boundary, detected statelessly by comparing the transcript's current context
-    token count against the count at the previous prompt. The re-read instruction requires the Read tool so the
-    documents are loaded visibly into context, not recalled from memory. The PreCompact hook clears the session flag
-    so the full instruction is re-injected after context compaction."""
+    """Single-purpose entry: inject the full instruction on the first prompt of a session and on the first prompt
+    after each compaction. When _REINJECTION_CYCLE_ENABLED is True, also inject a re-read instruction each time the
+    context grows past another _REINJECTION_CYCLE_CONTEXT_TOKENS boundary."""
 
 
     @staticmethod
     def main():
 
-        """Reads the payload, checks the session flag and the context boundary, injects or exits silent."""
+        """Reads the payload and the session flag, injects the full instruction on first fire, and otherwise runs the
+        boundary check when it is enabled or exits silent."""
         try:
             userpromptsubmit_payload = (
                 _common._hook_io.UserPromptSubmitHookIo.read_userpromptsubmit_payload_from_stdin()
@@ -49,9 +48,13 @@ class UserPromptSubmitInstructionRepeaterEntry:
             except OSError:
                 pass
             claude_session_id_string = userpromptsubmit_payload.get("session_id") or "unknown-session"
+            # the PreCompact hook clears the flag, so the first prompt after a compaction gets the full instruction
             if instruction_repeater._state.InstructionRepeaterState.is_flag_set(
                 claude_session_id_string = claude_session_id_string
             ):
+                if not _REINJECTION_CYCLE_ENABLED:
+                    _common._hook_io.UserPromptSubmitHookIo.emit_passthrough_and_exit()
+                    return
                 UserPromptSubmitInstructionRepeaterEntry._check_context_boundary_and_emit(
                     transcript_file_abs_path = userpromptsubmit_payload.get("transcript_path")
                 )
@@ -89,6 +92,7 @@ class UserPromptSubmitInstructionRepeaterEntry:
             _common._hook_io.UserPromptSubmitHookIo.emit_passthrough_and_exit()
             return
         crossed_boundary_context_tokens = current_cycle_bucket * _REINJECTION_CYCLE_CONTEXT_TOKENS
+        # the re-read instruction requires the Read tool so both documents load visibly into context
         reread_instruction_text = (
             f"Context has crossed the {crossed_boundary_context_tokens:,}-token mark"
             f" (now at {current_context_token_count:,} tokens). You must re-read the global claude.md"

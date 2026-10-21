@@ -110,17 +110,15 @@ The global manifest is always present because it ships with this repo. Its style
 
 ## 5. Instruction Repeater
 
-Injects a fixed instruction message into context on the first user message of each conversation, then re-injects a shorter re-read instruction each time the context grows past another 100k-token boundary. Compaction resets the cycle.
+The instruction repeater makes claude read the global and project CLAUDE.md files and summarize their rules back to the user on the first prompt of each conversation. The hook injects the instruction again on the first prompt after each compaction, because compaction summarizes the earlier read and summary away with the rest of the conversation.
 
-Works by handling `UserPromptSubmit` to check a per-session flag file. On first fire (no flag), it writes the instruction text to stdout (which Claude Code injects as visible context) and sets the flag. A `PreCompact` handler clears the flag so the instruction is re-injected after context compaction.
+The hook handles `UserPromptSubmit` and keeps a per-session flag file. The hook injects the instruction and sets the flag whenever the flag is missing. A `PreCompact` handler clears the flag.
 
-On subsequent fires, the hook reads the transcript JSONL and compares two context token counts: the current count (last assistant message's usage) and the count as of the previous user prompt. When the two counts fall in different 100k buckets (integer division by the cycle size), the context crossed a boundary during the intervening turn and the hook injects a re-read instruction. This check is stateless; the transcript is the only input. A boundary fires at most once because the next prompt's counts share a bucket, and a large turn that jumps a boundary entirely still fires because the bucket number increased. After compaction the count drops, the bucket comparison goes false, and the check stays quiet until the context grows past the next boundary. The cycle size is the `_REINJECTION_CYCLE_CONTEXT_TOKENS` constant in the hook's `userpromptsubmit.py`.
+The hook also has a re-read cycle, which injects a shorter instruction each time the context grows past another fixed-size boundary. The cycle is off. The cycle's boundary check is stateless and reads only the transcript.
 
 ## 6. Context Alarm
 
-Reminds the user in chat to run `/compact` as context grows. The context window is 1M tokens but quality degrades past 200k, so the reminders escalate: a gentle nudge once each at 200k, 300k, and 400k, then a firm warning every turn past 500k.
-
-Works by handling `UserPromptSubmit` to read the transcript JSONL file and extract the total context token count from the most recent assistant message. Above 200k it injects an instruction naming the highest bracket the count has passed; above 500k the instruction demands an immediate warning on every turn. The once-per-bracket behavior is delegated to claude rather than tracked in hook state: the injection tells claude to stay silent if its reminder for that bracket is already visible in the conversation. After a `/compact` the count drops below 200k, so re-crossing a bracket later naturally re-reminds.
+The context alarm reads the context token count from the transcript on each prompt and injects nothing. The VS Code context counter already shows the count to the user, so an injected reminder would repeat it.
 
 ## Tests
 

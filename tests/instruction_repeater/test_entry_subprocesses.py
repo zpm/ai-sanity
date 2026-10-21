@@ -36,8 +36,9 @@ class UserPromptSubmitInstructionRepeaterSubprocessTestCase(
             payload = userpromptsubmit_payload
         )
         HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_context_injection(
-            self, exit_code, raw_stdout, expected_substring = "claude.md"
+            self, exit_code, raw_stdout, expected_substring = "read the global claude.md and the project claude.md"
         )
+        self.assertIn("summary of the important rules", raw_stdout)
 
 
     def test_second_prompt_in_same_session_is_silent(self):
@@ -139,7 +140,7 @@ class ContextBoundaryReinjectionSubprocessTestCase(
         )
 
 
-    def test_boundary_crossing_injects_reread_instruction(self):
+    def test_boundary_crossing_is_silent_while_reinjection_cycle_disabled(self):
 
         session_id = "session-boundary-crossed"
         self._set_session_flag_via_first_prompt(session_id = session_id)
@@ -153,46 +154,6 @@ class ContextBoundaryReinjectionSubprocessTestCase(
         exit_code, raw_stdout = HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.invoke_entry_script_raw_stdout(
             entry_script_relative_path = "instruction_repeater/userpromptsubmit.py",
             payload = crossing_payload
-        )
-        HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_context_injection(
-            self, exit_code, raw_stdout, expected_substring = "re-read the global claude.md"
-        )
-        self.assertIn("100,000-token mark", raw_stdout)
-        self.assertIn("using the Read tool, not from memory", raw_stdout)
-
-
-    def test_same_bucket_is_silent(self):
-
-        session_id = "session-same-bucket"
-        self._set_session_flag_via_first_prompt(session_id = session_id)
-        transcript_fixture_abs_path = self._write_transcript_fixture(
-            context_token_counts_by_turn = (52_000, 54_000)
-        )
-        same_bucket_payload = PAYLOAD_FIXTURE_BUILDER.build_userpromptsubmit_payload(
-            session_id = session_id,
-            transcript_path = transcript_fixture_abs_path
-        )
-        exit_code, raw_stdout = HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.invoke_entry_script_raw_stdout(
-            entry_script_relative_path = "instruction_repeater/userpromptsubmit.py",
-            payload = same_bucket_payload
-        )
-        HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_silent_passthrough(self, exit_code, raw_stdout)
-
-
-    def test_count_drop_after_compaction_is_silent(self):
-
-        session_id = "session-count-dropped"
-        self._set_session_flag_via_first_prompt(session_id = session_id)
-        transcript_fixture_abs_path = self._write_transcript_fixture(
-            context_token_counts_by_turn = (180_000, 40_000)
-        )
-        dropped_count_payload = PAYLOAD_FIXTURE_BUILDER.build_userpromptsubmit_payload(
-            session_id = session_id,
-            transcript_path = transcript_fixture_abs_path
-        )
-        exit_code, raw_stdout = HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.invoke_entry_script_raw_stdout(
-            entry_script_relative_path = "instruction_repeater/userpromptsubmit.py",
-            payload = dropped_count_payload
         )
         HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_silent_passthrough(self, exit_code, raw_stdout)
 
@@ -244,8 +205,12 @@ class PreCompactInstructionRepeaterSubprocessTestCase(
             payload = userpromptsubmit_payload
         )
         HOOK_ENTRY_SCRIPT_INVOCATION_HELPER.assert_context_injection(
-            self, exit_code_reinject, raw_stdout_reinject, expected_substring = "claude.md"
+            self,
+            exit_code_reinject,
+            raw_stdout_reinject,
+            expected_substring = "read the global claude.md and the project claude.md"
         )
+        self.assertIn("summary of the important rules", raw_stdout_reinject)
 
 
     def test_precompact_on_session_without_prior_flag_is_a_no_op(self):

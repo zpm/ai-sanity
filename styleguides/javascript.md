@@ -46,6 +46,8 @@ Every name (variable, function, method, constant, class, CSS class, HTML id) mus
 
 Clarity does not mean expanding abbreviations. Common or technical abbreviations are encouraged as part of a broader descriptive name: `env`, `var`/`vars`, `config`, `db`, `api`, `url`, `id`, `uuid`, `llm`, `sdk`, etc.
 
+Email markup is the exception. An email's class names are short abbreviations, because Gmail clips a message past about 100 KB, and an email stays as small as markup a person can still read.
+
 ## JSON Formatting
 
 JSON files are always expanded (pretty-printed) with every field on its own line. No collapsed single-line or collapsed-single-object forms. Nested objects and arrays indent one level. This applies to configuration, fixtures, manifests, and hand-authored payloads alike. Editor-generated minification is fine at the build boundary but never committed.
