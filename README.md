@@ -48,19 +48,17 @@ Tools must be invoked by name, not by absolute path. The deny and safe lists key
 
 The playbook is a per-project registry of entrypoint commands (test runners, build scripts, task scripts) that claude runs to do common tasks. A command matching `./.ai-sanity/playbook.json` is auto-allowed, bypassing every deny check except the absolute raw-path checks above. The command is tokenized and matched against playbook entries (exact or prefix). If claude submits a compound command, the compounded part is evaluated independently against the bash rules.
 
-Each project that wants playbook support creates `./.ai-sanity/playbook.json`. It includes metadata to help Claude understand when to run the commands:
+Each project that wants playbook support creates `./.ai-sanity/playbook.json`. Each entry's `what` describes the allowed command. A rule about when a command runs belongs in the project's documentation:
 
 ```json
 [
   {
     "bash": "python -m unittest discover -s tests -t . -v",
-    "what": "Runs the full test suite",
-    "when": "Run as a final step after all changes have landed"
+    "what": "Runs the full test suite"
   },
   {
     "bash": "python -m unittest *",
-    "what": "Run targeted tests for a specific module",
-    "when": "After modifying a specific hook, run its targeted tests"
+    "what": "Run targeted tests for a specific module"
   }
 ]
 ```

@@ -1,12 +1,10 @@
 [
   {
     "bash": "python -m unittest discover -s tests -t . -v",
-    "what": "Runs the full test suite",
-    "when": "Run as a final step after all changes have landed"
+    "what": "Runs the full test suite"
   },
   {
     "bash": "python -m unittest *",
-    "what": "Run targeted tests for a specific module",
-    "when": "After modifying a specific hook, run its targeted tests"
+    "what": "Run targeted tests for a specific module"
   }
 ]

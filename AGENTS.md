@@ -6,4 +6,4 @@ Before working in a folder, read the documents that [./.ai-sanity/required-readi
 
 Before editing a file, read the styleguides that [../ai-sanity/.ai-sanity/required-styleguides.json](../ai-sanity/.ai-sanity/required-styleguides.json) requires for it.
 
-Run project commands as [./.ai-sanity/playbook.json](.ai-sanity/playbook.json) lists them, and run each one when its entry says to.
+Run project commands in the form [./.ai-sanity/playbook.json](.ai-sanity/playbook.json) lists them.
