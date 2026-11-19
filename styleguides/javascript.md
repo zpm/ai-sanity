@@ -65,6 +65,8 @@ Example:
 }
 ```
 
+A JSON file omits every key whose value would be empty: an empty string, an empty array, an empty object, or null.
+
 ## Comments
 
 Comment non-trivial blocks. Before any block of code where the intent isn't immediately obvious from the code itself, write a brief 1-2 line comment explaining what the block does and why. The reader should understand the purpose of the next 10-20 lines without reading every line. Don't comment self-explanatory code; only where the context helps.
