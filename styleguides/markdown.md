@@ -12,6 +12,8 @@ Do not introduce line breaks within a paragraph. Each paragraph is a single unbr
 
 Every `##` section heading has three blank lines above it. `###` subheadings keep a single blank line above.
 
+A doc that numbers its sections writes `## 1. Name` for a section and `### 1.1. Name` for a subsection.
+
 ## Formatting
 
 Bold and italic are both available when the user asks for them. Never add bold or italic on your own initiative. The rule exists because you overuse both as headings and for emphasis in running text when left to your own devices.
