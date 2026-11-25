@@ -59,7 +59,7 @@ Example:
   "rules": [
     {
       "extension": ".py",
-      "read": "~/docs/python.md"
+      "read": "./docs/python.md"
     }
   ]
 }

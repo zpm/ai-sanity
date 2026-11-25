@@ -44,10 +44,16 @@ Prefer tables over lists when presenting records with multiple attributes, such 
 
 Use project-root-relative display paths and document-relative link targets.
 
-The display path is the visible link text. It always starts with `./` for files inside the project, such as `[./styleguides/python.md](python.md)`.
+The display path is the visible link text. It always starts with `./` for files inside the project, such as `[./styleguides/python.md](python.md)`, with `../` for files in a sibling repo, such as `[../zpm-llc/PROD.md](../zpm-llc/PROD.md)`, and with `~/` only for global files.
 
-The link target is the hyperlink destination. It is relative to the current document's location so the link works when clicked, such as `(python.md)` from `./styleguides/markdown.md` to `./styleguides/python.md`, or `(../README.md)` from `./styleguides/markdown.md` to `./README.md`.
+The link target is the hyperlink destination. It is relative to the current document's location so the link works when clicked, such as `(python.md)` from `./styleguides/markdown.md` to `./styleguides/python.md`, `(../README.md)` from `./styleguides/markdown.md` to `./README.md`, or `(../../zpm-llc/PROD.md)` from `./styleguides/markdown.md` to `../zpm-llc/PROD.md`.
 
 ## Paths
 
-All displayed file references must use dot-prefix paths. Within a project, display paths from the project root with `./` (e.g., `./docs/stack/backend.md`). For user-level files under the home directory, always use the tilde path `~/` (e.g., `~/.claude/settings.json`). Never display absolute paths (`/Users/...`) or naked paths without a dot prefix (`docs/stack/backend.md`).
+Every displayed path to a file in the project or in a sibling repo is relative to the project root. A path inside the project starts with `./` (e.g., `./docs/stack/backend.md`), and a path in a sibling repo starts with `../` (e.g., `../zpm-llc/PROD.md`). Use the tilde path `~/` only for global files, which are the user-level files under the home directory (e.g., `~/.claude/settings.json`). Never display absolute paths (`/Users/...`) or naked paths without a dot prefix (`docs/stack/backend.md`).
+
+
+
+## File Names
+
+A doc at a repo's root has a name in capitals, and so does a README in any folder. Every other doc has a lowercase name with hyphens between words.

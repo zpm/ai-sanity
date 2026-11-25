@@ -29,6 +29,8 @@ Clarity does not mean expanding abbreviations. Common or technical abbreviations
 
 Scripts are Python by default. `.py` is the standard format for all scripts: it matches the codebase language, is platform-independent, and is testable. Dev machines and prod operators have the venv active in their terminal. No shell wrapper is needed to run a Python script.
 
+A Python command that a person or an agent runs has hyphens between the words of its file name, and a Python module that other code imports has underscores.
+
 `.sh` and `.ps1` files exist only for two cases:
 
 - Agent entry points. Agents (Claude Code) run in sandboxed environments without venv. `.sh`/`.ps1` thin pairs activate the venv and call `python <script>.py` immediately. No logic beyond venv activation and arg passthrough lives in these files. Each is natively written for its platform (`.sh` for macOS/Linux, `.ps1` for Windows); neither delegates to the other. A `.ps1` whose body invokes `bash.exe` on the sibling `.sh` is not allowed.

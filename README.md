@@ -18,7 +18,7 @@ All hooks fail closed. If a hook crashes for any reason, the tool call is denied
 
 Copy [./settings.example.json](settings.example.json) to `~/.claude/settings.json` and adjust paths.
 
-The `permissions.allow` list should include the path to this repo (e.g., `Read(~/Dev/ai-sanity/**)`) so the required-reading hook can load styleguides from this repo without prompting.
+The `permissions.allow` list should include the path to this repo, as the example does, so the required-reading hook can load styleguides from this repo without prompting.
 
 ## 1. Bash Playbook
 
